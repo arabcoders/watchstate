@@ -38,10 +38,10 @@ This mode is available when you have **exactly 1 backend** configured. In this m
 
 To enable single backend mode:
 
-1. Navigate to **Configuration** > <!--i:i-lucide-users--> **Identities** > **Match & Provision**.
-2. If you have exactly 1 backend configured, you'll see an **"Allow single backend identities"** switch.
+1. Open **Settings** > <!--i:i-lucide-users--> **Identities** in the sidebar, then click **Match & Provision**.
+2. If you have exactly 1 backend configured, you'll see an **Allow single backend identities** switch under **Execution options**.
 3. Check this option to enable single backend mode.
-4. All users from that backend (except the main identity) will be created as individual identities.
+4. Click **Create identities** to create individual identities for users from that backend (except the main identity).
 
 > [!NOTE]
 > Single backend mode still respects PIN settings for protected Plex users. You can set PINs by clicking the lock icon
@@ -65,12 +65,12 @@ Begin by configuring your media server backends as you normally would for a sing
 If you're using Plex:
 
 * You **must** provide an **Admin-level `X-Plex-Token`** to access the user list required for identity grouping.
-* To verify your token:
+* To check that WatchState can load the users:
 
-    * Navigate to **Diagnostics** > <!--i:i-lucide-key-round--> **Plex Token**.
-    * Review the message:
-        * If it shows **Success**, your token has sufficient privileges.
-        * If it shows an **Error**, your token likely has restricted permissions. Replace it with a valid admin token.
+    * Open **Backends** in the sidebar, click your Plex backend name, then open **Users**.
+    * Confirm that the expected users are listed. Limited Plex tokens cannot load this list.
+    * To replace the token, return to **Backends**, click **Edit** for that backend, and update
+      **X-Plex-Token** under **Connection**. Click **Save settings**.
 
 ---
 
@@ -83,7 +83,8 @@ If you're using Jellyfin or Emby:
 
     1. Go to **Dashboard > Advanced > API Keys**.
     2. Generate a new key.
-    3. Add the key to the corresponding backend configuration.
+    3. Open **Backends**, click **Edit** for the corresponding backend, and enter the **API Key** under
+       **Connection**. Click **Save settings**.
 
 ---
 
@@ -91,14 +92,14 @@ If you're using Jellyfin or Emby:
 
 After verifying all backends are properly configured:
 
-1. Navigate to **Configuration** > <!--i:i-lucide-users--> **Identities** > **Match & Provision**.
+1. Open **Settings** > <!--i:i-lucide-users--> **Identities** in the sidebar, then click **Match & Provision**.
 2. **If you have multiple backends:**
     * The system will attempt to **automatically group users** based on matching names across the backends.
     * **Manual adjustment may be necessary**:
         * Use drag-and-drop functionality to reassign or organize users into the appropriate groups.
         * This is helpful when naming conventions differ across services.
 3. **If you have a single backend:**
-    * Enable the **"Allow single backend identities"** switch.
+    * Enable **Allow single backend identities** under **Execution options**.
     * All users will be listed in the unmatched section and will be created individually.
     * No grouping or matching is required.
 
@@ -137,22 +138,28 @@ identity configurations.
 You can do this in one of three ways:
 
 1. **Manually Update Each Identity**
-    * Select `Change Identity` in the top right of the WebUI.
-    * `Browse as` an identity.
-    * Configure settings for each identity.
+    * Click the **Identity** button in the WebUI header to open **Change Identity**.
+    * Select an identity under **Browse as**, then click **Reload**.
+    * Open **Backends** and click **Edit** for the backend you need to update.
+    * Update the URL and credentials under **Connection**.
+    * Click **Save settings**.
 
-2. **Click `Sync backends`**
+2. **Click `Sync Backends`**
 
     This will:
 
-     * Run from the main <!--i:i-lucide-users--> **Identities** page.
+     * Run from **Settings** > <!--i:i-lucide-users--> **Identities** while browsing as `main`.
      * Safely propagate shared backend configuration changes from the main identity.
+     * Leave watch history unchanged.
      * **Not** create, delete, or rematch identities.
      * Preserve identity-specific values like backend user IDs, Plex child tokens, and protected user PINs.
 
 3. **Click `Update identities`**
-   
-   This will:
+
+    Open **Settings** > **Identities** > **Match & Provision**. When identities already exist, leave
+    **Re-create local identities** off under **Execution options** to use **Update identities**.
+
+    This will:
 
      * Attempt to propagate changes from the main configuration.
      * **Create new identities** for any users that do not yet exist in the system.

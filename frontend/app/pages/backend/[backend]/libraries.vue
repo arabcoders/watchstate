@@ -1,10 +1,8 @@
 <template>
-  <div class="space-y-6">
-    <section class="space-y-4">
-      <PageHeader v-bind="pageShell">
+  <div class="w-full min-w-0 max-w-full space-y-6">
+    <section aria-label="Backend libraries" :aria-busy="isLoading" class="space-y-4">
+      <PageHeader v-bind="pageShell" page-label="Libraries" description="">
         <template #kicker>
-          <span>{{ pageShell.sectionLabel }}</span>
-          <span>/</span>
           <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
           <span>/</span>
           <NuxtLink
@@ -12,8 +10,6 @@
             class="hover:text-primary normal-case tracking-normal"
             >{{ backend }}</NuxtLink
           >
-          <span>/</span>
-          <span class="text-highlighted normal-case tracking-normal">Libraries</span>
         </template>
 
         <template #actions>
@@ -23,9 +19,9 @@
             icon="i-lucide-refresh-cw"
             :loading="isLoading"
             :disabled="isLoading"
-            aria-label="Reload libraries"
+            aria-label="Refresh libraries"
             @click="loadContent"
-            label="Reload"
+            label="Refresh"
           />
         </template>
       </PageHeader>
@@ -35,219 +31,140 @@
         color="info"
         variant="soft"
         icon="i-lucide-loader-circle"
-        title="Loading"
-        description="Loading libraries list. Please wait..."
+        title="Loading backend libraries"
         :ui="{ icon: 'animate-spin' }"
       />
 
       <UAlert
-        v-else-if="0 === items.length"
-        color="warning"
+        v-else-if="loadError"
+        color="error"
         variant="soft"
         icon="i-lucide-triangle-alert"
-        title="Warning"
-        description="WatchState was unable to get any libraries from the backend."
+        title="Couldn't load libraries"
+        :description="loadError"
       />
 
-      <div v-else class="grid gap-4 xl:grid-cols-2">
-        <UCard
-          v-for="item in items"
-          :key="`library-${item.id}`"
-          class="h-full shadow-sm"
-          :ui="cardUi"
-        >
-          <template #header>
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <div
-                  class="flex min-w-0 items-start gap-2 text-base font-semibold leading-6 text-highlighted"
-                >
-                  <UIcon
-                    :name="'Movie' === item.type ? 'i-lucide-film' : 'i-lucide-tv'"
-                    class="mt-0.5 size-4 shrink-0 text-toned"
-                  />
+      <UEmpty
+        v-else-if="hasLoaded && 0 === items.length"
+        icon="i-lucide-library"
+        title="No libraries found"
+      />
 
-                  <div class="min-w-0 flex-1">
-                    <UTooltip v-if="item?.webUrl" :text="String(item.title)">
-                      <NuxtLink
-                        target="_blank"
-                        :to="item.webUrl"
-                        class="block truncate text-highlighted hover:text-primary"
-                      >
-                        {{ item.title }}
-                      </NuxtLink>
-                    </UTooltip>
-                    <UTooltip v-else :text="String(item.title)">
-                      <span class="block truncate text-highlighted">
-                        {{ item.title }}
-                      </span>
-                    </UTooltip>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex shrink-0 items-center justify-end">
-                <USwitch
-                  :model-value="item.ignored"
-                  :color="item.ignored ? 'success' : 'neutral'"
-                  :label="item.ignored ? 'Ignored' : 'Ignore'"
-                  @update:model-value="() => void toggleIgnore(item)"
+      <div v-else-if="0 < items.length" class="ws-card divide-y divide-default">
+        <Lazy v-for="item in items" :key="`library-${item.id}`" :unrender="true" :min-height="148">
+          <article
+            :aria-labelledby="`library-${item.id}`"
+            class="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_18rem]"
+          >
+            <div class="min-w-0 space-y-2">
+              <h2
+                :id="`library-${item.id}`"
+                class="flex min-w-0 items-start gap-2 text-base font-semibold text-highlighted"
+              >
+                <UIcon
+                  :name="'Movie' === item.type ? 'i-lucide-film' : 'i-lucide-tv'"
+                  class="mt-0.5 size-4 shrink-0 text-toned"
                 />
-              </div>
-            </div>
-          </template>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-              >
-                <div
-                  class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                >
-                  <UIcon name="i-lucide-tag" class="size-3.5 shrink-0" />
-                  <span>Type</span>
+                <UTooltip v-if="item.webUrl" :text="String(item.title)">
+                  <NuxtLink
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :to="item.webUrl"
+                    class="min-w-0 wrap-anywhere hover:text-primary"
+                  >
+                    {{ item.title }}
+                  </NuxtLink>
+                </UTooltip>
+                <span v-else class="min-w-0 wrap-anywhere">{{ item.title }}</span>
+              </h2>
+              <dl class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <div class="flex items-baseline gap-2">
+                  <dt class="text-xs text-muted">Type</dt>
+                  <dd>{{ item.type }}</dd>
                 </div>
-
-                <div class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">
-                  {{ item.type }}
+                <div class="flex items-baseline gap-2">
+                  <dt class="text-xs text-muted">Supported</dt>
+                  <dd>{{ item.supported ? 'Yes' : 'No' }}</dd>
                 </div>
-              </div>
-            </div>
-
-            <div
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-              >
-                <div
-                  class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                >
-                  <UIcon name="i-lucide-badge-check" class="size-3.5 shrink-0" />
-                  <span>Supported</span>
-                </div>
-
-                <div class="min-w-0 sm:ml-auto sm:text-right">
-                  <UBadge :color="item.supported ? 'success' : 'warning'" variant="soft">
-                    {{ item.supported ? 'Yes' : 'No' }}
-                  </UBadge>
-                </div>
-              </div>
+              </dl>
             </div>
 
-            <div
-              v-if="item?.agent"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-              >
-                <div
-                  class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                >
-                  <UIcon name="i-lucide-clapperboard" class="size-3.5 shrink-0" />
-                  <span>Agent</span>
-                </div>
-                <div
-                  class="min-w-0 wrap-break-word font-medium text-highlighted sm:ml-auto sm:text-right"
-                >
-                  {{ item.agent }}
-                </div>
+            <dl v-if="item.agent || item.scanner" class="min-w-0 space-y-2 text-sm">
+              <div v-if="item.agent" class="space-y-1">
+                <dt class="text-xs text-muted">Agent</dt>
+                <dd class="wrap-anywhere">{{ item.agent }}</dd>
               </div>
-            </div>
-
-            <div
-              v-if="item?.scanner"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-            >
-              <div
-                class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-              >
-                <div
-                  class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                >
-                  <UIcon name="i-lucide-cpu" class="size-3.5 shrink-0" />
-                  <span>Scanner</span>
-                </div>
-                <div
-                  class="min-w-0 wrap-break-word font-medium text-highlighted sm:ml-auto sm:text-right"
-                >
-                  {{ item.scanner }}
-                </div>
+              <div v-if="item.scanner" class="space-y-1">
+                <dt class="text-xs text-muted">Scanner</dt>
+                <dd class="wrap-anywhere">{{ item.scanner }}</dd>
               </div>
-            </div>
-          </div>
+            </dl>
 
-          <template v-if="item.supported && !item.ignored" #footer>
-            <div class="flex flex-wrap items-center justify-end gap-2">
+            <div class="min-w-0 space-y-3 xl:col-start-3">
+              <USwitch
+                :model-value="item.ignored"
+                color="neutral"
+                :label="item.ignored ? 'Ignored' : 'Ignore'"
+                :aria-label="`Ignore ${item.title} during imports and webhook processing`"
+                @update:model-value="() => void toggleIgnore(item)"
+              />
               <USelect
+                v-if="item.supported && !item.ignored"
                 v-model="selectedCommand"
                 :items="commandItems"
                 value-key="value"
                 placeholder="Quick operations"
                 icon="i-lucide-terminal"
+                :aria-label="`Quick operations for ${item.title}`"
                 class="w-full"
                 @update:model-value="() => void forwardCommand(item)"
               />
             </div>
-          </template>
-        </UCard>
+          </article>
+        </Lazy>
       </div>
     </section>
 
-    <UCard class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
-
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
-      </template>
-
+    <details
+      :open="show_page_tips"
+      class="space-y-3 border-t border-default pt-4"
+      @toggle="show_page_tips = ($event.target as HTMLDetailsElement).open"
+    >
+      <summary class="cursor-pointer text-sm font-medium text-highlighted">
+        Library filtering
+      </summary>
       <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
         <li>
-          Ignoring library will prevent any content from being added to the local database from the
-          library during import process, and webhook events handling.
+          Ignoring a library prevents its content from being added to the local database through
+          imports or webhook events.
         </li>
         <li>
           Libraries that show <code>Supported: No</code> will not be processed by
           <code>WatchState</code>.
         </li>
       </ul>
-    </UCard>
+    </details>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { navigateTo, useHead, useRoute } from '#app';
+import { NuxtLink, UAlert, UButton, UEmpty, UIcon, USelect, USwitch, UTooltip } from '#components';
 import { useStorage } from '@vueuse/core';
+import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { makeConsoleCommand, notification, parse_api_response, r, request } from '~/utils';
-import type { JsonObject, JsonValue, LibraryItem, UtilityCommand } from '~/types';
+import type { Backend, JsonObject, JsonValue, LibraryItem, UtilityCommand } from '~/types';
 
 const route = useRoute();
 const backend = route.params.backend as string;
 const pageShell = requireTopLevelPageShell('backends');
 const items = ref<Array<LibraryItem>>([]);
 const isLoading = ref<boolean>(false);
+const loadError = ref('');
+const hasLoaded = ref(false);
 const show_page_tips = useStorage('show_page_tips', true);
 const api_user = useStorage('api_user', 'main');
 const selectedCommand = ref<string>('');
@@ -272,17 +189,6 @@ type UiCommand = {
 type SelectItem = {
   label: string;
   value: string;
-};
-
-const cardUi = {
-  header: 'p-5',
-  body: 'p-5',
-  footer: 'p-5 border-t border-default',
-};
-
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'p-5 pt-0',
 };
 
 const uiCommands = computed<Record<string, UiCommand>>(() => ({
@@ -325,20 +231,29 @@ useHead({ title: `Backends: ${backend} - Libraries` });
 const loadContent = async (): Promise<void> => {
   try {
     isLoading.value = true;
+    loadError.value = '';
+    hasLoaded.value = false;
     items.value = [];
 
     const response = await request(`/backend/${backend}/library`);
     const data = await parse_api_response<Array<LibraryItem>>(response);
 
     if ('error' in data) {
-      notification('error', 'Error', `${data.error.code}: ${data.error.message}`);
+      loadError.value = `${data.error.code}: ${data.error.message}`;
+      notification(
+        'error',
+        'Backend libraries unavailable',
+        `${data.error.code}: ${data.error.message}`,
+      );
       return;
     }
 
     items.value = data;
+    hasLoaded.value = true;
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-    return notification('error', 'Error', `Request error. ${errorMessage}`);
+    loadError.value = errorMessage;
+    return notification('error', 'Backend libraries unavailable', errorMessage);
   } finally {
     isLoading.value = false;
   }
@@ -395,10 +310,14 @@ const toggleIgnore = async (library: LibraryItem): Promise<void> => {
         },
       ]),
     });
-    const data = await parse_api_response<any>(response);
+    const data = await parse_api_response<Backend>(response);
 
     if ('error' in data) {
-      notification('error', 'Error', `${data.error.code}: ${data.error.message}`);
+      notification(
+        'error',
+        'Library ignore setting not saved',
+        `${data.error.code}: ${data.error.message}`,
+      );
       return;
     }
 
@@ -408,7 +327,7 @@ const toggleIgnore = async (library: LibraryItem): Promise<void> => {
     }
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-    return notification('error', 'Error', `Request error. ${errorMessage}`);
+    return notification('error', 'Library ignore setting not saved', errorMessage);
   }
 };
 

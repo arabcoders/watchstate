@@ -17,8 +17,8 @@ to create a separate webhook for each user and backend.
 ## Webhook URL
 
 The webhook URL is `/v1/api/webhook`, of course, if you have enabled secure all endpoints you need to
-add `?apikey=your_ws_apikey` to the URL. which you can obtain by going to <!--i:i-lucide-ellipsis-vertical-->
-*More* > <!--i:i-lucide-terminal--> *Terminal* and then write `system:apikey` in the box. You should get the apikey which is
+add `?apikey=your_ws_apikey` to the URL. You can obtain it by going to **Activity** >
+<!--i:i-lucide-terminal--> **Console**, entering `system:apikey`, and clicking **Run command**. You should get the apikey which is
 hexadecimal string.
 
 If you don't have `WS_SECURE_API_ENDPOINTS` enabled:
@@ -35,8 +35,10 @@ https://your_ws_url/v1/api/webhook?apikey=[api_key_you_got_from_terminal]
 
 # Adding Webhooks to Your Backends
 
-The easiest way to configure webhooks is through the UI: navigate to
-<!--i:i-lucide-server--> **Backends**, click the <!--i:i-lucide-webhook--> **Add Webhook** button on any backend card, then click **Add/Update Webhook**.
+To configure webhooks through the UI, use the header's **Identity** button, choose **main** under **Browse as**,
+then click **Reload** if needed.
+Go to <!--i:i-lucide-server--> **Backends**, click the <!--i:i-lucide-webhook--> **Add Webhook** button on a backend entry,
+then click **Add/Update** in **Webhook Management**.
 This will automatically register or update the webhook URL on the remote backend. Alternatively, you can configure webhooks manually using the 
 instructions below.
 
@@ -244,5 +246,7 @@ webhook-specific event behavior.
 
 Webhooks can miss events. Enable the **Import** and **Export** tasks as a second path for synchronizing changes.
 
-Go to the *Tasks* page, enable the *Import* and *Export* tasks, and set the schedule to `every 12 hours` or
-`every 24 hours`.
+Go to **Activity** > **Tasks** and turn on the **Enabled** switches for the *Import* and *Export* tasks.
+These schedules apply across identities.
+Click each task's **Timer** value to edit its schedule in **Environment**. Set it to `0 */12 * * *` for every 12 hours or
+`0 0 * * *` for every 24 hours, then click **Save**.

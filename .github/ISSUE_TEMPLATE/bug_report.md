@@ -30,8 +30,8 @@ Attach screenshots if it helps explain your bug report.
 **Item synchronization logs**
 <!--
 For watched-state or watch-progress sync issues, include logs for one affected item:
-1. Open Activity > History and select the affected movie or episode.
-2. Expand Related Logs and select Copy > Copy raw.
+1. Open History > Records and select the affected movie or episode.
+2. Expand Related logs and select Copy > Copy raw.
 3. Paste the output below and state which backend the change came from and which backend did not sync.
 -->
 
@@ -41,7 +41,7 @@ Copy the affected item's related logs here
 
 **System report**
 <!-- 
-You can generate a report from Diagnostics > System Report
+You can generate a report from Activity > System Report
 Please put the output in a code block like this
 -->
 

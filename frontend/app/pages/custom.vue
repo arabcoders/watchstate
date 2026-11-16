@@ -1,40 +1,14 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
+    <PageHeader v-bind="pageShell" description="Support additional metadata providers.">
       <template #actions>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-plus"
-          @click="
-            () => {
-              addGuidModalOpen = true;
-            }
-          "
-          label="Add GUID"
-        />
-
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-plus"
-          @click="
-            () => {
-              addLinkModalOpen = true;
-            }
-          "
-          label="Add Link"
-        />
-
         <UButton
           color="neutral"
           variant="outline"
           size="sm"
           icon="i-lucide-refresh-cw"
           :loading="isLoading"
-          :disabled="isLoading"
+          :disabled="busy"
           @click="loadContent"
           label="Reload"
         />
@@ -46,300 +20,245 @@
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
+      title="Loading GUID definitions and client links"
       :ui="{ icon: 'animate-spin' }"
     />
 
     <template v-else>
-      <section class="space-y-4">
-        <div v-if="guids.length > 0" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <UCard
-            v-for="(guid, index) in guids"
-            :key="guid.name"
-            class="h-full shadow-sm"
-            :ui="itemCardUi"
-          >
-            <template #header>
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0 flex-1 text-base font-semibold text-highlighted">
-                  <UTooltip :text="String(guid.name)">
-                    <span class="block truncate">{{ guid.name }}</span>
-                  </UTooltip>
-                </div>
-                <UButton
-                  color="neutral"
-                  variant="outline"
-                  size="sm"
-                  icon="i-lucide-trash-2"
-                  aria-label="Delete GUID"
-                  @click="deleteGUID(index, guid)"
-                  label="Delete"
-                />
-              </div>
-            </template>
+      <UAlert
+        v-if="loadError"
+        color="error"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Unable to load custom GUIDs and links"
+        :description="loadError"
+      />
 
-            <p class="text-sm leading-6 text-default">
-              {{ guid.description || 'No description provided.' }}
-            </p>
-          </UCard>
+      <div
+        v-if="0 < guids.length || 0 < links.length"
+        class="flex flex-wrap items-end justify-between gap-3"
+      >
+        <UFormField label="Filter GUIDs and links" name="rule-filter" class="w-full sm:max-w-sm">
+          <UInput
+            v-model="query"
+            type="search"
+            icon="i-lucide-search"
+            placeholder="GUID, client, or mapping"
+            class="w-full"
+          />
+        </UFormField>
+        <p class="text-sm text-toned" aria-live="polite">
+          {{ filteredGuids.length }}{{ query.trim() ? ` of ${guids.length}` : '' }}
+          {{ 1 === guids.length ? 'definition' : 'definitions' }}, {{ filteredLinks.length
+          }}{{ query.trim() ? ` of ${links.length}` : '' }}
+          {{ 1 === links.length ? 'link' : 'links' }}
+        </p>
+      </div>
+
+      <section aria-labelledby="guid-definitions-heading" class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="guid-definitions-heading" class="text-lg font-semibold text-highlighted">
+            GUID definitions
+          </h2>
+          <UButton
+            color="primary"
+            variant="solid"
+            size="sm"
+            icon="i-lucide-plus"
+            :disabled="busy"
+            @click="addGuidModalOpen = true"
+            label="Add GUID"
+          />
         </div>
 
-        <UAlert
-          v-else
-          color="warning"
-          variant="soft"
-          icon="i-lucide-triangle-alert"
-          title="No custom GUIDs"
-          description="There are no custom GUIDs configured yet."
-        />
-      </section>
-
-      <section class="space-y-4">
-        <div class="space-y-1">
-          <div
-            class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-toned"
+        <ul v-if="0 < filteredGuids.length" class="ws-card divide-y divide-default">
+          <li
+            v-for="guid in filteredGuids"
+            :key="guid.id"
+            class="flex flex-wrap items-start justify-between gap-3 p-4"
           >
-            <UIcon name="i-lucide-arrow-right-left" class="size-4" />
-            <span>Client GUID Links</span>
-          </div>
-        </div>
-
-        <div v-if="links.length > 0" class="grid gap-4 xl:grid-cols-2">
-          <UCard
-            v-for="(link, index) in links"
-            :key="link.id"
-            class="h-full shadow-sm"
-            :ui="itemCardUi"
-          >
-            <template #header>
-              <div class="flex items-start justify-between gap-3">
-                <button
-                  v-if="link.replace?.from"
-                  type="button"
-                  class="flex min-w-0 flex-1 items-center gap-2 text-left text-base font-semibold text-highlighted"
-                  @click="link.show = !link.show"
-                >
-                  <UIcon
-                    :name="
-                      true === (link.show ?? false)
-                        ? 'i-lucide-chevron-up'
-                        : 'i-lucide-chevron-down'
-                    "
-                    class="size-4 shrink-0 text-toned"
-                  />
-                  <UTooltip :text="`${ucFirst(link.type)} client link`">
-                    <span class="truncate">{{ ucFirst(link.type) }} client link</span>
-                  </UTooltip>
-                </button>
-
-                <div v-else class="min-w-0 flex-1 text-base font-semibold text-highlighted">
-                  <UTooltip :text="`${ucFirst(link.type)} client link`">
-                    <span class="block truncate">{{ ucFirst(link.type) }} client link</span>
-                  </UTooltip>
-                </div>
-
-                <UButton
-                  color="neutral"
-                  variant="outline"
-                  size="sm"
-                  icon="i-lucide-trash-2"
-                  aria-label="Delete link"
-                  @click="deleteLink(index, link)"
-                  label="Delete"
-                />
-              </div>
-            </template>
-
-            <div class="grid gap-3 text-sm md:grid-cols-2">
-              <div class="rounded-md border border-default bg-elevated/40 px-3 py-2.5">
-                <div
-                  class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                >
-                  <span class="inline-flex items-center gap-2 text-toned">
-                    <UIcon name="i-lucide-chevron-right" class="size-4" />
-                    <span>From Client GUID</span>
-                  </span>
-                  <span class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">{{
-                    link.map.from
-                  }}</span>
-                </div>
-              </div>
-
-              <div class="rounded-md border border-default bg-elevated/40 px-3 py-2.5">
-                <div
-                  class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                >
-                  <span class="inline-flex items-center gap-2 text-toned">
-                    <UIcon name="i-lucide-chevron-left" class="size-4" />
-                    <span>To WatchState GUID</span>
-                  </span>
-                  <span class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">{{
-                    link.map.to
-                  }}</span>
-                </div>
-              </div>
-
-              <template v-if="link.replace?.from && 'show' in link && link.show">
-                <div class="rounded-md border border-default bg-elevated/40 px-3 py-2.5">
-                  <div
-                    class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                  >
-                    <span class="inline-flex items-center gap-2 text-toned">
-                      <UIcon name="i-lucide-x" class="size-4" />
-                      <span>Replace</span>
-                    </span>
-                    <span class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">{{
-                      link.replace.from
-                    }}</span>
-                  </div>
-                </div>
-
-                <div class="rounded-md border border-default bg-elevated/40 px-3 py-2.5">
-                  <div
-                    class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                  >
-                    <span class="inline-flex items-center gap-2 text-toned">
-                      <UIcon name="i-lucide-circle-check" class="size-4" />
-                      <span>With</span>
-                    </span>
-                    <span class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">{{
-                      link.replace.to
-                    }}</span>
-                  </div>
-                </div>
-              </template>
+            <div class="min-w-0 flex-1 space-y-1">
+              <h3 class="wrap-anywhere font-medium text-highlighted">{{ guid.name }}</h3>
+              <p v-if="guid.description" class="wrap-anywhere text-sm text-toned">
+                {{ guid.description }}
+              </p>
             </div>
-          </UCard>
-        </div>
-
-        <UAlert
-          v-else
-          color="warning"
-          variant="soft"
-          icon="i-lucide-triangle-alert"
-          title="No client GUID links"
-          description="There are no client GUID links configured yet."
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :disabled="busy || !!loadError"
+              :aria-label="`Delete GUID ${guid.name}`"
+              @click="deleteGUID(guid)"
+              label="Delete"
+            />
+          </li>
+        </ul>
+        <UEmpty
+          v-else-if="!loadError"
+          size="sm"
+          variant="naked"
+          icon="i-lucide-fingerprint"
+          :title="0 < guids.length ? 'No matching GUID definitions' : 'No custom GUIDs'"
         />
       </section>
 
-      <UCard class="shadow-sm" :ui="tipsCardUi">
-        <template #header>
-          <button
-            type="button"
-            class="flex w-full items-center justify-between gap-3 text-left"
-            @click="show_page_tips = !show_page_tips"
-          >
-            <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-              <UIcon name="i-lucide-info" class="size-4 text-toned" />
-              <span>Tips</span>
-            </span>
+      <section aria-labelledby="client-links-heading" class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="client-links-heading" class="text-lg font-semibold text-highlighted">
+            Client links
+          </h2>
+          <UButton
+            color="primary"
+            variant="solid"
+            size="sm"
+            icon="i-lucide-plus"
+            :disabled="busy"
+            @click="addLinkModalOpen = true"
+            label="Add link"
+          />
+        </div>
 
-            <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-              <UIcon
-                :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                class="size-4"
+        <ul v-if="0 < filteredLinks.length" class="ws-card divide-y divide-default">
+          <li v-for="link in filteredLinks" :key="`${link.type}-${link.id}`" class="space-y-3 p-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0 flex-1 space-y-1">
+                <h3 class="font-medium text-highlighted">{{ ucFirst(link.type) }}</h3>
+                <p class="wrap-anywhere text-sm">
+                  <span class="text-toned">Client </span>
+                  <code>{{ link.map.from }}</code>
+                  <span aria-hidden="true"> → </span>
+                  <span class="sr-only">maps to</span>
+                  <span class="text-toned">WatchState </span>
+                  <code>{{ link.map.to }}</code>
+                </p>
+              </div>
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-trash-2"
+                :disabled="busy || !!loadError"
+                :aria-label="`Delete ${ucFirst(link.type)} link ${link.map.from} to ${link.map.to}`"
+                @click="deleteLink(link)"
+                label="Delete"
               />
-              <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-            </span>
-          </button>
-        </template>
+            </div>
 
-        <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
-          <li>
-            Using this feature allows you to extend <code>WatchState</code> to support more less
-            known or regional specific metadata databases. We cannot add support directly to all
-            databases, so this feature instead allows you to do it manually.
+            <details
+              v-if="
+                'plex' === link.type && (undefined !== link.options?.legacy || link.replace?.from)
+              "
+              class="text-sm"
+            >
+              <summary class="w-fit cursor-pointer font-medium text-toned">Plex options</summary>
+              <dl class="mt-3 space-y-2">
+                <div v-if="undefined !== link.options?.legacy" class="flex flex-wrap gap-x-3">
+                  <dt class="text-toned">Legacy agent</dt>
+                  <dd>{{ link.options.legacy ? 'Yes' : 'No' }}</dd>
+                </div>
+                <template v-if="link.replace?.from">
+                  <div class="space-y-1">
+                    <dt class="text-toned">Search for</dt>
+                    <dd class="wrap-anywhere font-mono">{{ link.replace.from }}</dd>
+                  </div>
+                  <div class="space-y-1">
+                    <dt class="text-toned">Replace with</dt>
+                    <dd class="wrap-anywhere font-mono">{{ link.replace.to }}</dd>
+                  </div>
+                </template>
+              </dl>
+            </details>
           </li>
+        </ul>
+        <UEmpty
+          v-else-if="!loadError"
+          size="sm"
+          variant="naked"
+          icon="i-lucide-arrow-right-left"
+          :title="0 < links.length ? 'No matching client links' : 'No client links'"
+        />
+      </section>
+
+      <details class="text-sm">
+        <summary class="w-fit cursor-pointer font-medium text-toned">GUID setup notes</summary>
+        <ul class="mt-3 list-disc space-y-2 pl-5 text-toned">
+          <li>A custom definition needs a client link before WatchState can parse its GUIDs.</li>
+          <li>GUID names must be unique. Each client GUID can link to only one WatchState GUID.</li>
           <li>
-            Adding a custom GUID without a client link is useless because the parsing engine will
-            not know what to do with it, so make sure to add a client GUID link referencing the
-            custom GUID.
-          </li>
-          <li>The GUID names are unique, so you cannot reuse an existing one.</li>
-          <li>
-            You cannot add a link from the same client GUID twice. For example, you cannot add
-            <code>jellyfin:foobar -> WatchState:guid_foobar</code> and another for
-            <code>jellyfin:foobar -> guid_imdb</code>.
-          </li>
-          <li>
-            Editing the <code>guid.yaml</code> file directly is unsupported and might lead to
-            unexpected behavior. Use the Web UI to manage GUIDs so the built-in safeguards stay in
-            place.
-          </li>
-          <li>
-            If you added or removed a custom GUID, you should run
+            After adding or removing a definition, run
             <NuxtLink
               :to="makeConsoleCommand('db:index --force-reindex')"
               class="text-primary hover:underline"
             >
-              <span class="inline-flex items-center gap-1">
-                <UIcon name="i-lucide-terminal" class="size-4" />
-                <span>db:index --force-reindex</span>
-              </span>
+              <code>db:index --force-reindex</code>
             </NuxtLink>
-            to rebuild the database indexes.
+            in Console.
           </li>
           <li>
-            The links are global for each client, not for a single backend. If you add a new
-            Jellyfin GUID link, it applies to all Jellyfin backends.
-          </li>
-          <li>
-            For more information, read <code>FAQ.md</code> or open
             <NuxtLink
-              target="_blank"
-              to="https://github.com/arabcoders/watchstate/blob/master/FAQ.md#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones"
-              class="text-primary hover:underline"
+              to="/help/faq#advanced-how-to-extend-the-guid-parser-to-support-more-guids-or-custom-ones"
+              class="inline-flex items-center gap-1 text-primary hover:underline"
             >
-              <span class="inline-flex items-center gap-1">
-                <UIcon name="i-lucide-external-link" class="size-4" />
-                <span>this link</span>
-              </span>
+              Custom GUID setup guide
+              <UIcon name="i-lucide-book-open" class="size-3.5" />
             </NuxtLink>
-            directly.
           </li>
         </ul>
-      </UCard>
-
-      <UModal
-        :open="addGuidModalOpen"
-        title="Add Custom GUID"
-        :ui="formModalUi"
-        @update:open="handleAddGuidOpenChange"
-      >
-        <template #body>
-          <CustomGuidForm
-            v-if="addGuidModalOpen"
-            @cancel="() => void requestCloseAddGuid()"
-            @saved="handleGuidSaved"
-            @dirty-change="(dirty) => (addGuidDirty = dirty)"
-          />
-        </template>
-      </UModal>
-
-      <UModal
-        :open="addLinkModalOpen"
-        title="Add Client GUID Link"
-        :ui="formModalUi"
-        @update:open="handleAddLinkOpenChange"
-      >
-        <template #body>
-          <CustomLinkForm
-            v-if="addLinkModalOpen"
-            @cancel="() => void requestCloseAddLink()"
-            @saved="handleLinkSaved"
-            @dirty-change="(dirty) => (addLinkDirty = dirty)"
-          />
-        </template>
-      </UModal>
+      </details>
     </template>
+
+    <UModal
+      :open="addGuidModalOpen"
+      title="Add GUID"
+      :ui="formModalUi"
+      :dismissible="!addGuidSaving"
+      :close="!addGuidSaving"
+      @update:open="handleAddGuidOpenChange"
+    >
+      <template #body>
+        <CustomGuidForm
+          v-if="addGuidModalOpen"
+          :actions-target="`#${addGuidFooterId}`"
+          @saved="handleGuidSaved"
+          @dirty-change="(dirty) => (addGuidDirty = dirty)"
+          @saving-change="(saving) => (addGuidSaving = saving)"
+        />
+      </template>
+      <template #footer>
+        <div :id="addGuidFooterId" class="w-full" />
+      </template>
+    </UModal>
+
+    <UModal
+      :open="addLinkModalOpen"
+      title="Add client link"
+      :ui="formModalUi"
+      :dismissible="!addLinkSaving"
+      :close="!addLinkSaving"
+      @update:open="handleAddLinkOpenChange"
+    >
+      <template #body>
+        <CustomLinkForm
+          v-if="addLinkModalOpen"
+          :actions-target="`#${addLinkFooterId}`"
+          @saved="handleLinkSaved"
+          @dirty-change="(dirty) => (addLinkDirty = dirty)"
+          @saving-change="(saving) => (addLinkSaving = saving)"
+        />
+      </template>
+      <template #footer>
+        <div :id="addLinkFooterId" class="w-full" />
+      </template>
+    </UModal>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, useId } from 'vue';
 import { useHead } from '#app';
-import { useStorage } from '@vueuse/core';
+import { NuxtLink, UAlert, UButton, UEmpty, UFormField, UIcon, UInput, UModal } from '#components';
 import CustomGuidForm from '~/components/CustomGuidForm.vue';
 import CustomLinkForm from '~/components/CustomLinkForm.vue';
 import PageHeader from '~/components/PageHeader.vue';
@@ -347,56 +266,81 @@ import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { request, makeConsoleCommand, notification, parse_api_response, ucFirst } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
-import type { CustomGUID, CustomLink, GenericError, GenericResponse } from '~/types';
+import type { CustomGUID, CustomLink, GenericResponse } from '~/types';
 
-type CustomLinkWithUI = CustomLink & { show?: boolean };
-useHead({ title: 'Custom Guids' });
+useHead({ title: 'Custom GUIDs' });
 
 const pageShell = requireTopLevelPageShell('custom');
-
+const addGuidFooterId = useId();
+const addLinkFooterId = useId();
 const guids = ref<Array<CustomGUID>>([]);
-const links = ref<Array<CustomLinkWithUI>>([]);
-const show_page_tips = useStorage('show_page_tips', true);
-const isLoading = ref<boolean>(false);
-const addGuidModalOpen = ref<boolean>(false);
-const addLinkModalOpen = ref<boolean>(false);
-const addGuidDirty = ref<boolean>(false);
-const addLinkDirty = ref<boolean>(false);
+const links = ref<Array<CustomLink>>([]);
+const query = ref('');
+const isLoading = ref(false);
+const isDeleting = ref(false);
+const loadError = ref('');
+const addGuidModalOpen = ref(false);
+const addLinkModalOpen = ref(false);
+const addGuidDirty = ref(false);
+const addLinkDirty = ref(false);
+const addGuidSaving = ref(false);
+const addLinkSaving = ref(false);
 const dialog = useDialog();
+let disposed = false;
 
-const itemCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
+const busy = computed(
+  () =>
+    isLoading.value ||
+    isDeleting.value ||
+    addGuidModalOpen.value ||
+    addLinkModalOpen.value ||
+    addGuidSaving.value ||
+    addLinkSaving.value,
+);
 
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
+const filteredGuids = computed(() => {
+  const filter = query.value.trim().toLowerCase();
+  return guids.value.filter((guid) =>
+    [guid.name, guid.description].some((value) => value.toLowerCase().includes(filter)),
+  );
+});
+
+const filteredLinks = computed(() => {
+  const filter = query.value.trim().toLowerCase();
+  return links.value.filter((link) =>
+    [link.type, link.map.from, link.map.to, link.replace?.from ?? '', link.replace?.to ?? ''].some(
+      (value) => value.toLowerCase().includes(filter),
+    ),
+  );
+});
 
 const formModalUi = {
-  content: 'sm:max-w-4xl',
+  content: 'sm:max-w-3xl',
   body: 'p-4 sm:p-5',
 };
 
-const { handleOpenChange: handleAddGuidOpenChange, requestClose: requestCloseAddGuid } =
-  useDirtyCloseGuard(addGuidModalOpen, {
-    dirty: addGuidDirty,
-    onDiscard: async () => {
-      addGuidDirty.value = false;
-    },
-  });
+const { handleOpenChange: handleAddGuidOpenChange } = useDirtyCloseGuard(addGuidModalOpen, {
+  dirty: addGuidDirty,
+  onDiscard: () => {
+    addGuidDirty.value = false;
+  },
+});
 
-const { handleOpenChange: handleAddLinkOpenChange, requestClose: requestCloseAddLink } =
-  useDirtyCloseGuard(addLinkModalOpen, {
-    dirty: addLinkDirty,
-    onDiscard: async () => {
-      addLinkDirty.value = false;
-    },
-  });
+const { handleOpenChange: handleAddLinkOpenChange } = useDirtyCloseGuard(addLinkModalOpen, {
+  dirty: addLinkDirty,
+  onDiscard: () => {
+    addLinkDirty.value = false;
+  },
+});
 
 const loadContent = async (): Promise<void> => {
+  if (disposed || busy.value) {
+    return;
+  }
+
   isLoading.value = true;
+  loadError.value = '';
+
   try {
     const response = await request('/system/guids/custom');
     const data = await parse_api_response<{
@@ -404,31 +348,34 @@ const loadContent = async (): Promise<void> => {
       links: Record<string, CustomLink>;
     }>(response);
 
-    if ('error' in data) {
-      notification('error', 'Error', data.error.message);
+    if (disposed) {
       return;
     }
 
-    // Clear existing data
-    guids.value = [];
-    links.value = [];
+    if ('error' in data) {
+      loadError.value = data.error.message;
+      notification('error', 'Unable to load custom GUIDs and links', data.error.message);
+      return;
+    }
 
-    // Convert object values to arrays
     guids.value = Object.values(data.guids);
-    links.value = Object.values(data.links).map((link) => ({
-      ...link,
-      show: false,
-    }));
+    links.value = Object.values(data.links);
   } catch (error: unknown) {
+    if (disposed) {
+      return;
+    }
+
     const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', message);
+    loadError.value = message;
+    notification('error', 'Unable to load custom GUIDs and links', message);
   } finally {
     isLoading.value = false;
   }
 };
 
-onMounted(async (): Promise<void> => {
-  await loadContent();
+onMounted(loadContent);
+onBeforeUnmount(() => {
+  disposed = true;
 });
 
 const handleGuidSaved = async (): Promise<void> => {
@@ -443,71 +390,111 @@ const handleLinkSaved = async (): Promise<void> => {
   await loadContent();
 };
 
-const deleteGUID = async (index: number, guid: CustomGUID): Promise<void> => {
-  const { status } = await dialog.confirmDialog({
-    title: 'Delete GUID',
-    message: `Delete '${guid.name}'? links using this GUID will be deleted as well.`,
-    confirmColor: 'error',
-  });
-
-  if (true !== status) {
+const deleteGUID = async (guid: CustomGUID): Promise<void> => {
+  if (disposed || busy.value || loadError.value || !guid.id) {
     return;
   }
 
+  const { id, name } = guid;
+  const currentGuids = guids.value;
+  const currentLinks = links.value;
+  isDeleting.value = true;
+
   try {
-    const response = await request(`/system/guids/custom/${guid.id}`, { method: 'DELETE' });
-    if (!response.ok) {
-      const result = await parse_api_response<GenericResponse>(response);
-      if ('error' in result) {
-        const errorJson = result as GenericError;
-        notification('error', 'Error', errorJson.error.message);
-      } else {
-        notification('error', 'Error', 'Failed to delete GUID.');
-      }
+    const { status } = await dialog.confirmDialog({
+      title: 'Delete GUID',
+      message: `Delete '${name}'? All client links to this GUID will also be deleted.`,
+      confirmText: 'Delete GUID',
+      confirmColor: 'error',
+    });
+
+    if (
+      true !== status ||
+      disposed ||
+      currentGuids !== guids.value ||
+      currentLinks !== links.value
+    ) {
       return;
     }
 
-    guids.value.splice(index, 1);
-    links.value = links.value.filter((link) => link.map.to !== guid.name);
+    const response = await request(`/system/guids/custom/${id}`, { method: 'DELETE' });
+    if (disposed) {
+      return;
+    }
 
-    notification('success', 'Success', `The GUID '${guid.name}' has been deleted.`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', message);
+    if (!response.ok) {
+      const result = await parse_api_response<GenericResponse>(response);
+      notification(
+        'error',
+        'GUID not deleted',
+        'error' in result ? result.error.message : 'Failed to delete GUID.',
+      );
+      return;
+    }
+
+    guids.value = guids.value.filter((item) => id !== item.id);
+    links.value = links.value.filter((link) => name !== link.map.to);
+    notification('success', 'GUID deleted', `'${name}' and its client links were removed.`);
+  } catch (error: unknown) {
+    if (!disposed) {
+      const message = error instanceof Error ? error.message : 'Unexpected error';
+      notification('error', 'GUID not deleted', message);
+    }
+  } finally {
+    isDeleting.value = false;
   }
 };
 
-const deleteLink = async (index: number, link: CustomLinkWithUI): Promise<void> => {
-  const { status } = await dialog.confirmDialog({
-    title: 'Delete Link',
-    message: `Are you sure you want to delete the '${link.type}' - '${link.id}'?`,
-    confirmColor: 'error',
-  });
-
-  if (true !== status) {
+const deleteLink = async (link: CustomLink): Promise<void> => {
+  if (disposed || busy.value || loadError.value || !link.id) {
     return;
   }
 
+  const { id, type } = link;
+  const { from, to } = link.map;
+  const currentLinks = links.value;
+  isDeleting.value = true;
+
   try {
-    const response = await request(`/system/guids/custom/${link.type}/${link.id}`, {
-      method: 'DELETE',
+    const { status } = await dialog.confirmDialog({
+      title: 'Delete client link',
+      message: `Delete the ${ucFirst(type)} link from '${from}' to '${to}'? This removes the mapping for all ${ucFirst(type)} backends.`,
+      confirmText: 'Delete link',
+      confirmColor: 'error',
     });
-    if (!response.ok) {
-      const result = await parse_api_response<GenericResponse>(response);
-      if ('error' in result) {
-        const errorJson = result as GenericError;
-        notification('error', 'Error', errorJson.error.message);
-      } else {
-        notification('error', 'Error', 'Failed to delete link.');
-      }
+
+    if (true !== status || disposed || currentLinks !== links.value) {
       return;
     }
 
-    links.value.splice(index, 1);
-    notification('success', 'Success', `The link '${link.type}' - '${link.id}' has been deleted.`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', message);
+    const response = await request(`/system/guids/custom/${type}/${id}`, { method: 'DELETE' });
+    if (disposed) {
+      return;
+    }
+
+    if (!response.ok) {
+      const result = await parse_api_response<GenericResponse>(response);
+      notification(
+        'error',
+        'Link not deleted',
+        'error' in result ? result.error.message : 'Failed to delete link.',
+      );
+      return;
+    }
+
+    links.value = links.value.filter((item) => id !== item.id || type !== item.type);
+    notification(
+      'success',
+      'Link deleted',
+      `The ${ucFirst(type)} link from '${from}' to '${to}' has been deleted.`,
+    );
+  } catch (error: unknown) {
+    if (!disposed) {
+      const message = error instanceof Error ? error.message : 'Unexpected error';
+      notification('error', 'Link not deleted', message);
+    }
+  } finally {
+    isDeleting.value = false;
   }
 };
 </script>

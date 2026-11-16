@@ -1,5 +1,17 @@
 # NEWS
 
+### 2026-10-21
+
+**Updating to WatchState v1.10.9 or later is recommended** following the PHP2Shell disclosure
+([CVE-2026-109618](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w) and
+[CVE-2026-109619](https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp)). These vulnerabilities affect
+the PHP runtime and can allow unauthenticated remote code execution; they are not bugs in WatchState itself.
+Pull the updated container image and recreate the container, as restarting alone does not update the bundled runtime.
+
+### 2026-09-15
+
+Path matching is now enabled by default. WatchState will generate `guid_path` values for new and refreshed movie and episode records unless `WS_GUID_PATH_ENABLED` is explicitly disabled. Existing records still need a full import before they can match by path. See the [path matching guide](/guides/path-match.md) for details.
+
 ### 2026-07-20
 
 Media Health is now the central place to audit media record problems. It replaces the 

@@ -1360,7 +1360,7 @@ final class Index
         }
 
         usort($logs, static function (array $left, array $right): int {
-            if (0 !== ($dateCmp = strcmp((string) ag($right, 'entry.datetime', ''), (string) ag($left, 'entry.datetime', '')))) {
+            if (0 !== ($dateCmp = strcmp((string) ag($left, 'entry.datetime', ''), (string) ag($right, 'entry.datetime', '')))) {
                 return $dateCmp;
             }
 

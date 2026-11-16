@@ -11,22 +11,25 @@
               </div>
 
               <h1 class="text-2xl font-semibold text-highlighted sm:text-3xl">
-                {{ error.status || 'Unknown Error' }}
+                {{ error.status || 'Unknown error' }}
                 <span v-if="error.statusText"> - {{ error.statusText }}</span>
               </h1>
 
-              <p class="max-w-3xl text-sm leading-6 text-toned">
-                An unexpected error interrupted this view. You can go back home or retry the current
-                route.
-              </p>
+              <p class="max-w-3xl text-sm leading-6 text-toned">This page couldn't be loaded.</p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2 lg:justify-end">
               <UButton color="neutral" variant="outline" size="sm" icon="i-lucide-house" to="/">
-                Back to Home
+                Overview
               </UButton>
 
-              <UButton color="primary" size="sm" icon="i-lucide-rotate-cw" @click="handleRetry">
+              <UButton
+                color="primary"
+                variant="solid"
+                size="sm"
+                icon="i-lucide-rotate-cw"
+                @click="handleRetry"
+              >
                 Retry
               </UButton>
             </div>
@@ -70,7 +73,9 @@
 </template>
 
 <script setup lang="ts">
-import type { NuxtError } from '#app';
+import { onMounted, ref } from 'vue';
+import { clearError, useRoute, type NuxtError } from '#app';
+import { NuxtLayout, UAlert, UButton, UIcon } from '#components';
 
 const props = defineProps<{
   error: NuxtError;

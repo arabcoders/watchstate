@@ -1,7 +1,7 @@
 <template>
   <div class="ws-page-header">
     <div class="ws-page-heading" :class="headingClass">
-      <span class="ws-page-icon">
+      <span class="ws-page-icon hidden sm:inline-flex">
         <slot name="icon">
           <UIcon :name="icon" class="size-5" />
         </slot>
@@ -11,11 +11,12 @@
         <div class="ws-page-kicker">
           <slot name="kicker">
             <span>{{ sectionLabel }}</span>
-            <span>/</span>
-            <span>{{ pageLabel }}</span>
           </slot>
         </div>
 
+        <h1 class="text-2xl font-semibold tracking-tight text-highlighted sm:text-3xl">
+          {{ pageLabel }}
+        </h1>
         <p v-if="description" class="max-w-3xl text-sm text-toned">{{ description }}</p>
       </div>
     </div>
@@ -30,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+import { UIcon } from '#components';
 import type { WatchStatePageHeaderProps } from '~/types';
 
 withDefaults(defineProps<WatchStatePageHeaderProps>(), {

@@ -97,8 +97,9 @@
               <UButton
                 color="neutral"
                 variant="outline"
-                icon="i-lucide-trash-2"
+                icon="i-lucide-x"
                 aria-label="Remove filter"
+                title="Remove filter"
                 :disabled="loading"
                 @click="advanced.splice(index, 1)"
               />
@@ -121,11 +122,19 @@
 
       <p v-if="validationError" class="text-sm text-error" role="alert">{{ validationError }}</p>
       <div class="flex flex-wrap items-center justify-end gap-2">
-        <UButton color="neutral" variant="outline" size="sm" :disabled="loading" @click="reset"
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-rotate-ccw"
+          :disabled="loading"
+          @click="reset"
           >Reset</UButton
         >
         <UButton
           type="submit"
+          color="primary"
+          variant="solid"
           size="sm"
           icon="i-lucide-search"
           :loading="loading"

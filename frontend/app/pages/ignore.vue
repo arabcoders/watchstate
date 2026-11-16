@@ -1,358 +1,307 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
+    <PageHeader
+      v-bind="pageShell"
+      description="Exclude incorrect GUIDs from matching on a backend."
+    >
+      <template #kicker>
+        <span>{{ pageShell.pageLabel }}</span>
+        <span>/</span>
+        <span>{{ ucFirst(apiUser) }}</span>
+      </template>
       <template #actions>
-        <UTooltip text="Add new ignore rule">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-plus"
-            @click="openAddForm"
-            label="Add"
-          />
-        </UTooltip>
-
-        <UTooltip text="Reload rules">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-refresh-cw"
-            :loading="isLoading"
-            :disabled="isLoading"
-            @click="loadContent"
-            label="Reload"
-          />
-        </UTooltip>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-refresh-cw"
+          :loading="isLoading"
+          :disabled="isLoading || isSaving || null !== deletingRule"
+          @click="() => void loadContent()"
+        >
+          Reload
+        </UButton>
+        <UButton
+          color="primary"
+          variant="solid"
+          size="sm"
+          icon="i-lucide-plus"
+          :disabled="isLoading || !!loadError || isSaving || null !== deletingRule"
+          @click="openAddForm"
+        >
+          Add rule
+        </UButton>
       </template>
     </PageHeader>
 
-    <UAlert
-      v-if="isLoading"
-      color="info"
-      variant="soft"
-      icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
-      :ui="{ icon: 'animate-spin' }"
-    />
+    <section aria-label="Ignore rules" :aria-busy="isLoading" class="space-y-4">
+      <div v-if="0 < items.length" class="flex flex-wrap items-end justify-between gap-3">
+        <UFormField label="Filter rules" name="ignore_filter" class="w-full sm:max-w-sm">
+          <UInput
+            id="ignore_filter"
+            v-model="filter"
+            icon="i-lucide-search"
+            placeholder="GUID, backend, type or source item"
+            class="w-full"
+          />
+        </UFormField>
+        <p v-if="!isLoading && !loadError" class="text-sm text-toned" aria-live="polite">
+          {{ filteredItems.length }}{{ filter.trim() ? ` of ${items.length}` : '' }}
+          {{ 1 === items.length ? 'rule' : 'rules' }}
+        </p>
+      </div>
 
-    <UAlert
-      v-else-if="0 === items.length"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-triangle-alert"
-      title="No ignore rules"
-    >
-      <template #description>
-        <div class="space-y-2 text-sm text-default">
-          <p>
-            There are no ignore rules configured.
-            <UButton
-              color="primary"
-              variant="link"
-              size="sm"
-              icon="i-lucide-plus"
-              class="px-0"
-              @click="openAddForm"
-            >
-              Add a new rule
-            </UButton>
-          </p>
-        </div>
-      </template>
-    </UAlert>
+      <UAlert
+        v-if="isLoading"
+        color="info"
+        variant="soft"
+        icon="i-lucide-loader-circle"
+        title="Loading ignore rules"
+        :ui="{ icon: 'animate-spin' }"
+      />
 
-    <div v-else class="grid gap-4 xl:grid-cols-2">
-      <UCard v-for="item in items" :key="item.rule" class="h-full shadow-sm" :ui="ruleCardUi">
-        <template #header>
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex flex-1 items-start gap-2">
-              <UIcon :name="getItemTypeIcon(item.type)" class="mt-0.5 size-4 shrink-0 text-toned" />
+      <UAlert
+        v-else-if="loadError"
+        color="error"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Unable to load ignore rules"
+        :description="loadError"
+      />
 
-              <div class="min-w-0">
-                <UTooltip :text="String(getItemTitle(item))">
-                  <div class="truncate text-base font-semibold text-highlighted">
-                    {{ getItemTitle(item) }}
-                  </div>
-                </UTooltip>
-              </div>
+      <UEmpty v-else-if="0 === items.length" icon="i-lucide-list-filter" title="No ignore rules" />
+
+      <UEmpty
+        v-else-if="0 === filteredItems.length"
+        icon="i-lucide-search"
+        title="No matching rules"
+      />
+
+      <div v-else class="ws-card divide-y divide-default">
+        <article
+          v-for="item in filteredItems"
+          :key="item.rule"
+          class="grid grid-cols-2 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.6fr)_auto]"
+        >
+          <div class="col-span-2 min-w-0 space-y-2 xl:col-span-1">
+            <h2 class="wrap-anywhere font-mono text-base font-semibold text-highlighted">
+              <NuxtLink
+                v-if="makeGUIDLink(item.type, item.db, item.id)"
+                :to="makeGUIDLink(item.type, item.db, item.id)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hover:text-primary hover:underline underline-offset-2"
+                :aria-label="`View ${item.guid} (opens in a new tab)`"
+              >
+                {{ item.guid }}
+              </NuxtLink>
+              <span v-else>{{ item.guid }}</span>
+            </h2>
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-toned">
+              <span class="inline-flex items-center gap-1.5">
+                <UIcon :name="getItemTypeIcon(item.type)" class="size-4" />
+                {{ item.type }}
+              </span>
+              <span aria-hidden="true">·</span>
+              <NuxtLink
+                :to="`/backend/${encodeURIComponent(item.backend)}`"
+                class="text-primary hover:underline underline-offset-2"
+              >
+                {{ item.backend }}
+              </NuxtLink>
             </div>
+          </div>
 
-            <div class="flex flex-wrap items-center justify-end gap-2">
+          <dl class="min-w-0 space-y-1 text-sm">
+            <dt class="text-xs text-muted">Source item</dt>
+            <dd v-if="item.scoped" class="space-y-1">
+              <NuxtLink
+                :to="makeItemLink(item)"
+                class="wrap-anywhere font-mono text-primary hover:underline underline-offset-2"
+              >
+                {{ item.scoped_to }}
+              </NuxtLink>
+              <p v-if="item.title" class="wrap-anywhere text-xs text-toned">
+                {{ item.title }}
+              </p>
+            </dd>
+            <dd v-else>All items</dd>
+          </dl>
+
+          <dl class="min-w-0 space-y-1 text-sm">
+            <dt class="text-xs text-muted">Created</dt>
+            <dd>
+              <UTooltip :text="moment(item.created).format(TOOLTIP_DATE_FORMAT)">
+                <time :datetime="item.created" class="cursor-help">
+                  {{ moment(item.created).fromNow() }}
+                </time>
+              </UTooltip>
+            </dd>
+          </dl>
+
+          <div class="col-span-2 flex flex-wrap items-start gap-2 xl:col-span-1 xl:justify-end">
+            <UTooltip text="Copy rule">
               <UButton
                 color="neutral"
                 variant="outline"
                 size="sm"
                 icon="i-lucide-copy"
+                :aria-label="`Copy rule for ${item.guid}`"
                 @click="copyText(item.rule)"
-              >
-                <span class="hidden sm:inline">Copy</span>
-              </UButton>
-
-              <UButton
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-trash-2"
-                @click="deleteIgnore(item)"
-                label="Delete"
               />
-            </div>
-          </div>
-        </template>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-            <div class="mb-1 inline-flex items-center gap-2 text-xs font-medium text-toned">
-              <UIcon name="i-lucide-server" class="size-4" />
-              <span>Backend</span>
-            </div>
-
-            <div class="text-sm text-default">
-              <NuxtLink :to="`/backend/${item.backend}`" class="hover:text-primary">{{
-                item.backend
-              }}</NuxtLink>
-            </div>
-          </div>
-
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-            <div class="mb-1 inline-flex items-center gap-2 text-xs font-medium text-toned">
-              <UIcon name="i-lucide-crosshair" class="size-4" />
-              <span>Scoped To</span>
-            </div>
-
-            <div
-              class="text-sm text-default"
-              :class="item.scoped_to ? expandableInlineClass(item.expandScopedTo, true) : ''"
-              @click="item.scoped_to ? (item.expandScopedTo = !item.expandScopedTo) : undefined"
+            </UTooltip>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :loading="item.rule === deletingRule"
+              :disabled="isSaving || null !== deletingRule"
+              :aria-label="`Delete rule for ${item.guid}`"
+              @click="() => void deleteIgnore(item)"
             >
-              <NuxtLink v-if="item.scoped_to" :to="makeItemLink(item)" class="hover:text-primary">
-                {{ item.scoped_to }}
-              </NuxtLink>
-              <span v-else>Global</span>
-            </div>
+              Delete
+            </UButton>
           </div>
-
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-            <div class="mb-1 inline-flex items-center gap-2 text-xs font-medium text-toned">
-              <UIcon name="i-lucide-database" class="size-4" />
-              <span>GUID</span>
-            </div>
-
-            <div
-              class="text-sm text-default"
-              :class="expandableInlineClass(item.expandGuid, true)"
-              @click="item.expandGuid = !item.expandGuid"
-            >
-              <NuxtLink
-                target="_blank"
-                :to="makeGUIDLink(item.type, item.db, item.id)"
-                class="hover:text-primary"
-              >
-                {{ `${item.db}://${item.id}` }}
-              </NuxtLink>
-            </div>
-          </div>
-
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-            <div class="mb-1 inline-flex items-center gap-2 text-xs font-medium text-toned">
-              <UIcon name="i-lucide-calendar" class="size-4" />
-              <span>Created</span>
-            </div>
-
-            <div class="text-sm text-default">
-              <UTooltip :text="`Created at: ${moment(item.created).format(TOOLTIP_DATE_FORMAT)}`">
-                <span class="cursor-help">{{ moment(item.created).fromNow() }}</span>
-              </UTooltip>
-            </div>
-          </div>
-        </div>
-      </UCard>
-    </div>
+        </article>
+      </div>
+    </section>
 
     <UModal
       :open="toggleForm"
-      title="Add Ignore rule"
+      title="Add ignore rule"
       :ui="formModalUi"
+      :dismissible="!isSaving"
+      :close="!isSaving"
       @update:open="handleFormOpenChange"
     >
       <template #body>
         <form id="ignore_form" class="space-y-5" @submit.prevent="addIgnoreRule">
-          <UFormField
-            label="Backend"
-            name="form_select_backend"
-            description="Ignore rules apply to backends. You must select the correct backend you want to ignore the GUID from."
-          >
-            <USelect
-              id="form_select_backend"
-              v-model="form.backend"
-              :items="backendItems"
-              value-key="value"
-              placeholder="Select Backend"
-              icon="i-lucide-server"
-              class="w-full"
-            />
-          </UFormField>
+          <UAlert
+            color="warning"
+            variant="soft"
+            icon="i-lucide-triangle-alert"
+            title="Ignore only incorrect GUIDs"
+            description="Ignoring a valid GUID can prevent items from matching."
+          />
 
-          <UFormField
-            label="Provider"
-            name="form_select_guid"
-            description="You must select the GUID provider that is giving you incorrect data."
-          >
-            <USelect
-              id="form_select_guid"
-              v-model="form.db"
-              :items="guidItems"
-              value-key="value"
-              placeholder="Select GUID provider"
-              icon="i-lucide-database"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="GUID value"
-            name="form_ignore_id"
-            description="The GUID value to ignore."
-          >
-            <UInput
-              id="form_ignore_id"
-              v-model="form.id"
-              type="text"
-              icon="i-lucide-type"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Type"
-            name="form_type"
-            description="What kind of data does the GUID value reference?"
-          >
-            <USelect
-              id="form_type"
-              v-model="form.type"
-              :items="typeItems"
-              value-key="value"
-              placeholder="Select type"
-              icon="i-lucide-clapperboard"
-              class="w-full"
-            />
-          </UFormField>
-
-          <div class="rounded-md border border-default bg-elevated/30 px-3 py-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-highlighted">Scoped rule</div>
-                <p class="mt-1 text-sm leading-6 text-toned">
-                  By default, rules are globally applied to all items from the selected backend. You
-                  can limit the scope by enabling this option.
-                </p>
-              </div>
-
-              <USwitch
-                :model-value="form.scoped"
-                color="neutral"
-                @update:model-value="(value) => (form.scoped = true === value)"
+          <fieldset :disabled="isSaving" class="space-y-5">
+            <UFormField label="Backend" name="form_select_backend">
+              <USelect
+                id="form_select_backend"
+                v-model="form.backend"
+                :items="backendItems"
+                value-key="value"
+                placeholder="Select backend"
+                icon="i-lucide-server"
+                class="w-full"
               />
-            </div>
-          </div>
+            </UFormField>
 
-          <UFormField v-if="form.scoped" label="Scoped to" name="form_scoped_to">
-            <UInput
-              id="form_scoped_to"
-              v-model="scopedToValue"
-              type="text"
-              icon="i-lucide-type"
-              class="w-full"
+            <UFormField label="Provider" name="form_select_guid">
+              <USelect
+                id="form_select_guid"
+                v-model="form.db"
+                :items="guidItems"
+                value-key="value"
+                placeholder="Select GUID provider"
+                icon="i-lucide-database"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField label="GUID value" name="form_ignore_id">
+              <UInput
+                id="form_ignore_id"
+                v-model="form.id"
+                type="text"
+                icon="i-lucide-type"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField label="Type" name="form_type">
+              <USelect
+                id="form_type"
+                v-model="form.type"
+                :items="typeItems"
+                value-key="value"
+                placeholder="Select type"
+                icon="i-lucide-clapperboard"
+                class="w-full"
+              />
+            </UFormField>
+
+            <USwitch
+              v-model="form.scoped"
+              color="neutral"
+              label="Limit to one source item"
+              description="Otherwise, this rule applies to all matching items on this backend for this identity."
             />
 
-            <p class="text-sm leading-6 text-toned">
-              The id to associate this rule with. The value must be the <code>{{ form.type }}</code>
-              id as being reported by the backend.
-            </p>
-          </UFormField>
+            <UFormField
+              v-if="form.scoped"
+              label="Source item ID"
+              name="form_scoped_to"
+              :description="`Use the ${form.type || 'item'} ID reported by the selected backend, not the WatchState history ID.`"
+              required
+            >
+              <UInput
+                id="form_scoped_to"
+                v-model="scopedToValue"
+                type="text"
+                icon="i-lucide-type"
+                class="w-full"
+                required
+              />
+            </UFormField>
+          </fieldset>
         </form>
       </template>
 
       <template #footer>
-        <div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-x"
-            class="justify-center"
-            type="button"
-            @click="cancelForm"
-          >
-            Cancel
-          </UButton>
-
+        <div class="flex w-full justify-end">
           <UButton
             color="primary"
             variant="solid"
             size="sm"
             icon="i-lucide-save"
-            class="justify-center"
             type="submit"
             form="ignore_form"
-            :disabled="false === checkForm"
+            :loading="isSaving"
+            :disabled="!checkForm || isSaving"
           >
             Save
           </UButton>
         </div>
       </template>
     </UModal>
-
-    <UCard class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
-
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
-      </template>
-
-      <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
-        <li>
-          Ignoring specific GUIDs sometimes helps prevent incorrect data being added to WatchState,
-          due to incorrect metadata being provided by backends.
-        </li>
-        <li>
-          <code>GUID</code> means, in terms of WatchState, the unique identifier for a specific item
-          in the external data source.
-        </li>
-      </ul>
-    </UCard>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { useHead, useRoute } from '#app';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useHead } from '#app';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
 import PageHeader from '~/components/PageHeader.vue';
+import {
+  NuxtLink,
+  UAlert,
+  UButton,
+  UEmpty,
+  UFormField,
+  UIcon,
+  UInput,
+  UModal,
+  USelect,
+  USwitch,
+  UTooltip,
+} from '#components';
 import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { useDialog } from '~/composables/useDialog';
 import { useDirtyState } from '~/composables/useDirtyState';
-import type { GenericResponse, GuidProvider, IgnoreItem } from '~/types';
+import type { Backend, GenericResponse, GuidProvider, IgnoreItem } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   copyText,
@@ -365,93 +314,84 @@ import {
   ucFirst,
 } from '~/utils';
 
-type BackendItem = {
-  name: string;
-  type?: string;
-};
-
-type IgnoreFormState = {
-  id: string;
-  type: string;
-  backend: string;
-  db: string;
-  scoped: boolean;
-  scoped_to: string | null;
-};
-
-type SelectItem = {
-  label: string;
-  value: string;
-};
-
-type IgnoreCardItem = IgnoreItem & {
-  expandScopedTo?: boolean;
-  expandGuid?: boolean;
-};
-
 useHead({ title: 'Ignore rules' });
 
 const pageShell = requireTopLevelPageShell('ignore');
-
-const route = useRoute();
+const apiUser = useStorage<string>('api_user', 'main');
 const dialog = useDialog();
-
 const types = ['show', 'movie', 'episode'];
-const defaultForm = (): IgnoreFormState => ({
+const defaultForm = () => ({
   id: '',
   type: '',
   backend: '',
   db: '',
   scoped: false,
-  scoped_to: null,
+  scoped_to: null as string | null,
 });
 
-const makeCardItem = (item: IgnoreItem): IgnoreCardItem => ({
-  ...item,
-  expandScopedTo: false,
-  expandGuid: false,
-});
-
-const items = ref<Array<IgnoreCardItem>>([]);
-const toggleForm = ref<boolean>(false);
-const form = ref<IgnoreFormState>(defaultForm());
-const show_page_tips = useStorage<boolean>('show_page_tips', true);
-const isLoading = ref<boolean>(false);
+const items = ref<Array<IgnoreItem>>([]);
+const filter = ref('');
+const toggleForm = ref(false);
+const form = ref(defaultForm());
+const isLoading = ref(true);
+const loadError = ref('');
+const isSaving = ref(false);
+const deletingRule = ref<string | null>(null);
 const guids = ref<Array<GuidProvider>>([]);
-const backends = ref<Array<BackendItem>>([]);
-
-const ruleCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'px-4 pb-4 pt-0',
-};
+const backends = ref<Array<Pick<Backend, 'name'>>>([]);
+let loadController: AbortController | null = null;
+let loadId = 0;
+let identityVersion = 0;
+let disposed = false;
 
 const formModalUi = {
   content: 'max-w-3xl',
-  body: 'space-y-5 p-5',
+  body: 'p-5',
   footer: 'border-t border-default p-5',
 };
 
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
+const filteredItems = computed(() => {
+  const rules = items.value.map((item) => ({
+    ...item,
+    guid: `${item.db}://${item.id}`,
+  }));
+  const query = filter.value.trim().toLowerCase();
+  if (!query) {
+    return rules;
+  }
 
-const backendItems = computed<Array<SelectItem>>(() =>
+  return rules.filter((item) =>
+    [
+      item.rule,
+      item.guid,
+      item.backend,
+      item.type,
+      item.title,
+      item.scoped_to,
+      item.scoped ? '' : 'All items',
+    ].some((value) =>
+      String(value ?? '')
+        .toLowerCase()
+        .includes(query),
+    ),
+  );
+});
+
+const backendItems = computed(() =>
   backends.value.map((backend) => ({
     label: backend.name,
     value: backend.name,
   })),
 );
 
-const guidItems = computed<Array<SelectItem>>(() =>
+const guidItems = computed(() =>
   guids.value.map((guid) => ({
     label: guid.guid,
     value: guid.guid,
   })),
 );
 
-const typeItems = computed<Array<SelectItem>>(() =>
+const typeItems = computed(() =>
   types.map((type) => ({
     label: ucFirst(type),
     value: type,
@@ -465,36 +405,18 @@ const scopedToValue = computed<string>({
   },
 });
 
-const dirtySource = computed(() => ({
-  id: form.value.id,
-  type: form.value.type,
-  backend: form.value.backend,
-  db: form.value.db,
-  scoped: form.value.scoped,
-  scoped_to: form.value.scoped_to,
-}));
-const { isDirty: isFormDirty, markClean: markFormClean } = useDirtyState(dirtySource);
-
-const expandableInlineClass = (expanded?: boolean, allowBreakAll = false): string => {
-  if (true === expanded) {
-    return allowBreakAll ? 'break-all' : 'break-words';
-  }
-
-  return allowBreakAll ? 'ws-expandable-inline-breakall' : 'ws-expandable-inline';
-};
+const { isDirty: isFormDirty, markClean: markFormClean } = useDirtyState(form);
 
 const resetFormData = (): void => {
   form.value = defaultForm();
   markFormClean();
 };
 
-const { handleOpenChange: handleFormOpenChange, requestClose: requestCloseForm } =
-  useDirtyCloseGuard(toggleForm, {
-    dirty: isFormDirty,
-    onDiscard: async () => {
-      resetFormData();
-    },
-  });
+const { handleOpenChange: handleFormOpenChange } = useDirtyCloseGuard(toggleForm, {
+  dirty: isFormDirty,
+  confirmColor: 'warning',
+  onDiscard: resetFormData,
+});
 
 const openAddForm = (): void => {
   resetFormData();
@@ -502,170 +424,257 @@ const openAddForm = (): void => {
 };
 
 const loadContent = async (): Promise<void> => {
-  isLoading.value = true;
-  items.value = [];
-
-  try {
-    if (0 === guids.value.length) {
-      const guidRequest = await request('/system/guids');
-      const guidResponse = await parse_api_response<Array<GuidProvider>>(guidRequest);
-
-      if ('ignore' !== route.name) {
-        return;
-      }
-
-      if ('error' in guidResponse) {
-        notification('error', 'Error', `${guidResponse.error.code}: ${guidResponse.error.message}`);
-        return;
-      }
-
-      guids.value = guidResponse;
-    }
-
-    if (0 === backends.value.length) {
-      const backendsRequest = await request('/backends');
-      const backendsResponse = await parse_api_response<Array<BackendItem>>(backendsRequest);
-
-      if ('ignore' !== route.name) {
-        return;
-      }
-
-      if ('error' in backendsResponse) {
-        notification(
-          'error',
-          'Error',
-          `${backendsResponse.error.code}: ${backendsResponse.error.message}`,
-        );
-        return;
-      }
-
-      backends.value = backendsResponse;
-    }
-
-    const response = await request('/ignore');
-    const json = await parse_api_response<Array<IgnoreItem>>(response);
-
-    if ('ignore' !== route.name) {
-      return;
-    }
-
-    if ('error' in json) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`);
-      return;
-    }
-
-    items.value = json.map((item) => makeCardItem(item));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', message);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-onMounted(() => void loadContent());
-
-const deleteIgnore = async (item: IgnoreItem): Promise<void> => {
-  const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Delete '${item.db}://${item.id}' rule?`,
-    confirmColor: 'error',
-  });
-
-  if (true !== confirmStatus) {
+  if (disposed) {
     return;
   }
 
+  loadController?.abort();
+  const controller = new AbortController();
+  loadController = controller;
+  const id = ++loadId;
+  const identity = apiUser.value;
+  isLoading.value = true;
+  loadError.value = '';
+
   try {
+    if (0 === guids.value.length) {
+      const response = await request('/system/guids', {
+        signal: controller.signal,
+        headers: { 'X-User': identity },
+      });
+      const json = await parse_api_response<Array<GuidProvider>>(response);
+      if (disposed || id !== loadId || identity !== apiUser.value) {
+        return;
+      }
+      if ('error' in json) {
+        throw new Error(`${json.error.code}: ${json.error.message}`);
+      }
+
+      guids.value = json;
+    }
+
+    if (0 === backends.value.length) {
+      const response = await request('/backends', {
+        signal: controller.signal,
+        headers: { 'X-User': identity },
+      });
+      const json = await parse_api_response<Array<Pick<Backend, 'name'>>>(response);
+      if (disposed || id !== loadId || identity !== apiUser.value) {
+        return;
+      }
+      if ('error' in json) {
+        throw new Error(`${json.error.code}: ${json.error.message}`);
+      }
+
+      backends.value = json;
+    }
+
     const response = await request('/ignore', {
-      method: 'DELETE',
-      body: JSON.stringify({
-        rule: item.rule,
-      }),
+      signal: controller.signal,
+      headers: { 'X-User': identity },
+    });
+    if (disposed || id !== loadId || identity !== apiUser.value) {
+      return;
+    }
+    if (304 === response.status) {
+      return;
+    }
+    if (204 === response.status) {
+      items.value = [];
+      return;
+    }
+
+    const json = await parse_api_response<Array<IgnoreItem>>(response);
+    if (disposed || id !== loadId || identity !== apiUser.value) {
+      return;
+    }
+    if ('error' in json) {
+      throw new Error(`${json.error.code}: ${json.error.message}`);
+    }
+
+    items.value = json;
+  } catch (error: unknown) {
+    if (disposed || id !== loadId || identity !== apiUser.value || controller.signal.aborted) {
+      return;
+    }
+
+    loadError.value = error instanceof Error ? error.message : 'Unexpected request error';
+    notification('error', 'Ignore rules unavailable', loadError.value);
+  } finally {
+    if (!disposed && id === loadId) {
+      isLoading.value = false;
+    }
+  }
+};
+
+const deleteIgnore = async (item: IgnoreItem): Promise<void> => {
+  if (
+    disposed ||
+    isLoading.value ||
+    loadError.value ||
+    isSaving.value ||
+    null !== deletingRule.value
+  ) {
+    return;
+  }
+
+  const identity = apiUser.value;
+  const version = identityVersion;
+  const rule = item.rule;
+  const guid = `${item.db}://${item.id}`;
+  deletingRule.value = rule;
+
+  try {
+    const { status } = await dialog.confirmDialog({
+      title: 'Delete ignore rule',
+      message: `Delete '${rule}' for identity '${identity}'?`,
+      confirmText: 'Delete rule',
+      confirmColor: 'error',
     });
 
-    if (response.ok) {
-      items.value = items.value.filter((currentItem) => currentItem.rule !== item.rule);
-      notification('success', 'Success', `Ignore rule '${item.rule}' successfully deleted.`, 5000);
+    if (
+      true !== status ||
+      disposed ||
+      version !== identityVersion ||
+      identity !== apiUser.value ||
+      !items.value.some((currentItem) => rule === currentItem.rule)
+    ) {
       return;
     }
 
-    const json = await parse_api_response<GenericResponse>(response);
-    if ('error' in json) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000);
+    const response = await request('/ignore', {
+      method: 'DELETE',
+      headers: { 'X-User': identity },
+      body: JSON.stringify({ rule }),
+    });
+    if (disposed || version !== identityVersion || identity !== apiUser.value) {
       return;
     }
 
-    notification('error', 'Error', 'Failed to delete ignore rule.', 5000);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Request error. ${message}`, 5000);
+    if (!response.ok) {
+      const json = await parse_api_response<GenericResponse>(response);
+      if (disposed || version !== identityVersion || identity !== apiUser.value) {
+        return;
+      }
+      throw new Error('error' in json ? json.error.message : 'Failed to delete ignore rule.');
+    }
+
+    items.value = items.value.filter((currentItem) => rule !== currentItem.rule);
+    notification('success', 'Rule deleted', `'${guid}' was removed from '${identity}'.`);
+  } catch (error: unknown) {
+    if (!disposed && version === identityVersion && identity === apiUser.value) {
+      const message = error instanceof Error ? error.message : 'Unexpected request error';
+      notification('error', 'Rule not deleted', message);
+    }
+  } finally {
+    if (!disposed && version === identityVersion) {
+      deletingRule.value = null;
+    }
   }
 };
 
 const makeItemLink = (item: IgnoreItem): string => {
-  if (!item.scoped_to) {
+  if (null === item.scoped_to || undefined === item.scoped_to) {
     return '';
   }
 
   const type = 'show' === item.type.toLowerCase() ? 'show' : 'id';
-  const params = new URLSearchParams();
-  params.append('perpage', '50');
-  params.append('page', '1');
-  params.append('q', `${item.backend}.${type}://${item.scoped_to}`);
-  params.append('key', 'metadata');
+  const params = new URLSearchParams({
+    perpage: '50',
+    page: '1',
+    q: `${item.backend}.${type}://${item.scoped_to}`,
+    key: 'metadata',
+  });
 
   return `/history?${params.toString()}`;
 };
 
 const addIgnoreRule = async (): Promise<void> => {
-  const provider = guids.value.find((guid) => guid.guid === form.value.db);
-  if (provider?.validator?.pattern) {
-    if (!stringToRegex(provider.validator.pattern).test(form.value.id)) {
+  if (disposed || !checkForm.value || isSaving.value || null !== deletingRule.value) {
+    return;
+  }
+
+  const identity = apiUser.value;
+  const version = identityVersion;
+  const payload = { ...form.value };
+  isSaving.value = true;
+
+  try {
+    const provider = guids.value.find((guid) => guid.guid === payload.db);
+    if (
+      provider?.validator?.pattern &&
+      !stringToRegex(provider.validator.pattern).test(payload.id)
+    ) {
       notification(
         'error',
-        'Error',
-        `Invalid GUID value, must match the pattern: '${provider.validator.pattern}'. Example ${provider.validator.example}`,
+        'Invalid GUID',
+        `Value must match '${provider.validator.pattern}'. Example: ${provider.validator.example}`,
         5000,
       );
       return;
     }
-  }
 
-  try {
     const response = await request('/ignore', {
       method: 'POST',
-      body: JSON.stringify(form.value),
+      headers: { 'X-User': identity },
+      body: JSON.stringify(payload),
     });
-
     const json = await parse_api_response<IgnoreItem>(response);
-    if ('error' in json) {
-      notification('error', 'Error', `${json.error.code}: ${json.error.message}`, 5000);
+    if (disposed || version !== identityVersion || identity !== apiUser.value) {
       return;
     }
+    if ('error' in json) {
+      throw new Error(`${json.error.code}: ${json.error.message}`);
+    }
 
-    items.value.push(makeCardItem(json));
-    notification('success', 'Success', 'Successfully added new ignore rule.', 5000);
+    items.value.push(json);
+    notification('success', 'Rule added', `Ignore rule added to '${identity}'.`);
     resetFormData();
     toggleForm.value = false;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Request error. ${message}`, 5000);
+  } catch (error: unknown) {
+    if (!disposed && version === identityVersion && identity === apiUser.value) {
+      const message = error instanceof Error ? error.message : 'Unexpected request error';
+      notification('error', 'Rule not added', message);
+    }
+  } finally {
+    if (!disposed && version === identityVersion) {
+      isSaving.value = false;
+    }
   }
 };
 
-const cancelForm = async (): Promise<void> => {
-  await requestCloseForm();
-};
-
-watch(toggleForm, (value: boolean) => {
+watch(toggleForm, (value) => {
   if (!value) {
     resetFormData();
   }
 });
 
-const checkForm = computed<boolean>(() => {
-  const { id, type, backend, db } = form.value;
-  return '' !== id && '' !== type && '' !== backend && '' !== db;
+watch(
+  apiUser,
+  () => {
+    identityVersion++;
+    loadId++;
+    loadController?.abort();
+    items.value = [];
+    backends.value = [];
+    isSaving.value = false;
+    deletingRule.value = null;
+    toggleForm.value = false;
+    resetFormData();
+    void loadContent();
+  },
+  { flush: 'sync' },
+);
+
+const checkForm = computed(() => {
+  const { id, type, backend, db, scoped, scoped_to } = form.value;
+  return (
+    '' !== id.trim() &&
+    '' !== type &&
+    '' !== backend &&
+    '' !== db &&
+    (!scoped || '' !== (scoped_to ?? '').trim())
+  );
 });
 
 const getItemTypeIcon = (type: string): string => {
@@ -679,8 +688,13 @@ const getItemTypeIcon = (type: string): string => {
   }
 };
 
-const getItemTitle = (item: IgnoreItem): string =>
-  item.title || (item.scoped ? 'Unknown title' : 'Global');
+onMounted(() => void loadContent());
+onBeforeUnmount(() => {
+  disposed = true;
+  identityVersion++;
+  loadId++;
+  loadController?.abort();
+});
 
 markFormClean();
 </script>

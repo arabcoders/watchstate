@@ -26,21 +26,26 @@ If both options are enabled on the same backend, WatchState can both read from i
 
 To turn on automatic import or export tasks:
 
-1. Go to the `Tasks` page.
-2. Enable the tasks you want to schedule for automatic execution.
+1. Open **Activity > Tasks**.
+2. Turn on **Enabled** for the tasks you want to run automatically.
+
+Task schedules apply across identities, not just the identity selected in the header.
 
 By default, the tasks are scheduled:
 
 - **Import** task runs every **1 hour**
-- **Export** task runs every **1 hour and 30 minutes**
+- **Export** task runs **hourly at 30 minutes past the hour**
 
-If you want to customize the schedule, go to <!--i:i-lucide-list-checks--> **Tasks** page and click the timer row underneath the task,
-and it will take you to the <!--i:i-lucide-settings-2--> **Env** page, where you can set the cron expression directly.
+To customize the schedule, open **Activity > Tasks** and click the task's **Timer** value.
+It opens the corresponding variable in **Settings > Environment**, where you can edit the cron expression and click **Save**.
 
-> [!NOTE]
-> A great tool to validate your cron expression is [crontab.guru](https://crontab.guru/)
+**Schedule** describes the frequency and links to [crontab.guru](https://crontab.guru/) for cron syntax help.
 
-After making changes, visit the `Tasks` page again to see the updated schedule next to `Next Run`.
+For a one-off run, choose **Queue task** for background execution or **Run in CLI** to review the command in Console.
+**Cancel queued task** removes a pending run; it doesn't stop an active process.
+
+When **Last run** is a link, open it to inspect the latest completed run's status and logs. A completed run can have
+succeeded or failed; its timestamp alone doesn't confirm success.
 
 ---
 
@@ -139,8 +144,9 @@ However, if the new backend's state is incorrect, it may unintentionally overrid
 To synchronize both backends correctly:
 
 - **Add the backend** that contains the correct watch state first.
-- Enable **Full Import** for that backend.
-- Go to `Tasks` page, and run the **Import** task via `Run via console` button.
+- In the backend's **Edit > Sync direction** section, enable **Import** and click **Save settings**.
+- Open **Activity > Tasks**, click **Run** on the **Import** task, then choose **Run in CLI**.
+  Review the prefilled command in **Activity > Console**, then click **Run command**.
 - Once the import is complete, **add the second backend** (the one with incorrect or outdated play state).
 - Under the newly added backend, locate the **Quick operations** section.
 - Select **3. Force export local play state to this backend.**
@@ -199,7 +205,7 @@ Ignoring 'main@backend' movie|episode '#0000: title (2025)'. Database date is ol
 This usually means the backend is reporting the same event with a different time than WatchState. Make sure every
 component uses the same timezone and synchronized clock.
 
-* **WatchState**: set `WS_TZ` from `Configuration > Env`.
+* **WatchState**: set `WS_TZ` from **Settings > Environment**.
 * **Docker fallback**: set `TZ` only in `compose.yaml` / `docker run` if `WS_TZ` is not available.
 * **Plex / Jellyfin / Emby**: must use the same timezone as WatchState.
 * **Host**: make sure the clock is correct and NTP is enabled.
@@ -235,11 +241,11 @@ a bug report, please try the following workaround:
 
 * Go to the `Backends`.
 * Find the backend where the issue occurs and click the **Edit** button.
-* Expand the **Additional options...** section.
+* Expand **Advanced**.
 * Under **Add new option**, select `client.http_version` from the dropdown list.
-* Click the green **+** add button.
+* Click **Add**.
 * Once the option appears, set its value to `1.0`.
-* Click **Save Settings**.
+* Click **Save settings**.
 
 This setting forces the internal HTTP client to use **HTTP/1.1** instead of HTTP/2. If the issue persists after making
 this change, please open a bug report so it can be investigated further.
@@ -253,11 +259,11 @@ following these steps:
 
 * Go to the `Backends`.
 * Find the backend where the issue occurs and click the **Edit** button.
-* Expand the **Additional options...** section.
+* Expand **Advanced**.
 * Under **Add new option**, select `client.timeout` from the dropdown list.
-* Click the green **+** add button.
+* Click **Add**.
 * Once the option appears, set its value to `600`.
-* Click **Save Settings**.
+* Click **Save settings**.
 
 The value `600` represents the number of seconds the system will wait before terminating the request due to a timeout.
 
@@ -342,12 +348,11 @@ WatchState parses the following Plex GUIDs:
 
 # Environment Variables
 
-You can configure WatchState extensively using environment variables. The recommended approach is for keys that starts
-with `WS_` is to use the `Env` page. It will do some validation for you and ensure the values are correct.
+Use **Settings > Environment** for `WS_` settings to catch invalid values before saving.
 
 ## WatchState specific environment variables.
 
-to see list of loaded environment variables, click on `Env` page.
+Open **Settings > Environment** to see settings you've changed. Click **Add variable** to choose from the available variables.
 
 ## Container specific environment variable.
 
@@ -425,25 +430,22 @@ relevant data if they are not matching correctly, and we hopefully can resolve i
 
 ---
 
-# How to check if the container able to communicate with the media backends?
+<a id="how-to-check-if-the-container-able-to-communicate-with-the-media-backends"></a>
 
-If you're having problem adding a backend to `WatchState`, it most likely network related problem, where the container
-isn't able to communicate with the media backend. Thus, you will get errors. To make sure the container is able to
-communicate with the media backend,
+# How can I check connectivity to a media backend?
 
-Run the following tests via: **Diagnostics** > <!--i:i-lucide-link--> **URL Checker**.
+Open **Activity** > <!--i:i-lucide-link--> **URL Checker**. Requests run from WatchState, so this checks the connection
+available to WatchState rather than your browser.
 
-From the `Pre-defined` templates select the media server you want to test against and replace the following with your
-info
+Choose a **Template** for your media server, then replace its placeholders:
 
-* Replace `[PLEX_TOKEN]` with your plex token.
-* Replace `[API_KEY]` with your jellyfin/emby api key.
-* Replace `[IP:port]` with your media backend host or ip:port. it can be a host or ip:port i.e. `media.mydomain.ltd`
-  or `172.23.0.11:8096`.
+* `[PLEX_TOKEN]`: your Plex token.
+* `[API_KEY]`: your Jellyfin or Emby API key.
+* `[ip:port]`: the backend hostname or IP address and port, such as `media.mydomain.ltd` or `172.23.0.11:8096`.
 
-If everything is working correctly you should see `200 Status code response.` with green text. this good indicator that
-the container is able to communicate with the media backend. If you see `403` or `404` or any other error code, please
-check your backend settings and make sure the token is correct and the ip:port is reachable from the container.
+Click **Send request**. **Response** shows the status, request URL, headers, and body. A `200` status indicates a successful
+request. For `401` or `403`, check the token and its permissions; for `404`, check the endpoint path.
+Connection failures appear under **Response headers** as `WS-Error` and in **Body**.
 
 ----
 
@@ -451,11 +453,9 @@ check your backend settings and make sure the token is correct and the ip:port i
 
 ## INFO: Ignoring [xxx] Episode range, and treating it as single episode. Backend says it covers [00-00]?
 
-To increase the limit per backend, go to <!--i:i-lucide-server--> **Backends** > <!--i:i-lucide-settings--> **Edit** > Expand
-**Additional options...** section > Under **Add new option** select
-`MAX_EPISODE_RANGE` from the dropdown list > Click the green **<!--i:i-lucide-plus--> add** button > Once the
-option appears, set its value to the number of episodes you want to allow per episode range then,
-Click **<!--i:i-lucide-save--> Save Settings**.
+To increase the limit per backend, open <!--i:i-lucide-server--> **Backends > Edit > Advanced**.
+Under **Add new option**, select `MAX_EPISODE_RANGE` and click **Add**.
+Set its value to the number of episodes allowed per range, then click **Save settings**.
 
 ## I Keep receiving 'jellyfin' item 'id: name' is marked as 'played' vs local state 'unplayed'
 
@@ -474,7 +474,7 @@ updated.
 ### (2) Special handling
 
 The `state:import` command has an experimental workaround. Enable it by adding `WS_CLIENTS_JELLYFIN_FIX_PLAYED` on the
-`Configuration > Environment` page. It is disabled by default because it has not been tested in production.
+**Settings > Environment** page. It is disabled by default because it has not been tested in production.
 
 ## DM001 (`error: dm001_stale_date`) - Item queued for re-processing.
 
@@ -532,21 +532,46 @@ Note: the tip about adding the group_add came from the user `binarypancakes` in 
 
 # Advanced: How to extend the GUID parser to support more GUIDs or custom ones?
 
-Visit the `Configuration > Custom GUIDs` page, where you can add custom GUIDs to the parser using the add form.
+Open **Settings > Custom GUIDs**.
 
-If you added or removed a guid from the `guid.yaml` file, you should run `db:index --force-reindex` command to
-update the database indexes with the new guids.
+1. Choose **Add GUID** if the identifier provider isn't already supported. Supply its validation pattern and examples.
+2. Choose **Add link** to map the client identifier to a WatchState GUID. The target can be a built-in GUID or one you added.
+
+Client links apply to every backend of that client type. Deleting a custom GUID also deletes the links
+that target it.
+
+After adding or removing a custom GUID, run `db:index --force-reindex` in Console to rebuild the database indexes.
+
+---
+
+# Ignore rules or log suppression?
+
+Use **Settings > Ignore Rules** when a backend reports an unwanted GUID. Rules belong to the selected identity and backend.
+A scoped rule applies only to the specified source item; an unscoped rule ignores that GUID on any matching item from that
+backend. Other GUIDs on the item can still be used for matching.
+
+Use **Settings > Suppression** to stop recording log messages that match a rule. **Contains** matches case-sensitive text;
+**Regex** uses a PHP regular expression. Suppression applies across all identities and does not remove existing log entries.
 
 ---
 
 # Sync watch progress.
 
 For best experience, first Enable the [webhook](/guides/webhooks.md) feature for the media backends you want to sync the
-watch progress. However, if you are unable to do so, the `Tasks > Import` task will also generate progress watch events.
+watch progress. However, if you are unable to do so, the **Import** task under **Activity > Tasks** also generates progress watch events.
 However, it's not as reliable as the `Webhooks` or as fast it will only sync the progress when the import task is run.
 
-To check if there is any watch progress events being registered, You can go to `Activity > Events` and check `on_progress`
-events. If you are seeing those, this means the progress is being synced. Check the `Operations > Logs` page to see the event log.
+Open **Activity > Events**, select **Any status**, open **Search events**, enter `on_progress` under
+**Event name**, then click **Apply search**. Click an event name for its status, attached data, and saved logs.
+**Filter this page** only narrows the current page. Check the user and backend in the event data or logs.
+An event alone doesn't confirm that a destination backend accepted the update.
+
+For work waiting in the transport queue, open **Activity > Transport**.
+An item disappearing from the queue doesn't confirm delivery to a media backend.
+
+In event details, **Cancel** stops a queued event. **Run again** repeats its action, and both actions clear its saved logs.
+**Delete matching** can remove events across all pages. **Filter this page** doesn't limit deletion.
+Pending events require **Include pending**; running events can't be deleted.
 
 If this is set up and working you may be ok with changing the `WS_CRON_IMPORT_AT/WS_CRON_EXPORT_AT` schedule to
 something less frequent as the sync progress working will update the progress near realtime. For example, you could
@@ -560,15 +585,15 @@ check [this FAQ entry](#how-to-enable-scheduledautomatic-tasks).
 By default, we do async requests to the media backends to speed up the sync process. However, in some cases this may
 lead to overloading the media backend with requests, especially if you have a large library. To mitigate this, you can
 instead switch the tasks to use synchronous requests. This will slow down the sync process by a lot, but will reduce the
-load on your media backend. You have to manually edit the tasks `args` to include `--sync-requests` flag.
+load on your media backend. You have to manually edit the task arguments to include `--sync-requests` flag.
 
 For example, to change the `Import` task to use synchronous requests:
 
-1. Go to the `Tasks` page.
-2. Find the `Import` task and click on the `Args` row value.
-3. This will redirect you to the `Configuration > Environment` page to edit the relevant environment variable.
+1. Open **Activity > Tasks**.
+2. Find the `Import` task and click its **Arguments** value.
+3. This opens **Settings > Environment** to edit the relevant environment variable.
 4. In the `WS_CRON_IMPORT_ARGS` value field, change the value from `-v` to `-v --sync-requests`.
-5. Click `Save Settings`.
+5. Click **Save**.
 
 Repeat for all sync related tasks you want to change.
 
@@ -586,7 +611,7 @@ operations.
 
 To enable MEMORY mode, follow these steps:
 
-1. Go to the `Configuration > Environment` page.
+1. Open **Settings > Environment**.
 2. Add a new environment variable.
 3. Select `WS_DB_MODE` from the dropdown list.
 4. select the `MEMORY` option.

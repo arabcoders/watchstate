@@ -15,7 +15,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <UButton
           color="neutral"
-          variant="ghost"
+          variant="outline"
           size="sm"
           icon="i-lucide-refresh-cw"
           :loading="isLoading"
@@ -26,8 +26,8 @@
 
         <UButton
           v-if="status.restartable"
-          color="warning"
-          variant="soft"
+          color="neutral"
+          variant="outline"
           size="sm"
           icon="i-lucide-power"
           :loading="isRestarting"
@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { UAlert, UButton } from '#components';
 import { useDialog } from '~/composables/useDialog';
 import { notification, request } from '~/utils';
 

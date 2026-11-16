@@ -46,6 +46,7 @@
 
         <template v-else-if="isConfirm || isPrompt">
           <UButton
+            v-if="cancelText"
             type="button"
             color="neutral"
             variant="outline"
@@ -73,11 +74,13 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
+import { UButton, UFormField, UInput, UModal } from '#components';
 import UTextarea from '@nuxt/ui/components/Textarea.vue';
 import {
   useDialog,
   type AlertOptions,
   type ConfirmOptions,
+  type DialogConfirmColor,
   type PromptOptions,
 } from '~/composables/useDialog';
 
@@ -85,12 +88,9 @@ type InputExpose = {
   inputRef: HTMLInputElement | null;
 };
 
-type ButtonColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
-type ButtonVariant = 'solid' | 'outline' | 'soft' | 'subtle' | 'ghost' | 'link';
-
 type ButtonTheme = {
-  color: ButtonColor;
-  variant: ButtonVariant;
+  color: DialogConfirmColor;
+  variant: 'solid' | 'outline';
 };
 
 const { state, confirm, cancel } = useDialog();
@@ -151,48 +151,14 @@ watch(
   { immediate: true },
 );
 
-const resolveButtonTheme = (
-  color?: ConfirmOptions['confirmColor'],
-  fallback: ButtonColor = 'primary',
-): ButtonTheme => {
-  const map: Record<string, ButtonColor> = {
-    'is-danger': 'error',
-    'is-primary': 'primary',
-    'is-link': 'secondary',
-    'is-info': 'info',
-    'is-success': 'success',
-    'is-warning': 'warning',
-    'is-light': 'neutral',
-    'is-dark': 'neutral',
-    'is-white': 'neutral',
-    primary: 'primary',
-    secondary: 'secondary',
-    success: 'success',
-    info: 'info',
-    warning: 'warning',
-    error: 'error',
-    neutral: 'neutral',
-  };
+const primaryButtonTheme = computed<ButtonTheme>(() => {
+  const color = isAlert.value
+    ? (alertOptions.value?.confirmColor ?? 'neutral')
+    : isPrompt.value
+      ? (promptOptions.value?.confirmColor ?? 'primary')
+      : (confirmOptions.value?.confirmColor ?? 'primary');
 
-  const resolved = color ? (map[color] ?? fallback) : fallback;
-
-  if ('neutral' === resolved) {
-    return { color: 'neutral', variant: 'outline' };
-  }
-
-  return { color: resolved, variant: 'solid' };
-};
-
-const primaryButtonTheme = computed(() => {
-  if (isAlert.value) {
-    return resolveButtonTheme(alertOptions.value?.confirmColor, 'error');
-  }
-
-  if (isPrompt.value) {
-    return resolveButtonTheme(promptOptions.value?.confirmColor);
-  }
-
-  return resolveButtonTheme(confirmOptions.value?.confirmColor);
+  return { color, variant: 'neutral' === color ? 'outline' : 'solid' };
 });
 
 const isPromptUnchanged = computed(() => {
@@ -220,10 +186,10 @@ const confirmText = computed(() => {
 
 const cancelText = computed(() => {
   if (isPrompt.value) {
-    return promptOptions.value?.cancelText ?? 'Cancel';
+    return promptOptions.value?.cancelText;
   }
 
-  return confirmOptions.value?.cancelText ?? 'Cancel';
+  return confirmOptions.value?.cancelText;
 });
 
 const dialogMessage = computed(() => {

@@ -2,51 +2,37 @@
   <main class="w-full min-w-0 max-w-full space-y-6">
     <PageHeader v-bind="pageShell">
       <template #actions>
-        <form v-if="showDisplayFilter" class="w-full sm:w-72" @submit.prevent="void loadContent(1)">
-          <UInput
-            id="display-filter"
-            v-model.lazy="displayFilter"
-            type="search"
-            placeholder="Filter displayed results"
-            icon="i-lucide-filter"
-            size="sm"
-            class="w-full"
-          />
-        </form>
-
-        <UButton
-          color="neutral"
-          :variant="showDisplayFilter ? 'soft' : 'outline'"
-          size="sm"
-          icon="i-lucide-filter"
-          @click="toggleDisplayFilter"
-          label="Filter"
-        />
-
         <UButton
           color="neutral"
           :variant="showSearchPanel ? 'soft' : 'outline'"
           size="sm"
           icon="i-lucide-search"
-          @click="
-            () => {
-              showSearchPanel = !showSearchPanel;
-            }
+          :aria-expanded="showSearchPanel"
+          aria-controls="events-server-filters"
+          @click="showSearchPanel = !showSearchPanel"
+        >
+          Search events
+          <UBadge v-if="appliedFilters.length" color="neutral" variant="soft" size="xs">
+            {{ appliedFilters.length }}
+          </UBadge>
+        </UButton>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-trash-2"
+          :disabled="
+            isLoading ||
+            deleteSubmitting ||
+            !hasResults ||
+            !!loadError ||
+            searchDirty ||
+            0 === total
           "
-          label="Search"
-        />
-
-        <UTooltip v-if="items.length > 0" text="Delete events.">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-trash-2"
-            :disabled="isLoading"
-            @click="openDeleteModal"
-            label="Delete"
-          />
-        </UTooltip>
+          @click="openDeleteModal"
+        >
+          Delete matching
+        </UButton>
 
         <UButton
           color="neutral"
@@ -54,38 +40,76 @@
           size="sm"
           icon="i-lucide-refresh-cw"
           :loading="isLoading"
-          :disabled="isLoading"
-          @click="() => void loadContent(page, false)"
-          label="Reload"
-        />
+          :disabled="isLoading || deleteSubmitting"
+          @click="() => void loadContent(page)"
+          aria-label="Refresh events"
+        >
+          Refresh
+        </UButton>
       </template>
     </PageHeader>
 
-    <UCard v-if="showSearchPanel" class="ws-card shadow-sm" :ui="searchCardUi">
-      <template #header>
-        <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-          <UIcon name="i-lucide-search" class="size-4 text-toned" />
-          <span>Search Events</span>
+    <section aria-label="Event controls" class="space-y-4">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="w-full space-y-1.5 sm:w-44">
+          <label for="event-status" class="block text-xs font-medium text-toned">Status</label>
+          <USelect
+            id="event-status"
+            :model-value="appliedSearch.status"
+            :items="statusItems"
+            value-key="value"
+            label-key="label"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-filter"
+            class="w-full"
+            :disabled="isLoading || deleteSubmitting"
+            @update:model-value="applyStatus"
+          />
         </div>
-      </template>
+        <div class="min-w-0 flex-1 basis-full space-y-1.5 sm:basis-64">
+          <label for="display-filter" class="block text-xs font-medium text-toned">
+            Filter this page
+          </label>
+          <UInput
+            id="display-filter"
+            v-model="displayFilter"
+            type="search"
+            placeholder="Event name or reference"
+            aria-label="Filter events on the current page"
+            icon="i-lucide-list-filter"
+            size="sm"
+            class="w-full"
+          />
+        </div>
+        <div class="w-36 space-y-1.5">
+          <label for="events-per-page" class="block text-xs font-medium text-toned">
+            Items per page
+          </label>
+          <USelect
+            id="events-per-page"
+            v-model="perpage"
+            :items="perPageItems"
+            value-key="value"
+            label-key="label"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            class="w-full"
+            :disabled="isLoading || deleteSubmitting"
+            @update:model-value="() => void loadContent(1)"
+          />
+        </div>
+      </div>
 
-      <form class="space-y-4" @submit.prevent="void submitSearch()">
-        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <UFormField label="Status" name="event_status">
-            <USelect
-              v-model="search.status"
-              :items="statusItems"
-              value-key="value"
-              label-key="label"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-filter"
-              class="w-full"
-              :disabled="isLoading"
-            />
-          </UFormField>
-
+      <form
+        v-show="showSearchPanel"
+        id="events-server-filters"
+        class="space-y-4"
+        @submit.prevent="void submitSearch()"
+      >
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <UFormField label="Event name" name="event_name">
             <UInput
               v-model="search.event"
@@ -94,7 +118,7 @@
               icon="i-lucide-tag"
               size="sm"
               class="w-full"
-              :disabled="isLoading"
+              :disabled="isLoading || deleteSubmitting"
             />
           </UFormField>
 
@@ -106,7 +130,7 @@
               icon="i-lucide-link"
               size="sm"
               class="w-full"
-              :disabled="isLoading"
+              :disabled="isLoading || deleteSubmitting"
             />
           </UFormField>
 
@@ -118,7 +142,7 @@
               icon="i-lucide-calendar-range"
               size="sm"
               class="w-full"
-              :disabled="isLoading"
+              :disabled="isLoading || deleteSubmitting"
             />
           </UFormField>
 
@@ -130,7 +154,7 @@
               icon="i-lucide-calendar-clock"
               size="sm"
               class="w-full"
-              :disabled="isLoading"
+              :disabled="isLoading || deleteSubmitting"
             />
           </UFormField>
         </div>
@@ -142,290 +166,323 @@
             size="sm"
             icon="i-lucide-x"
             type="button"
-            :disabled="isLoading"
+            :disabled="isLoading || deleteSubmitting"
             @click="resetSearch"
           >
-            Reset
+            Clear search
           </UButton>
 
           <UButton
             color="primary"
+            variant="solid"
             size="sm"
             icon="i-lucide-search"
             type="submit"
             :loading="isLoading"
+            :disabled="isLoading || deleteSubmitting"
           >
-            Search
+            Apply search
           </UButton>
         </div>
       </form>
-    </UCard>
 
-    <div v-if="total && last_page > 1" class="flex flex-wrap items-center justify-between gap-3">
-      <Pager :page="page" :last_page="last_page" :is-loading="isLoading" @navigate="navigatePage" />
-      <div class="text-xs text-toned">Page {{ page }} of {{ last_page }}</div>
+      <div v-if="appliedFilters.length || displayFilter" class="flex flex-wrap items-center gap-2">
+        <span class="text-xs text-dimmed">Applied</span>
+        <UButton
+          v-for="chip in appliedFilters"
+          :key="chip.key"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          trailing-icon="i-lucide-x"
+          :aria-label="`Remove filter ${chip.label}`"
+          :disabled="isLoading || deleteSubmitting"
+          @click="removeFilter(chip.key)"
+        >
+          {{ chip.label }}
+        </UButton>
+        <UButton
+          v-if="displayFilter"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          trailing-icon="i-lucide-x"
+          :aria-label="`Remove page filter ${displayFilter}`"
+          @click="displayFilter = ''"
+        >
+          This page: {{ displayFilter }}
+        </UButton>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="xs"
+          icon="i-lucide-x"
+          :disabled="isLoading || deleteSubmitting"
+          @click="clearFilters"
+        >
+          Clear all
+        </UButton>
+      </div>
+      <p v-if="searchDirty" class="text-sm text-warning" role="status">
+        Apply your search changes before deleting matching events.
+      </p>
+    </section>
+
+    <div class="flex flex-wrap items-center justify-between gap-3" aria-live="polite">
+      <p v-if="hasResults" class="text-sm text-toned">
+        <strong class="font-medium text-highlighted">{{ total.toLocaleString() }}</strong>
+        {{ appliedFilters.length ? 'matching events' : 'events' }}
+        <span class="text-dimmed">
+          · {{ filteredRows.length }}{{ displayFilter ? ` of ${items.length}` : '' }} on this page
+        </span>
+      </p>
+      <Pager
+        v-if="total && 1 < last_page"
+        :page="page"
+        :last_page="last_page"
+        :is-loading="isLoading || deleteSubmitting"
+        @navigate="loadContent"
+      />
     </div>
 
+    <p v-if="isLoading && hasResults" role="status" class="text-xs text-muted">
+      Refreshing events…
+    </p>
     <UAlert
-      v-if="isLoading"
+      v-if="isLoading && !hasResults"
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
+      title="Loading events"
       :ui="{ icon: 'animate-spin' }"
     />
 
     <UAlert
-      v-else-if="filteredRows.length < 1"
-      color="warning"
+      v-if="loadError"
+      color="error"
       variant="soft"
-      icon="i-lucide-triangle-alert"
-      title="No items found"
+      icon="i-lucide-circle-alert"
+      :title="hasResults ? 'Events could not be refreshed' : 'Events could not be loaded'"
     >
       <template #description>
-        <div class="space-y-2 text-sm text-default">
-          <p>No items found.</p>
-          <p v-if="hasActiveServerFilters">
-            Search filters: <code>{{ activeServerFilterSummary }}</code>
-          </p>
-          <p v-if="displayFilter">
-            Displayed-results filter: <code>{{ displayFilter }}</code>
-          </p>
+        <div class="space-y-3">
+          <p>{{ loadError }}</p>
+          <p v-if="hasResults">These results may be out of date.</p>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            @click="() => void loadContent(page)"
+          >
+            Retry
+          </UButton>
         </div>
       </template>
     </UAlert>
 
-    <div v-else class="grid gap-4 xl:grid-cols-2">
-      <UCard v-for="item in filteredRows" :key="item.id" class="h-full shadow-sm" :ui="eventCardUi">
-        <template #header>
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <UTooltip :text="`#${makeEventName(item.id)}`">
-                <button
-                  type="button"
-                  class="block truncate text-left text-base font-semibold text-highlighted hover:text-primary"
-                  @click="quick_view = item.id"
-                >
-                  #{{ makeEventName(item.id) }}
-                </button>
-              </UTooltip>
-            </div>
+    <UEmpty
+      v-if="!isLoading && !loadError && 0 === filteredRows.length"
+      icon="i-lucide-search"
+      :title="displayFilter || appliedFilters.length ? 'No matching events' : 'No events yet'"
+      :description="
+        displayFilter
+          ? 'Clear the page filter or use Search events to search all pages.'
+          : appliedFilters.length
+            ? 'Try a broader search or remove an applied filter.'
+            : 'Use Tasks to schedule imports & exports.'
+      "
+    >
+      <template v-if="displayFilter || appliedFilters.length" #actions>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-x"
+          @click="clearFilters"
+        >
+          Clear all
+        </UButton>
+      </template>
+    </UEmpty>
 
-            <div class="flex shrink-0 items-center gap-2">
-              <UTooltip
-                v-if="item.delay_by"
-                text="The event dispatching was delayed by this many seconds."
-              >
-                <UBadge color="warning" variant="soft">
-                  <span class="inline-flex items-center gap-1">
-                    <UIcon name="i-lucide-clock-3" class="size-3.5" />
-                    <span>{{ item.delay_by }}s</span>
-                  </span>
-                </UBadge>
-              </UTooltip>
-
-              <UBadge :color="getEventStatusColor(item.status)" variant="soft">
-                <span class="inline-flex items-center gap-1">
-                  <UIcon
-                    :name="getEventStatusIcon(item.status)"
-                    :class="getEventStatusIconClass(item.status)"
-                  />
-                  <span>{{ getStatusName(item) }}</span>
-                </span>
-              </UBadge>
-            </div>
-          </div>
-        </template>
-
-        <div class="space-y-3">
-          <div v-if="item.reference" class="flex flex-wrap items-center gap-2">
-            <UBadge color="neutral" variant="outline">
-              <span class="inline-flex items-center gap-1">
-                <UIcon name="i-lucide-link" class="size-3.5" />
-                <span>{{ item.reference }}</span>
-              </span>
+    <ul
+      v-if="0 < filteredRows.length"
+      aria-label="Events"
+      class="ws-card divide-y divide-default overflow-hidden"
+    >
+      <li
+        v-for="item in filteredRows"
+        :key="item.id"
+        class="grid min-w-0 gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+      >
+        <div class="min-w-0 space-y-2">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <UBadge :color="getEventStatusColor(item.status)" variant="soft" class="shrink-0">
+              <UIcon
+                :name="getEventStatusIcon(item.status)"
+                :class="1 === item.status ? 'size-3.5 animate-spin' : 'size-3.5'"
+              />
+              {{ getStatusName(item) }}
             </UBadge>
+            <button
+              type="button"
+              class="min-w-0 break-all text-left text-sm font-semibold text-highlighted hover:text-primary focus-visible:outline-primary"
+              :aria-label="`View ${item.event}, event ${makeEventName(item.id)}`"
+              @click="quick_view = item.id"
+            >
+              {{ item.event }}
+            </button>
+            <UTooltip v-if="item.delay_by" text="Dispatch delay">
+              <span class="inline-flex items-center gap-1 text-xs text-warning">
+                <UIcon name="i-lucide-clock-3" class="size-3.5" />
+                {{ item.delay_by }}s delay
+              </span>
+            </UTooltip>
           </div>
-
-          <div class="grid grid-cols-2 gap-2.5">
-            <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-              <div
-                class="flex min-w-0 flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-              >
-                <span
-                  class="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-toned"
-                >
-                  <UIcon name="i-lucide-calendar" class="size-4" />
-                  <span>Created</span>
-                </span>
-
-                <UTooltip
-                  :text="`Created at: ${moment(item.created_at).format(TOOLTIP_DATE_FORMAT)}`"
-                >
-                  <span class="min-w-0 cursor-help text-default sm:ml-auto sm:text-right">
-                    {{ moment(item.created_at).fromNow() }}
-                  </span>
-                </UTooltip>
-              </div>
-            </div>
-
-            <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-              <div
-                class="flex min-w-0 flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-              >
-                <span
-                  class="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-toned"
-                >
-                  <UIcon
-                    :name="
-                      1 === item.status && !item.updated_at
-                        ? 'i-lucide-loader-circle'
-                        : 'i-lucide-calendar-days'
-                    "
-                    :class="
-                      1 === item.status && !item.updated_at ? 'size-4 animate-spin' : 'size-4'
-                    "
-                  />
-                  <span>Updated</span>
-                </span>
-
-                <template v-if="!item.updated_at">
-                  <span class="min-w-0 text-default sm:ml-auto sm:text-right">
-                    {{ 1 === item.status ? 'Running' : 0 === item.status ? 'Pending' : 'None' }}
-                  </span>
-                </template>
-
-                <template v-else>
-                  <UTooltip
-                    :text="`Updated at: ${moment(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
-                  >
-                    <span class="min-w-0 cursor-help text-default sm:ml-auto sm:text-right">
-                      {{ moment(item.updated_at).fromNow() }}
-                    </span>
-                  </UTooltip>
-                </template>
-              </div>
-            </div>
+          <p v-if="item.reference" class="break-all text-sm text-default">
+            <span class="text-toned">Reference:</span> {{ item.reference }}
+          </p>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-toned">
+            <UTooltip :text="item.id">
+              <span class="font-mono"> #{{ makeEventName(item.id) }} </span>
+            </UTooltip>
+            <UTooltip :text="moment(item.created_at).format(TOOLTIP_DATE_FORMAT)">
+              <span>Created {{ moment(item.created_at).fromNow() }}</span>
+            </UTooltip>
+            <UTooltip
+              v-if="item.updated_at"
+              :text="moment(item.updated_at).format(TOOLTIP_DATE_FORMAT)"
+            >
+              <span>Updated {{ moment(item.updated_at).fromNow() }}</span>
+            </UTooltip>
           </div>
         </div>
 
-        <template #footer>
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <UBadge color="neutral" variant="soft">
-              <span class="inline-flex items-center gap-1">
-                <UIcon name="i-lucide-tag" class="size-3.5" />
-                <span>{{ item.event }}</span>
-              </span>
-            </UBadge>
+        <div class="flex shrink-0 flex-wrap items-center gap-2">
+          <UTooltip
+            :text="
+              1 === item.status
+                ? 'Running events cannot be run again or cancelled.'
+                : 0 === item.status
+                  ? 'Cancel stops dispatch and clears this event’s saved logs.'
+                  : 'Run again queues this action again and clears its saved logs.'
+            "
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              :icon="0 === item.status ? 'i-lucide-ban' : 'i-lucide-rotate-ccw'"
+              :disabled="1 === item.status || isLoading || !!loadError || deleteSubmitting"
+              @click="resetEvent(item, 0 === item.status ? 4 : 0)"
+            >
+              {{ 0 === item.status ? 'Cancel' : 'Run again' }}
+            </UButton>
+          </UTooltip>
+          <UTooltip
+            :text="1 === item.status ? 'Running events cannot be deleted.' : 'Delete event'"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :aria-label="`Delete event ${makeEventName(item.id)}`"
+              :disabled="1 === item.status || isLoading || !!loadError || deleteSubmitting"
+              @click="deleteItem(item)"
+            >
+              Delete
+            </UButton>
+          </UTooltip>
+        </div>
+      </li>
+    </ul>
 
-            <div class="flex flex-wrap items-center justify-end gap-2">
-              <UTooltip
-                :text="
-                  1 === item.status
-                    ? 'Running events cannot be reset or cancelled.'
-                    : 0 === item.status
-                      ? 'Cancel event'
-                      : 'Reset event'
-                "
-              >
-                <UButton
-                  color="neutral"
-                  variant="outline"
-                  size="sm"
-                  icon="i-lucide-rotate-ccw"
-                  :disabled="1 === item.status"
-                  @click="resetEvent(item, 0 === item.status ? 4 : 0)"
-                >
-                  {{ 0 === item.status ? 'Cancel' : 'Reset' }}
-                </UButton>
-              </UTooltip>
-
-              <UTooltip
-                :text="1 === item.status ? 'Running events cannot be deleted.' : 'Delete event'"
-              >
-                <UButton
-                  color="neutral"
-                  variant="outline"
-                  size="sm"
-                  icon="i-lucide-trash-2"
-                  :disabled="1 === item.status"
-                  @click="deleteItem(item)"
-                >
-                  Delete
-                </UButton>
-              </UTooltip>
-            </div>
-          </div>
-        </template>
-      </UCard>
-    </div>
-
-    <div v-if="total && last_page > 1" class="flex flex-wrap items-center justify-between gap-3">
-      <Pager :page="page" :last_page="last_page" :is-loading="isLoading" @navigate="navigatePage" />
+    <div v-if="total && 1 < last_page" class="flex flex-wrap items-center justify-between gap-3">
+      <Pager
+        :page="page"
+        :last_page="last_page"
+        :is-loading="isLoading || deleteSubmitting"
+        @navigate="loadContent"
+      />
       <div class="text-xs text-toned">Page {{ page }} of {{ last_page }}</div>
     </div>
 
-    <UCard class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <UIcon
-            :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-            class="size-4 text-toned"
-          />
-          <UIcon name="i-lucide-info" class="size-4 text-toned" />
-          <span>Tips</span>
-        </button>
-      </template>
-
-      <div v-if="show_page_tips" class="text-sm leading-6 text-default">
+    <section class="space-y-3">
+      <button
+        type="button"
+        class="flex items-center gap-2 text-left text-sm font-semibold text-highlighted"
+        :aria-expanded="show_page_tips"
+        aria-controls="event-action-help"
+        @click="show_page_tips = !show_page_tips"
+      >
+        <UIcon
+          :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          class="size-4 text-toned"
+        />
+        <UIcon name="i-lucide-info" class="size-4 text-toned" />
+        <span>About event actions</span>
+      </button>
+      <div v-if="show_page_tips" id="event-action-help" class="text-sm leading-6 text-toned">
         <ul class="list-disc space-y-2 pl-5">
-          <li>Resetting an event will return it to pending so it can be dispatched again.</li>
+          <li>Run again queues the action again and clears its saved logs.</li>
+          <li>Cancel stops a pending event from being dispatched and clears its saved logs.</li>
+          <li>Running events cannot be run again, cancelled, or deleted.</li>
           <li>
-            Cancelling a pending event marks it as cancelled and stops it from being dispatched.
-          </li>
-          <li>
-            Events with status of <UBadge color="warning" variant="soft" size="sm">Running</UBadge>
-            cannot be reset, cancelled, or deleted.
-          </li>
-          <li>
-            Bulk delete removes events matching the current search filters. Pending events are only
-            included when you opt in during confirmation.
-          </li>
-          <li>
-            The top <UIcon name="i-lucide-filter" class="inline size-4 align-text-bottom" /> filter
-            only narrows the currently displayed cards. Use
-            <UIcon name="i-lucide-search" class="inline size-4 align-text-bottom" /> search to query
-            the backend.
+            Delete matching applies across all pages, not the page filter. Pending events are
+            included only when you opt in.
           </li>
         </ul>
       </div>
-    </UCard>
+    </section>
 
     <UModal v-model:open="quickViewOpen" :title="quickViewTitle" :ui="quickViewModalUi">
       <template #body>
-        <EventView v-if="quick_view" :id="quick_view" @delete="(item) => deleteItem(item)" />
+        <EventView
+          v-if="quick_view"
+          :id="quick_view"
+          :actions-target="`#${eventActionsId}`"
+          @deleted="(item) => deletedItem(item.id)"
+          @open-event="(id) => (quick_view = id)"
+        />
+      </template>
+      <template #footer>
+        <div :id="eventActionsId" class="w-full" />
       </template>
     </UModal>
 
-    <UModal v-model:open="deleteModalOpen" title="Delete events" :ui="deleteModalUi">
+    <UModal
+      v-model:open="deleteModalOpen"
+      title="Delete events"
+      :dismissible="!deleteSubmitting"
+      :ui="deleteModalUi"
+    >
       <template #body>
         <div class="space-y-4">
           <div
             class="rounded-md border border-default bg-elevated/20 px-4 py-3 text-sm text-default"
           >
-            <p>Delete the matching events.</p>
+            <p>
+              Delete events matching these search filters across all pages. This cannot be undone.
+            </p>
+            <p class="mt-2 wrap-break-word font-medium text-highlighted">
+              {{
+                deleteFilterSummary ||
+                'Any status, all event names and references, any creation time'
+              }}
+            </p>
+            <p class="mt-2 text-toned">
+              Running events are never deleted. Pending events are excluded unless you opt in below.
+              The page filter does not limit deletion.
+            </p>
           </div>
 
           <label
             class="flex items-start gap-3 rounded-md border border-default bg-elevated/30 px-4 py-3 text-sm text-default"
           >
-            <UCheckbox v-model="deleteIncludePending" color="warning" />
-            <span class="font-medium text-highlighted">Also delete pending events</span>
+            <UCheckbox v-model="deleteIncludePending" color="primary" />
+            <span class="font-medium text-highlighted">Include pending</span>
           </label>
         </div>
       </template>
@@ -433,21 +490,8 @@
       <template #footer>
         <div class="flex w-full flex-wrap items-center justify-end gap-2">
           <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            :disabled="deleteSubmitting"
-            @click="
-              () => {
-                deleteModalOpen = false;
-              }
-            "
-          >
-            Cancel
-          </UButton>
-
-          <UButton
             color="error"
+            variant="solid"
             size="sm"
             icon="i-lucide-trash-2"
             :loading="deleteSubmitting"
@@ -463,19 +507,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, useId, watch } from 'vue';
 import { useHead, useRoute, useRouter } from '#app';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
+import {
+  UAlert,
+  UBadge,
+  UButton,
+  UCheckbox,
+  UEmpty,
+  UFormField,
+  UIcon,
+  UInput,
+  UModal,
+  USelect,
+  UTooltip,
+} from '#components';
 import EventView from '~/components/EventView.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
 import { useDialog } from '~/composables/useDialog';
-import type { EventsItem, GenericError, GenericResponse } from '~/types';
+import type { EventsItem } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   TOOLTIP_DATE_FORMAT,
-  awaitElement,
   makeEventName,
   notification,
   parse_api_response,
@@ -487,23 +543,10 @@ type EventStatus = {
   name: string;
 };
 
-type EventsFilter = {
-  filter: string;
-  status: string;
-  event: string;
-  reference: string;
-  before: string;
-  after: string;
-  sort: string;
-  direction: string;
-  all: boolean;
-};
-
 type EventsResponse = {
   items: Array<EventsItem>;
   statuses: Array<EventStatus>;
   paging: { page: number; perpage: number; total: number };
-  filter: EventsFilter;
 };
 
 type SearchState = {
@@ -515,11 +558,13 @@ type SearchState = {
 };
 
 const ANY_STATUS = '__any__';
+const DEFAULT_PER_PAGE = 25;
 
 const pageShell = requireTopLevelPageShell('events');
 
 const route = useRoute();
 const router = useRouter();
+useHead({ title: 'Events' });
 
 const getRouteQueryValue = (
   value: string | null | Array<string | null> | undefined,
@@ -534,7 +579,7 @@ const getRouteQueryValue = (
 
 const toPositiveInt = (value: string, fallback: number): number => {
   const parsed = Number.parseInt(value, 10);
-  return Number.isNaN(parsed) || parsed < 1 ? fallback : parsed;
+  return Number.isNaN(parsed) || 1 > parsed ? fallback : parsed;
 };
 
 const parseStatusScope = (value: string): string => {
@@ -560,24 +605,35 @@ const createSearchState = (query: typeof route.query): SearchState => ({
 
 const total = ref<number>(0);
 const page = ref<number>(toPositiveInt(getRouteQueryValue(route.query.page, '1'), 1));
-const perpage = ref<number>(toPositiveInt(getRouteQueryValue(route.query.perpage, '26'), 26));
-const isLoading = ref<boolean>(false);
+const perpage = ref<number>(
+  toPositiveInt(
+    getRouteQueryValue(route.query.perpage, String(DEFAULT_PER_PAGE)),
+    DEFAULT_PER_PAGE,
+  ),
+);
+const isLoading = ref<boolean>(true);
+const hasResults = ref(false);
+const loadError = ref('');
 const deleteSubmitting = ref<boolean>(false);
 const items = ref<Array<EventsItem>>([]);
 const statuses = ref<Array<EventStatus>>([]);
 const displayFilter = ref<string>(getRouteQueryValue(route.query.filter, ''));
-const showDisplayFilter = ref<boolean>(!!displayFilter.value);
 const showSearchPanel = ref<boolean>(
-  ['status', 'event', 'reference', 'before', 'after'].some((key) => {
+  ['event', 'reference', 'before', 'after'].some((key) => {
     const value = route.query[key];
     return Array.isArray(value) ? !!value[0] : !!value;
   }),
 );
 const search = ref<SearchState>(createSearchState(route.query));
+const appliedSearch = ref<SearchState>({ ...search.value });
+const deleteSearch = ref<SearchState>(defaultSearchState());
 const quick_view = ref<string | null>(null);
 const show_page_tips = useStorage<boolean>('show_page_tips', true);
 const deleteModalOpen = ref<boolean>(false);
 const deleteIncludePending = ref<boolean>(false);
+let loadController: AbortController | null = null;
+let loadId = 0;
+let disposed = false;
 
 const quickViewOpen = computed({
   get: () => null !== quick_view.value,
@@ -593,26 +649,16 @@ const quickViewTitle = computed(() =>
 );
 
 const last_page = computed<number>(() => Math.ceil(total.value / perpage.value));
+const perPageItems = computed(() =>
+  [...new Set([DEFAULT_PER_PAGE, 50, 100, 200, perpage.value])]
+    .sort((left, right) => left - right)
+    .map((value) => ({ label: String(value), value })),
+);
 
-const eventCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'border-t border-default/70 px-4 py-4',
-};
-
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
+const eventActionsId = useId();
 const quickViewModalUi = {
   content: 'max-w-5xl',
   body: 'p-4 sm:p-5',
-};
-
-const searchCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
 };
 
 const deleteModalUi = {
@@ -636,48 +682,41 @@ const statusItems = computed<Array<{ label: string; value: string }>>(() => [
   })),
 ]);
 
-const hasActiveServerFilters = computed<boolean>(() => {
-  return ['status', 'event', 'reference', 'before', 'after'].some((key) => {
-    const value = search.value[key as keyof SearchState];
-    return 'string' === typeof value && '' !== value.trim();
+const filterLabels: Record<keyof SearchState, string> = {
+  status: 'Status',
+  event: 'Event name',
+  reference: 'Reference',
+  after: 'Created after',
+  before: 'Created before',
+};
+
+const describeFilters = (state: SearchState) => {
+  return (Object.keys(filterLabels) as Array<keyof SearchState>).flatMap((key) => {
+    const value = state[key].trim();
+    if (!value || ('status' === key && ANY_STATUS === value)) {
+      return [];
+    }
+
+    const display =
+      'status' === key
+        ? statusItems.value.find((item) => value === item.value)?.label || value
+        : value;
+
+    return [{ key, label: `${filterLabels[key]}: ${display}` }];
   });
-});
+};
 
-const activeServerFilterSummary = computed<string>(() => {
-  const parts: Array<string> = [];
-
-  if (ANY_STATUS !== search.value.status) {
-    const matched = statusItems.value.find((item) => item.value === search.value.status);
-    parts.push(`status: ${matched?.label || search.value.status}`);
-  }
-
-  if (search.value.event.trim()) {
-    parts.push(`event: ${search.value.event.trim()}`);
-  }
-
-  if (search.value.reference.trim()) {
-    parts.push(`reference: ${search.value.reference.trim()}`);
-  }
-
-  if (search.value.after.trim()) {
-    parts.push(`after: ${search.value.after.trim()}`);
-  }
-
-  if (search.value.before.trim()) {
-    parts.push(`before: ${search.value.before.trim()}`);
-  }
-
-  return parts.join(' | ');
-});
-
-watch(showDisplayFilter, () => {
-  if (!showDisplayFilter.value) {
-    displayFilter.value = '';
-    return;
-  }
-
-  awaitElement('#display-filter', (_, element) => (element as HTMLInputElement).focus());
-});
+const appliedFilters = computed(() => describeFilters(appliedSearch.value));
+const deleteFilterSummary = computed(() =>
+  describeFilters(deleteSearch.value)
+    .map((chip) => chip.label)
+    .join(' · '),
+);
+const searchDirty = computed(() =>
+  (Object.keys(filterLabels) as Array<keyof SearchState>).some(
+    (key) => search.value[key].trim() !== appliedSearch.value[key].trim(),
+  ),
+);
 
 const filteredRows = computed<Array<EventsItem>>(() => {
   if (!displayFilter.value) {
@@ -738,17 +777,13 @@ const getEventStatusIcon = (status: number): string => {
   }
 };
 
-const getEventStatusIconClass = (status: number): string => {
-  return 1 === status ? 'size-3.5 animate-spin' : 'size-3.5';
-};
-
 const buildServerQuery = (pageNumber: number, requestedPerPage: number): URLSearchParams => {
   const queryParams = new URLSearchParams();
   queryParams.append('page', pageNumber.toString());
   queryParams.append('perpage', requestedPerPage.toString());
   queryParams.append('all', '1');
 
-  for (const [key, value] of Object.entries(search.value)) {
+  for (const [key, value] of Object.entries(appliedSearch.value)) {
     if ('status' === key && ANY_STATUS === value) {
       continue;
     }
@@ -775,7 +810,7 @@ const buildRouteQuery = (
     historyQuery.filter = displayFilter.value;
   }
 
-  for (const [key, value] of Object.entries(search.value)) {
+  for (const [key, value] of Object.entries(appliedSearch.value)) {
     if ('status' === key && ANY_STATUS === value) {
       continue;
     }
@@ -790,103 +825,181 @@ const buildRouteQuery = (
   return historyQuery;
 };
 
-const navigatePage = async (nextPage: number): Promise<void> => {
-  await loadContent(nextPage);
-};
+let loadedQuery = '';
 
 const loadContent = async (
   pageNumber: number = 1,
   updateHistory: boolean = true,
 ): Promise<void> => {
-  try {
-    pageNumber = toPositiveInt(pageNumber.toString(), 1);
-    const requestedPerPage = toPositiveInt(perpage.value.toString(), 25);
-    const queryParams = buildServerQuery(pageNumber, requestedPerPage);
+  if (disposed || 'events' !== route.name) {
+    return;
+  }
 
-    isLoading.value = true;
+  loadController?.abort();
+  const active = new AbortController();
+  loadController = active;
+  const id = ++loadId;
+  pageNumber = toPositiveInt(pageNumber.toString(), 1);
+  page.value = pageNumber;
+  const requestedPerPage = toPositiveInt(perpage.value.toString(), DEFAULT_PER_PAGE);
+  const queryParams = buildServerQuery(pageNumber, requestedPerPage);
+
+  isLoading.value = true;
+  loadError.value = '';
+  if (loadedQuery !== queryParams.toString()) {
+    hasResults.value = false;
     items.value = [];
+    total.value = 0;
+  }
 
-    const response = await request(`/system/events?${queryParams.toString()}`);
+  try {
+    const response = await request(`/system/events?${queryParams.toString()}`, {
+      signal: active.signal,
+    });
     const json = await parse_api_response<EventsResponse>(response);
-
-    if ('error' in json) {
-      notification(
-        'error',
-        'Error',
-        `Events request error. ${json.error.code}: ${json.error.message}`,
-      );
+    if (active.signal.aborted || id !== loadId || 'events' !== route.name) {
       return;
     }
 
-    const titleParts = [`Events - Page #${pageNumber}`];
-    if (hasActiveServerFilters.value) {
-      titleParts.push(activeServerFilterSummary.value);
+    if ('error' in json) {
+      throw new Error(`${json.error.code}: ${json.error.message}`);
     }
-    if (displayFilter.value) {
-      titleParts.push(`display filter: ${displayFilter.value}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    useHead({ title: titleParts.join(' | ') });
 
-    if (true === updateHistory) {
-      await router.push({ path: '/events', query: buildRouteQuery(pageNumber, requestedPerPage) });
+    const lastAvailablePage = Math.max(1, Math.ceil(json.paging.total / json.paging.perpage));
+    if (lastAvailablePage < pageNumber) {
+      await loadContent(lastAvailablePage);
+      return;
     }
 
     page.value = json.paging.page;
     perpage.value = json.paging.perpage;
     total.value = json.paging.total;
-    items.value = (json.items ?? []).map((item) => ({ ...item }));
+    items.value = json.items ?? [];
     statuses.value = json.statuses ?? [];
+    hasResults.value = true;
+    loadedQuery = queryParams.toString();
+
+    const titleParts = [`Events - Page #${pageNumber}`];
+    if (appliedFilters.value.length) {
+      titleParts.push(appliedFilters.value.map((chip) => chip.label).join(' | '));
+    }
+    if (displayFilter.value) {
+      titleParts.push(`this page: ${displayFilter.value}`);
+    }
+    useHead({ title: titleParts.join(' | ') });
+
+    if (true === updateHistory) {
+      await router.push({ path: '/events', query: buildRouteQuery(page.value, perpage.value) });
+    }
   } catch (e: unknown) {
-    console.error(e);
-    notification(
-      'crit',
-      'Error',
-      `Events Request failure. ${e instanceof Error ? e.message : String(e)}`,
-    );
+    if (!active.signal.aborted && id === loadId) {
+      loadError.value = e instanceof Error ? e.message : String(e);
+      notification('error', 'Events', loadError.value);
+    }
   } finally {
-    isLoading.value = false;
+    if (!active.signal.aborted && id === loadId) {
+      isLoading.value = false;
+    }
   }
 };
 
 const submitSearch = async (): Promise<void> => {
   showSearchPanel.value = true;
+  search.value = Object.fromEntries(
+    Object.entries(search.value).map(([key, value]) => [key, value.trim()]),
+  ) as SearchState;
+  appliedSearch.value = { ...search.value };
   await loadContent(1);
+};
+
+const applyStatus = (status: string): void => {
+  search.value.status = status;
+  appliedSearch.value = { ...appliedSearch.value, status };
+  void loadContent(1);
+};
+
+const removeFilter = (key: keyof SearchState): void => {
+  const value = 'status' === key ? ANY_STATUS : '';
+  search.value[key] = value;
+  appliedSearch.value = { ...appliedSearch.value, [key]: value };
+  void loadContent(1);
 };
 
 const resetSearch = (): void => {
   search.value = defaultSearchState();
-  showSearchPanel.value = false;
+  appliedSearch.value = { ...search.value };
   void loadContent(1);
 };
 
-onMounted(async () => {
-  await loadContent(page.value);
-  window.addEventListener('popstate', handlePopState);
-});
-
-onUnmounted(() => window.removeEventListener('popstate', handlePopState));
-
-const handlePopState = async (): Promise<void> => {
-  page.value = toPositiveInt(getRouteQueryValue(route.query.page, '1'), 1);
-  perpage.value = toPositiveInt(getRouteQueryValue(route.query.perpage, '26'), 26);
-  displayFilter.value = getRouteQueryValue(route.query.filter, '');
-  showDisplayFilter.value = !!displayFilter.value;
-  search.value = createSearchState(route.query);
-  showSearchPanel.value = ['status', 'event', 'reference', 'before', 'after'].some((key) => {
-    const value = route.query[key];
-    return Array.isArray(value) ? !!value[0] : !!value;
-  });
-
-  await loadContent(page.value, false);
+const clearFilters = (): void => {
+  displayFilter.value = '';
+  resetSearch();
 };
 
-const deletedItem = (id: string): void => {
-  items.value = items.value.filter((item) => item.id !== id);
-  total.value = Math.max(0, total.value - 1);
+onMounted(() => void loadContent(page.value));
 
-  if (quick_view.value === id) {
+onUnmounted(() => {
+  disposed = true;
+  loadController?.abort();
+  loadId++;
+});
+
+watch(
+  () => route.query,
+  (query, previous) => {
+    if ('events' !== route.name) {
+      return;
+    }
+    displayFilter.value = getRouteQueryValue(query.filter, '');
+    if (
+      ['page', 'perpage', 'status', 'event', 'reference', 'before', 'after'].every(
+        (key) => getRouteQueryValue(query[key]) === getRouteQueryValue(previous[key]),
+      )
+    ) {
+      return;
+    }
+
+    const nextPage = toPositiveInt(getRouteQueryValue(query.page, '1'), 1);
+    const nextPerPage = toPositiveInt(
+      getRouteQueryValue(query.perpage, String(DEFAULT_PER_PAGE)),
+      DEFAULT_PER_PAGE,
+    );
+    const nextSearch = createSearchState(query);
+    if (
+      nextPage === page.value &&
+      nextPerPage === perpage.value &&
+      JSON.stringify(nextSearch) === JSON.stringify(appliedSearch.value)
+    ) {
+      return;
+    }
+
+    page.value = nextPage;
+    perpage.value = nextPerPage;
+    search.value = nextSearch;
+    appliedSearch.value = { ...nextSearch };
+    showSearchPanel.value = ['event', 'reference', 'before', 'after'].some(
+      (key) => !!nextSearch[key as keyof SearchState],
+    );
+    deleteModalOpen.value = false;
+    void loadContent(nextPage, false);
+  },
+);
+
+const deletedItem = (id: string): void => {
+  const removed = items.value.some((item) => id === item.id);
+  items.value = items.value.filter((item) => item.id !== id);
+  if (removed) {
+    total.value = Math.max(0, total.value - 1);
+  }
+
+  if (id === quick_view.value) {
     quick_view.value = null;
   }
+
+  void loadContent(page.value, false);
 };
 
 const deleteItem = async (item: EventsItem): Promise<void> => {
@@ -895,58 +1008,62 @@ const deleteItem = async (item: EventsItem): Promise<void> => {
     return;
   }
 
+  const generation = loadId;
   const { status: confirmStatus } = await useDialog().confirmDialog({
-    message: `Delete '${makeEventName(item.id)}'?`,
+    title: 'Delete event?',
+    message: `Delete #${makeEventName(item.id)} & its saved logs? This can't be undone.`,
+    confirmText: 'Delete',
     confirmColor: 'error',
   });
 
-  if (true !== confirmStatus) {
+  if (true !== confirmStatus || disposed || generation !== loadId) {
     return;
   }
 
   try {
     const response = await request(`/system/events/${item.id}`, { method: 'DELETE' });
-
-    if (200 !== response.status) {
-      const json = await parse_api_response<GenericResponse>(response);
-      if ('error' in json) {
-        const errorJson = json as GenericError;
-        notification(
-          'error',
-          'Error',
-          `Events delete Request error. ${errorJson.error.code}: ${errorJson.error.message}`,
-        );
-      } else {
-        notification('error', 'Error', 'Events delete Request error.');
-      }
+    const json = await parse_api_response<EventsItem>(response);
+    if ('error' in json) {
+      notification('error', 'Could not delete event', `${json.error.code}: ${json.error.message}`);
+      return;
+    }
+    if (!response.ok) {
+      notification('error', 'Could not delete event', `${response.status}: ${response.statusText}`);
       return;
     }
 
+    if (disposed) {
+      return;
+    }
     deletedItem(item.id);
-    notification('success', 'Success', `Event '${makeEventName(item.id)}' successfully deleted.`);
-  } catch (e: unknown) {
-    console.error(e);
     notification(
-      'crit',
-      'Error',
-      `Events delete Request failure. ${e instanceof Error ? e.message : String(e)}`,
+      'success',
+      'Event deleted',
+      `Deleted #${makeEventName(item.id)} & its saved logs.`,
     );
+  } catch (e: unknown) {
+    notification('error', 'Could not delete event', e instanceof Error ? e.message : 'Try again.');
   }
 };
 
 const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> => {
   if (1 === item.status) {
-    notification('warning', 'Unavailable', 'Running events cannot be reset or cancelled.');
+    notification('warning', 'Unavailable', 'Running events cannot be run again or cancelled.');
     return;
   }
 
-  const action = 4 === status ? 'Cancel' : 'Reset';
+  const generation = loadId;
   const { status: confirmStatus } = await useDialog().confirmDialog({
-    message: `${action} '${makeEventName(item.id)}'?`,
-    confirmColor: 'warning',
+    title: 4 === status ? 'Cancel queued event?' : 'Run event again?',
+    message:
+      4 === status
+        ? `Cancel #${makeEventName(item.id)}? Its saved logs will be cleared.`
+        : `Queue #${makeEventName(item.id)} again? This repeats its action & clears its saved logs.`,
+    confirmColor: 'neutral',
+    confirmText: 4 === status ? 'Cancel event' : 'Run again',
   });
 
-  if (true !== confirmStatus) {
+  if (true !== confirmStatus || disposed || generation !== loadId) {
     return;
   }
 
@@ -962,33 +1079,27 @@ const resetEvent = async (item: EventsItem, status: number = 0): Promise<void> =
     const json = await parse_api_response<EventsItem>(response);
 
     if ('error' in json) {
-      const errorJson = json as GenericError;
-      notification(
-        'error',
-        'Error',
-        `Events view patch Request error. ${errorJson.error.code}: ${errorJson.error.message}`,
-      );
+      notification('error', 'Could not change event', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
     if (200 !== response.status) {
-      notification('error', 'Error', 'Events view patch Request error.');
+      notification('error', 'Could not change event', `${response.status}: ${response.statusText}`);
       return;
     }
 
-    const index = items.value.findIndex((currentItem) => currentItem.id === item.id);
-    if (index < 0) {
+    if (disposed) {
       return;
     }
 
-    items.value[index] = { ...json };
-  } catch (e: unknown) {
-    console.error(e);
     notification(
-      'crit',
-      'Error',
-      `Events view patch Request failure. ${e instanceof Error ? e.message : String(e)}`,
+      'success',
+      'Event updated',
+      `Event '${makeEventName(item.id)}' ${4 === status ? 'cancelled' : 'queued again'}.`,
     );
+    await loadContent(page.value, false);
+  } catch (e: unknown) {
+    notification('error', 'Could not change event', e instanceof Error ? e.message : 'Try again.');
   }
 };
 
@@ -999,11 +1110,7 @@ const buildDeleteQuery = (): URLSearchParams => {
     queryParams.append('include_pending', '1');
   }
 
-  for (const [key, value] of Object.entries(search.value)) {
-    if ('all' === key) {
-      continue;
-    }
-
+  for (const [key, value] of Object.entries(deleteSearch.value)) {
     if ('status' === key && ANY_STATUS === value) {
       continue;
     }
@@ -1020,6 +1127,7 @@ const buildDeleteQuery = (): URLSearchParams => {
 };
 
 const openDeleteModal = (): void => {
+  deleteSearch.value = { ...appliedSearch.value };
   deleteIncludePending.value = false;
   deleteModalOpen.value = true;
 };
@@ -1033,12 +1141,19 @@ const confirmDeleteAll = async (): Promise<void> => {
     });
 
     const json = await parse_api_response<{ deleted: number; matched: number }>(response);
+    if (disposed) {
+      return;
+    }
 
     if ('error' in json) {
+      notification('error', 'Could not delete events', `${json.error.code}: ${json.error.message}`);
+      return;
+    }
+    if (!response.ok) {
       notification(
         'error',
-        'Error',
-        `Failed to delete events. ${json.error.code}: ${json.error.message}`,
+        'Could not delete events',
+        `${response.status}: ${response.statusText}`,
       );
       return;
     }
@@ -1047,27 +1162,21 @@ const confirmDeleteAll = async (): Promise<void> => {
     quick_view.value = null;
     notification(
       'success',
-      'Success',
-      `Deleted ${json.deleted} event(s) from ${json.matched} match(es).`,
+      'Events deleted',
+      `Deleted ${json.deleted} of ${json.matched} matching events.`,
     );
     await loadContent(page.value);
   } catch (e: unknown) {
-    console.error(e);
-    notification(
-      'crit',
-      'Error',
-      `Events delete Request failure. ${e instanceof Error ? e.message : String(e)}`,
-    );
+    notification('error', 'Could not delete events', e instanceof Error ? e.message : 'Try again.');
   } finally {
     deleteSubmitting.value = false;
   }
 };
 
-const toggleDisplayFilter = (): void => {
-  showDisplayFilter.value = !showDisplayFilter.value;
-};
-
 watch(displayFilter, (value: string) => {
+  if ('events' !== route.name) {
+    return;
+  }
   if (!value) {
     if (!route.query.filter) {
       return;

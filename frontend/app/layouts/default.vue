@@ -12,7 +12,7 @@
           side="left"
           collapsible
           resizable
-          :default-size="17"
+          :default-size="15"
           :min-size="11"
           :max-size="22"
           :collapsed-size="4"
@@ -32,29 +32,22 @@
 
               <div v-if="!collapsed" class="min-w-0">
                 <p class="truncate text-sm font-semibold text-highlighted">WatchState</p>
-                <p class="truncate text-xs text-toned">Control Panel</p>
+                <p class="truncate text-xs text-muted">Play-state sync</p>
               </div>
             </div>
           </template>
 
           <template #default="{ collapsed }">
-            <div class="flex h-full flex-col gap-6 px-1 py-1">
-              <div v-for="section in sidebarSections" :key="section.id" class="space-y-2">
-                <p
-                  v-if="!collapsed && section.label"
-                  class="px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-toned"
-                >
-                  {{ section.label }}
-                </p>
-
-                <UNavigationMenu
-                  orientation="vertical"
-                  :collapsed="collapsed"
-                  :items="section.items"
-                  :tooltip="true"
-                  :ui="navigationUi(collapsed)"
-                />
-              </div>
+            <div class="flex h-full flex-col gap-5 px-1 py-1">
+              <UNavigationMenu
+                v-model="openNavigationGroups"
+                orientation="vertical"
+                :collapsed="collapsed"
+                :items="sidebarItems"
+                :tooltip="true"
+                :popover="{ mode: 'click' }"
+                :ui="navigationUi(collapsed)"
+              />
             </div>
           </template>
         </UDashboardSidebar>
@@ -65,29 +58,24 @@
               <template #left>
                 <div class="flex min-w-0 shrink-0 items-center gap-2">
                   <UDashboardSidebarToggle class="lg:hidden" />
-                  <UButton
-                    to="/"
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    icon="i-lucide-house"
-                    class="lg:hidden"
-                  >
-                    Home
-                  </UButton>
                   <UDashboardSidebarCollapse class="hidden lg:inline-flex" />
                 </div>
               </template>
 
               <template #right>
                 <div class="flex min-w-0 shrink items-center gap-0.5 sm:gap-2">
-                  <UTooltip v-if="inContainer" text="Task Scheduler Status">
+                  <UTooltip
+                    v-if="inContainer"
+                    :text="scheduler.status ? 'Task scheduler running' : 'Task scheduler stopped'"
+                  >
                     <UButton
                       color="neutral"
-                      variant="ghost"
+                      :variant="showScheduler ? 'soft' : 'outline'"
                       size="sm"
                       :color-mode="undefined"
-                      class="hidden sm:inline-flex"
+                      class="hidden lg:inline-flex"
+                      aria-label="Toggle scheduler status"
+                      :aria-pressed="showScheduler"
                       @click="
                         () => {
                           showScheduler = !showScheduler;
@@ -96,37 +84,47 @@
                     >
                       <UIcon
                         name="i-lucide-cpu"
-                        :class="[
-                          'size-4',
-                          scheduler.status ? 'text-primary' : 'animate-pulse text-error',
-                        ]"
+                        :class="['size-4', { 'animate-pulse': !scheduler.status }]"
                       />
                       <span class="hidden lg:inline">Scheduler</span>
                     </UButton>
                   </UTooltip>
 
                   <HeaderStatus
+                    class="hidden xl:flex"
                     :stats="systemStats.stats.value"
                     :loading="systemStats.loading.value"
+                    :error="systemStats.error.value"
                   />
 
                   <UTooltip text="Change Identity" placement="bottom">
                     <UButton
                       color="neutral"
-                      variant="ghost"
+                      variant="soft"
                       size="sm"
                       icon="i-lucide-users"
+                      :aria-label="`Browsing as ${apiUser}. Change identity`"
+                      :title="`Browsing as ${apiUser}`"
                       @click="
                         () => {
                           showIdentitySelection = true;
                         }
                       "
                     >
-                      <span class="hidden xl:inline">{{ apiUser }}</span>
+                      <span class="hidden text-xs font-normal text-muted sm:inline">Identity</span>
+                      <span class="max-w-24 truncate sm:max-w-36">{{ apiUser }}</span>
                     </UButton>
                   </UTooltip>
 
-                  <UDashboardSearchButton class="hidden shrink-0 sm:inline-flex" />
+                  <UTooltip text="Find a page or action">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      icon="i-lucide-search"
+                      aria-label="Find a page or action"
+                      @click="showRouteSearch = true"
+                    />
+                  </UTooltip>
 
                   <UTooltip :text="colorModeButtonTitle" placement="bottom">
                     <UButton
@@ -139,29 +137,17 @@
                     />
                   </UTooltip>
 
-                  <UButton
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    icon="i-lucide-settings-2"
-                    @click="
-                      () => {
-                        showSettings = true;
-                      }
-                    "
-                  >
-                    <span class="hidden xl:inline">Settings</span>
-                  </UButton>
-
-                  <UButton
-                    color="neutral"
-                    variant="ghost"
-                    size="sm"
-                    icon="i-lucide-log-out"
-                    @click="() => void logout()"
-                  >
-                    <span class="hidden xl:inline">Logout</span>
-                  </UButton>
+                  <UDropdownMenu :items="accountActions" :content="{ align: 'end' }">
+                    <UTooltip text="Preferences and sign out">
+                      <UButton
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        icon="i-lucide-ellipsis"
+                        aria-label="Preferences and sign out"
+                      />
+                    </UTooltip>
+                  </UDropdownMenu>
                 </div>
               </template>
             </UDashboardNavbar>
@@ -171,8 +157,14 @@
             <NuxtLoadingIndicator />
 
             <div
-              class="mx-auto flex w-full max-w-450 min-w-0 flex-1 flex-col px-4 py-4 sm:px-5 lg:px-6"
+              class="relative isolate mx-auto flex w-full max-w-450 min-w-0 flex-1 flex-col px-4 py-5 sm:px-6 sm:py-7 lg:px-10"
             >
+              <div
+                v-if="effectiveBackgroundSrc"
+                aria-hidden="true"
+                class="ws-header-artwork pointer-events-none absolute inset-x-0 top-0 -z-10 h-80"
+                :style="{ backgroundImage: `url(${effectiveBackgroundSrc})` }"
+              />
               <NewVersion v-if="newVersionIsAvailable" />
 
               <TaskScheduler
@@ -181,42 +173,55 @@
                 v-if="inContainer"
               />
 
-              <div
-                class="ws-shell-panel flex min-h-0 flex-1 flex-col p-3 sm:p-4 lg:p-5 ws-blur-text"
-              >
+              <div class="flex min-h-0 min-w-0 flex-1 flex-col">
                 <NuxtPage />
               </div>
 
-              <footer
-                class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-toned"
-              >
-                <NuxtLink
-                  href="https://github.com/arabcoders/watchstate"
-                  target="_blank"
-                  class="font-semibold text-highlighted hover:underline"
-                >
-                  WatchState
-                </NuxtLink>
-                <UTooltip
-                  :text="`Full SHA: ${apiVersionSha ?? 'Unknown'} · Branch: ${apiVersionBranch ?? 'Unknown'}`"
-                >
-                  <span class="cursor-help">
-                    {{ apiVersion ? `${apiVersion}` : 'Loading version...' }}
-                    · {{ apiVersionDate ?? 'Unknown' }} ·
+              <footer class="mt-8 border-t border-default pt-6 text-sm text-toned">
+                <div class="grid gap-6 lg:grid-cols-2">
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
                     <NuxtLink
-                      v-if="apiVersionSha"
-                      :href="`https://github.com/arabcoders/watchstate/commit/${apiVersionSha}`"
+                      href="https://github.com/arabcoders/watchstate"
                       target="_blank"
-                      class="hover:text-primary hover:underline"
-                      @click.stop
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-2 font-semibold text-highlighted hover:underline underline-offset-2"
                     >
-                      {{ apiVersionSha.slice(0, 7) }}
+                      <UIcon name="i-lucide-github" class="size-4" aria-hidden="true" />
+                      WatchState
                     </NuxtLink>
-                    <span v-else>Unknown</span>
-                    ·
-                    {{ apiVersionBranch ?? 'Unknown' }}
-                  </span>
-                </UTooltip>
+                    <span class="text-xs">{{ apiVersion || 'Loading version…' }}</span>
+                  </div>
+                  <dl
+                    class="grid grid-cols-2 gap-4 border-t border-default pt-4 text-xs sm:grid-cols-3 lg:border-t-0 lg:border-s lg:ps-6 lg:pt-0"
+                  >
+                    <div class="min-w-0 space-y-1.5">
+                      <dt class="text-muted">Build date</dt>
+                      <dd class="wrap-anywhere text-default">{{ apiVersionDate || 'Unknown' }}</dd>
+                    </div>
+                    <div class="min-w-0 space-y-1.5">
+                      <dt class="text-muted">Branch</dt>
+                      <dd class="wrap-anywhere font-mono text-default">
+                        {{ apiVersionBranch || 'Unknown' }}
+                      </dd>
+                    </div>
+                    <div class="min-w-0 space-y-1.5">
+                      <dt class="text-muted">Commit</dt>
+                      <dd class="font-mono text-default">
+                        <UTooltip v-if="apiVersionSha" :text="apiVersionSha">
+                          <NuxtLink
+                            :href="`https://github.com/arabcoders/watchstate/commit/${apiVersionSha}`"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="hover:text-primary hover:underline underline-offset-2"
+                          >
+                            {{ apiVersionSha.slice(0, 7) }}
+                          </NuxtLink>
+                        </UTooltip>
+                        <span v-else>Unknown</span>
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
               </footer>
             </div>
 
@@ -230,8 +235,12 @@
               <template #body>
                 <IdentitySelection
                   v-if="hasOpenedIdentitySelection"
+                  :actions-target="`#${identitySelectionFooterId}`"
                   @close="() => (showIdentitySelection = false)"
                 />
+              </template>
+              <template #footer>
+                <div :id="identitySelectionFooterId" class="w-full" />
               </template>
             </UModal>
 
@@ -265,11 +274,33 @@ import {
   onMounted,
   readonly,
   ref,
+  useId,
   watch,
 } from 'vue';
 import { useBreakpoints, useStorage } from '@vueuse/core';
-import { navigateTo } from '#app';
-import { useColorMode } from '#imports';
+import { navigateTo, useNuxtApp, useRoute } from '#app';
+import { useColorMode, useToast } from '#imports';
+import {
+  NuxtLink,
+  NuxtLoadingIndicator,
+  NuxtPage,
+  UApp,
+  UButton,
+  UDashboardGroup,
+  UDashboardNavbar,
+  UDashboardPanel,
+  UDashboardSearch,
+  UDashboardSidebar,
+  UDashboardSidebarCollapse,
+  UDashboardSidebarToggle,
+  UDropdownMenu,
+  UIcon,
+  UModal,
+  UNavigationMenu,
+  UTooltip,
+} from '#components';
+import type { NavigationMenuItem } from '@nuxt/ui';
+import type { VersionResponse } from '~/types';
 import { useAuth } from '~/composables/useAuth';
 import { useMediaQuery } from '~/composables/useMediaQuery';
 import { usePageBackground } from '~/composables/usePageBackground';
@@ -279,7 +310,7 @@ import {
   getTopLevelNavigationEntries,
   getTopLevelNavigationSections,
 } from '~/utils/topLevelNavigation';
-import { dEvent, registerToastController, request, syncOpacity } from '~/utils';
+import { dEvent, parse_api_response, registerToastController, request, syncOpacity } from '~/utils';
 import TaskScheduler from '~/components/TaskScheduler.vue';
 import NewVersion from '~/components/NewVersion.vue';
 import HeaderStatus from '~/components/HeaderStatus.vue';
@@ -361,11 +392,13 @@ const apiUser = useStorage<string>('api_user', 'main');
 const isMobile = useMediaQuery({ query: '(max-width: 1023px)' });
 
 const showIdentitySelection = ref(false);
+const identitySelectionFooterId = useId();
 const showSettings = ref(false);
 const inContainer = ref(false);
 const showScheduler = ref(false);
 const showRouteSearch = ref(false);
 const showSidebar = ref(false);
+const openNavigationGroups = ref<Array<string>>([]);
 const hasOpenedDialog = ref(false);
 const hasOpenedIdentitySelection = ref(false);
 const hasOpenedSettings = ref(false);
@@ -541,6 +574,7 @@ const apiVersionDate = ref<string | undefined>();
 const apiVersionBranch = ref<string | undefined>();
 const bgImage = ref<{ src: string; type: string }>({ src: '', type: '' });
 const loadedImages = ref<Record<string, string>>({ poster: '', background: '' });
+let backgroundLoadId = 0;
 
 const changelogUrl = computed(() => `/changelog?version=${apiVersion.value ?? ''}`);
 const effectiveBackgroundSrc = computed(() => {
@@ -548,7 +582,8 @@ const effectiveBackgroundSrc = computed(() => {
     return '';
   }
 
-  return pageBackgroundOverride.value?.src ?? bgImage.value.src;
+  const src = pageBackgroundOverride.value?.src ?? bgImage.value.src;
+  return 'failed' === src ? '' : src;
 });
 
 const normalizePath = (value?: string | null) => {
@@ -650,19 +685,57 @@ const sidebarDefinitions = computed<Array<SidebarSection>>(() => {
 
 const makeNavigationItem = (entry: NavEntry) => ({
   label: entry.label,
+  'aria-label': entry.label,
   icon: entry.icon,
   to: entry.to,
   href: entry.href,
   target: entry.target,
   active: isNavigationEntryActive(entry),
-  onSelect: entry.onSelect,
+  onSelect: () => {
+    entry.onSelect?.();
+    showSidebar.value = false;
+  },
 });
 
-const sidebarSections = computed(() =>
-  sidebarDefinitions.value.map((section) => ({
-    ...section,
-    items: section.items.map((group) => group.map((entry) => makeNavigationItem(entry))),
-  })),
+const sidebarItems = computed<Array<NavigationMenuItem>>(() =>
+  sidebarDefinitions.value.map((section) => {
+    const entries = section.items.flat();
+    if (1 === entries.length && ('overview' === section.id || 'backends' === section.id)) {
+      return { ...makeNavigationItem(entries[0]!), value: section.id };
+    }
+
+    const first = entries[0];
+    return {
+      value: section.id,
+      label: section.label,
+      'aria-label': section.label,
+      icon:
+        'configuration' === section.id
+          ? 'i-lucide-settings-2'
+          : 'activity' === section.id
+            ? 'i-lucide-activity'
+            : first?.icon,
+      active: entries.some((entry) => isNavigationEntryActive(entry)),
+      children: entries.map((entry) => ({
+        ...makeNavigationItem(entry),
+        label: 'history' === entry.id ? 'Records' : entry.label,
+      })),
+    };
+  }),
+);
+
+watch(
+  () => route.path,
+  () => {
+    const section = sidebarDefinitions.value.find((section) =>
+      section.items.flat().some((entry) => isNavigationEntryActive(entry)),
+    );
+    if (section && false === openNavigationGroups.value.includes(section.id)) {
+      openNavigationGroups.value = [...openNavigationGroups.value, section.id];
+    }
+    showSidebar.value = false;
+  },
+  { immediate: true },
 );
 
 const allNavEntries = computed(() =>
@@ -685,6 +758,7 @@ const handleRouteSelect = async (entry: {
   onSelect?: () => void;
 }): Promise<void> => {
   await closeRouteSearch();
+  showSidebar.value = false;
 
   entry.onSelect?.();
 
@@ -776,16 +850,45 @@ const pageTitle = computed(() => {
   return match?.label ?? 'WatchState';
 });
 
+const accountActions = computed(() => [
+  [
+    {
+      label: 'Preferences',
+      icon: 'i-lucide-settings-2',
+      onSelect: () => {
+        showSettings.value = true;
+      },
+    },
+    {
+      label: true === showScheduler.value ? 'Hide scheduler status' : 'Show scheduler status',
+      icon: 'i-lucide-cpu',
+      disabled: false === inContainer.value,
+      onSelect: () => {
+        showScheduler.value = !showScheduler.value;
+      },
+    },
+  ],
+  [
+    {
+      label: 'Sign out',
+      icon: 'i-lucide-log-out',
+      onSelect: () => {
+        void logout();
+      },
+    },
+  ],
+]);
+
 const dashboardSidebarUi = {
-  root: 'ws-shell-surface border-r border-default bg-default/95 backdrop-blur-sm',
-  header: 'border-b border-default px-2.5 py-3',
+  root: 'border-r border-default bg-muted',
+  header: 'px-3 py-5',
   body: 'gap-3 px-2.5 py-3',
   footer: 'border-t border-default px-2.5 py-3',
 };
 
 const dashboardNavbarUi = {
-  root: 'border-b border-default bg-transparent px-4 py-3 sm:px-5 lg:px-6',
-  title: 'text-sm font-semibold text-highlighted',
+  root: 'border-b border-default bg-default px-4 py-3 sm:px-6 lg:px-10',
+  title: 'hidden text-sm font-medium text-muted md:flex',
   right: 'flex min-w-0 shrink items-center gap-0.5 sm:gap-1.5',
 };
 
@@ -802,6 +905,8 @@ const navigationUi = (collapsed: boolean) => ({
     : 'rounded-md px-2.5 py-2 text-sm font-medium text-default transition-colors',
   linkLeadingIcon: collapsed ? 'size-5' : 'size-4',
   linkLabel: collapsed ? 'hidden' : 'truncate',
+  childList: 'ms-4 border-s border-default ps-2',
+  childLink: 'py-2',
 });
 
 const getVersion = async (): Promise<void> => {
@@ -811,7 +916,13 @@ const getVersion = async (): Promise<void> => {
 
   try {
     const response = await request('/system/version');
-    const json = await response.json();
+    const json = await parse_api_response<VersionResponse>(response);
+    if ('error' in json) {
+      throw new Error(json.error.message);
+    }
+    if (false === response.ok) {
+      throw new Error(`Unable to load version (HTTP ${response.status}).`);
+    }
     apiVersion.value = json.version;
     apiVersionSha.value = json.sha;
     apiVersionDate.value = json.build;
@@ -823,73 +934,42 @@ const getVersion = async (): Promise<void> => {
 };
 
 watch(
-  effectiveBackgroundSrc,
-  async (src) => {
-    const html = document.documentElement;
-
-    if ('' === src || 'failed' === src) {
-      if (html.getAttribute('style')) {
-        html.removeAttribute('style');
-      }
-
-      html.classList.remove('bg-fanart');
-      return;
-    }
-
-    const style: Record<string, string> = {
-      'background-color': 'unset',
-      display: 'block',
-      'min-height': '100%',
-      'min-width': '100%',
-      'background-image': `url(${src})`,
-    };
-
-    html.setAttribute(
-      'style',
-      Object.keys(style)
-        .map((key) => `${key}: ${style[key]}`)
-        .join('; ')
-        .trim(),
-    );
-
-    html.classList.add('bg-fanart');
+  [bgOpacity, bgEnable],
+  () => {
     syncOpacity();
   },
   { immediate: true },
 );
 
-watch(bgOpacity, () => {
-  if (false === bgEnable.value) {
-    return;
-  }
-
-  syncOpacity();
-});
-
 watch(breakpoints.active(), async () => await loadImage());
 
-watch(bgEnable, async (value) => {
-  if (true === value) {
-    if (pageBackgroundOverride.value?.src) {
-      syncOpacity();
-      return;
-    }
-
-    await loadImage();
+watch(bgEnable, async (enabled) => {
+  if (false === enabled) {
+    backgroundLoadId++;
     return;
   }
+  await loadImage();
+});
 
+watch(
+  apiUser,
+  () => {
+    releaseBackgroundImages();
+    void loadImage();
+  },
+  { flush: 'sync' },
+);
+
+const releaseBackgroundImages = (): void => {
+  backgroundLoadId++;
+  for (const src of Object.values(loadedImages.value)) {
+    if (src) {
+      URL.revokeObjectURL(src);
+    }
+  }
   loadedImages.value = { poster: '', background: '' };
   bgImage.value = { src: '', type: '' };
-
-  const html = document.documentElement;
-  html.removeAttribute('style');
-  html.classList.remove('bg-fanart');
-  const body = document.querySelector('body');
-  if (body) {
-    body.style.removeProperty('opacity');
-  }
-});
+};
 
 watch(isMobile, (v) => {
   if (true === v) {
@@ -940,7 +1020,7 @@ const forceBackgroundReload = async (): Promise<void> => {
 };
 
 const loadImage = async (force = false): Promise<void> => {
-  if (!bgEnable.value) {
+  if (false === bgEnable.value) {
     return;
   }
 
@@ -960,27 +1040,41 @@ const loadImage = async (force = false): Promise<void> => {
     url += `?force=1&t=${Date.now()}`;
   }
 
-  const imgRequest = await request(url);
-  if (200 !== imgRequest.status) {
-    bgImage.value = { src: 'failed', type: bgType };
-    return;
-  }
-
+  const loadId = ++backgroundLoadId;
+  const selectedUser = apiUser.value;
   try {
-    loadedImages.value[bgType] = URL.createObjectURL(await imgRequest.blob());
+    const imgRequest = await request(url, { headers: { 'X-User': selectedUser } });
+    if (loadId !== backgroundLoadId || selectedUser !== apiUser.value) {
+      return;
+    }
+    if (200 !== imgRequest.status) {
+      bgImage.value = { src: 'failed', type: bgType };
+      return;
+    }
+    const image = await imgRequest.blob();
+    if (loadId !== backgroundLoadId || selectedUser !== apiUser.value) {
+      return;
+    }
+    if (loadedImages.value[bgType]) {
+      URL.revokeObjectURL(loadedImages.value[bgType]);
+    }
+    loadedImages.value[bgType] = URL.createObjectURL(image);
     bgImage.value = {
       src: loadedImages.value[bgType],
       type: bgType,
     };
   } catch {
-    bgImage.value = { src: 'failed', type: bgType };
+    if (loadId === backgroundLoadId && selectedUser === apiUser.value) {
+      bgImage.value = { src: 'failed', type: bgType };
+    }
   }
 };
 
 const logout = async (): Promise<boolean> => {
   const { status } = await dialog.confirmDialog({
-    title: 'Logout',
-    message: 'Are you sure you want to logout?',
+    title: 'Sign out?',
+    message: 'End your current session?',
+    confirmText: 'Sign out',
     confirmColor: 'error',
   });
 
@@ -1016,6 +1110,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  releaseBackgroundImages();
   document.removeEventListener('touchstart', handleSwipeStart, true);
   document.removeEventListener('touchmove', handleSwipeMove, true);
   document.removeEventListener('touchend', handleSwipeEnd, true);

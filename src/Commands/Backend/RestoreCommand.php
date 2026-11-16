@@ -80,7 +80,7 @@ class RestoreCommand extends Command
                 'ignore',
                 'i',
                 InputOption::VALUE_NONE,
-                'Bypass backend export.enabled check. Use with caution.',
+                'Legacy option. Restores no longer require export to be enabled.',
             )
             ->addArgument('file', InputArgument::REQUIRED, 'Backup file to restore from')
             ->addOption(
@@ -196,28 +196,6 @@ class RestoreCommand extends Command
                 ],
             ]);
             return self::FAILURE;
-        }
-
-        if (false === (bool) ag($backend, 'export.enabled')) {
-            if (false === $input->getOption('ignore')) {
-                $this->logger->warning("Export to '{identity.user}@{identity.backend}' is disabled.", [
-                    'identity' => [
-                        'backend' => $name,
-                        'user' => $userContext->name,
-                    ],
-                ]);
-                return self::FAILURE;
-            }
-
-            $this->logger->warning(
-                "Exporting to '{identity.user}@{identity.backend}' is disabled, However, the check was bypass due to [-i, --ignore] flag being used.",
-                [
-                    'identity' => [
-                        'backend' => $name,
-                        'user' => $userContext->name,
-                    ],
-                ],
-            );
         }
 
         if (true === (bool) ag($backend, 'import.enabled')) {

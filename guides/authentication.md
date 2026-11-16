@@ -1,10 +1,10 @@
 # Authentication
 
-WatchState supports local credentials, OpenID Connect (OIDC), and trusted-header authentication through a reverse proxy. 
+WatchState supports local credentials, OpenID Connect (OIDC), and trusted-header authentication through a reverse proxy.
 
 > [!NOTE]
-> 
-> You must create the local WatchState account before enabling either external method. 
+>
+> You must create the local WatchState account before enabling either external method.
 > That account remains available for local login and is the account external logins use.
 
 ## Choose a login method
@@ -13,13 +13,14 @@ WatchState supports local credentials, OpenID Connect (OIDC), and trusted-header
 - **OIDC** sends users to an identity provider to authenticate in the browser.
 - **Trusted-header authentication** accepts an identity asserted by a reverse proxy that you control.
 
-You can enable OIDC and trusted-header authentication together. Local login remains available as a fallback. 
+You can enable OIDC and trusted-header authentication together. Local login remains available as a fallback.
 All successful external logins use the configured WatchState account and therefore have administrator access.
 
 ## Create the local account first
 
-Create the required local WatchState account before configuring OIDC or a proxy. Test that you can sign in with its local 
-credentials. Do not remove or disable this account after enabling an external method. Without the local account, you will 
+Create the required local WatchState account before configuring OIDC or a proxy. Test that you can sign in with its local
+credentials.
+Do not remove or disable this account after enabling an external method. Without the local account, you will
 not be able to sign in, regardless of the external authentication methods you enable.
 
 ## Configure OIDC
@@ -33,10 +34,10 @@ https://watchstate.example.com/v1/api/system/auth/oidc/callback
 ```
 
 The provider client must allow the `openid`, `profile`, and `email` scopes. WatchState accepts HS256, RS256, RS384,
-RS512, PS256, PS384, PS512, ES256, ES384, and ES512 for ID tokens. 
+RS512, PS256, PS384, PS512, ES256, ES384, and ES512 for ID tokens.
 
 > [!NOTE]
-> For HS256, set a client secret of at least 32 bytes  in the provider and WatchState. Alternatively, configure a 
+> For HS256, set a client secret of at least 32 bytes in the provider and WatchState. Alternatively, configure a
 > signing certificate for an asymmetric algorithm such as RS256.
 
 ### 2. Add the four OIDC fields
@@ -53,24 +54,24 @@ auth:
 ```
 
 > [!IMPORTANT]
-> 
+>
 > The redirect URI in WatchState must match the provider registration exactly, including scheme, host, path, and any deployment prefix.
 
 ### 3. Restart and verify
 
-Restart WatchState after changing the configuration. Open the login page, select the OIDC login button, authenticate at the provider, 
+Restart WatchState after changing the configuration. Open the login page, click **SSO**, authenticate at the provider,
 and confirm that WatchState signs you in. If the provider session is still active, a later OIDC login may not ask for credentials again.
 
-Every identity permitted to use this OIDC client becomes the one WatchState administrator. WatchState does not create separate users or 
+Every identity permitted to use this OIDC client becomes the one WatchState administrator. WatchState does not create separate users or
 apply provider roles and groups. Restrict access to the client with your identity provider's access policy before allowing users to log in.
 
-Logging out of WatchState clears the local WatchState session. It does not log out of the identity provider. Use the provider's logout 
-function when that session must also end.
+To log out, open the ellipsis menu in the WebUI header and select **Sign out**. This clears the local WatchState session.
+It does not log out of the identity provider. Use the provider's logout function when that session must also end.
 
 ## Configure trusted-header authentication
 
 > [!IMPORTANT]
-> 
+>
 > This method is safe only when the WatchState origin cannot be reached directly by clients.
 
 1. Put WatchState behind an authenticated reverse proxy and make the origin reachable only from that proxy.
@@ -103,21 +104,21 @@ auth:
       - 192.0.2.10/32
 ```
 
-WatchState checks the raw `REMOTE_ADDR` against `auth.remote_user.trusted_proxies` with CIDR matching. IPv4 and IPv6 are 
-supported.  An empty `trusted_proxies` list fails closed, so no proxy identity is trusted. A request must come from a 
-trusted address and contain a non-empty configured header. If clients can bypass the proxy or supply that header themselves, 
+WatchState checks the raw `REMOTE_ADDR` against `auth.remote_user.trusted_proxies` with CIDR matching. IPv4 and IPv6 are
+supported. An empty `trusted_proxies` list fails closed, so no proxy identity is trusted. A request must come from a
+trusted address and contain a non-empty configured header. If clients can bypass the proxy or supply that header themselves,
 they can bypass the login layer entirely.
 
 ## Use OIDC and proxy authentication together
 
-When both methods are enabled, use the OIDC button for OIDC login and the proxy entry point for requests authenticated 
+When both methods are enabled, use **SSO** for OIDC login and the proxy entry point for requests authenticated
 by the proxy. Local credentials remain available.
 
 ## Troubleshooting
 
-- **The OIDC button is missing or login is unavailable:** check all four `auth.oidc` values in `{DATA_PATH}/config/config.yaml`, 
+- **SSO is missing or login is unavailable:** check all four `auth.oidc` values in `{DATA_PATH}/config/config.yaml`,
   then restart WatchState. Confirm the issuer is reachable from the WatchState container.
-- **The provider rejects the callback:** compare the provider's registered URI with the `auth.oidc.redirect_uri` value 
+- **The provider rejects the callback:** compare the provider's registered URI with the `auth.oidc.redirect_uri` value
   in `{DATA_PATH}/config/config.yaml`.
 - **State, nonce, or PKCE errors appear:** start a new login from the login page. Do not reuse an old callback or an expired callback.
 - **An unsupported OIDC signing algorithm appears in the logs:** check the provider's ID-token signing algorithm against

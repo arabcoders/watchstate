@@ -2,377 +2,374 @@
   <main class="w-full min-w-0 max-w-full space-y-6">
     <PageHeader v-bind="pageShell">
       <template #actions>
-        <UTooltip text="Reload tasks">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-refresh-cw"
+          :loading="isLoading"
+          :disabled="isLoading || null !== pendingTask"
+          aria-label="Refresh tasks"
+          @click="() => void loadContent()"
+        >
+          Refresh
+        </UButton>
+      </template>
+    </PageHeader>
+
+    <section
+      v-if="0 < queued.length"
+      id="queued_tasks"
+      aria-labelledby="queued-tasks-title"
+      class="ws-panel-padded scroll-mt-24 space-y-3"
+    >
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2
+          id="queued-tasks-title"
+          class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted"
+        >
+          <UIcon name="i-lucide-clock-3" class="size-4 text-toned" />
+          Queued tasks
+          <UBadge color="neutral" variant="soft" size="xs">{{ queued.length }}</UBadge>
+        </h2>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          v-for="name in queued"
+          :key="name"
+          :to="`#${name}`"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+        >
+          {{ formatTaskName(name) }}
+        </UButton>
+      </div>
+    </section>
+
+    <section aria-label="Scheduled tasks" :aria-busy="isLoading" class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3" aria-live="polite">
+        <p v-if="hasResults" class="text-sm text-toned">
+          <strong class="font-medium text-highlighted">{{ tasks.length }}</strong>
+          {{ 1 === tasks.length ? 'task' : 'tasks' }}
+          <span class="text-muted">· {{ enabledCount }} enabled · {{ queued.length }} queued</span>
+        </p>
+        <p
+          v-if="isLoading"
+          role="status"
+          class="inline-flex items-center gap-1.5 text-xs text-muted"
+        >
+          <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+          {{ hasResults ? 'Refreshing tasks…' : 'Loading tasks…' }}
+        </p>
+      </div>
+
+      <UAlert
+        v-if="loadError"
+        color="error"
+        variant="soft"
+        icon="i-lucide-circle-alert"
+        :title="hasResults ? 'Tasks could not be refreshed' : 'Tasks could not be loaded'"
+      >
+        <template #description>
+          <div class="space-y-2">
+            <p class="wrap-break-word">{{ loadError }}</p>
+            <p v-if="hasResults">Showing the last loaded tasks. Their status may be out of date.</p>
+          </div>
+        </template>
+        <template #actions>
           <UButton
             color="neutral"
             variant="outline"
             size="sm"
             icon="i-lucide-refresh-cw"
-            :loading="isLoading"
-            :disabled="isLoading"
-            aria-label="Reload tasks"
-            @click="loadContent"
+            :disabled="isLoading || null !== pendingTask"
+            @click="() => void loadContent()"
           >
-            <span class="hidden sm:inline">Reload</span>
+            Retry
           </UButton>
-        </UTooltip>
-      </template>
-    </PageHeader>
-
-    <UCard v-if="queued.length > 0" id="queued_tasks" class="shadow-sm" :ui="queuedCardUi">
-      <template #header>
-        <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-          <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-toned" />
-          <span>Queued Tasks</span>
-        </div>
-      </template>
-
-      <div class="space-y-3">
-        <p class="text-sm text-default">
-          The following tasks are queued to run in background soon.
-        </p>
-
-        <div class="flex flex-wrap gap-2">
-          <NuxtLink
-            v-for="task in queued"
-            :key="`queued-${task}`"
-            :to="`#${task}`"
-            class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default hover:bg-elevated/60"
-          >
-            <UIcon name="i-lucide-clock-3" class="size-3.5" />
-            <span class="capitalize">{{ task }}</span>
-          </NuxtLink>
-        </div>
-      </div>
-    </UCard>
-
-    <UAlert
-      v-if="isLoading"
-      color="info"
-      variant="soft"
-      icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
-      :ui="{ icon: 'animate-spin' }"
-    />
-
-    <UAlert
-      v-else-if="tasks.length < 1"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-triangle-alert"
-      title="No tasks found"
-      description="There are no configured tasks to display right now."
-    />
-
-    <div v-else class="grid gap-4 xl:grid-cols-2">
-      <UCard
-        v-for="task in tasks"
-        :id="task.name"
-        :key="task.name"
-        class="h-full shadow-sm"
-        :class="task.enabled ? '' : 'opacity-85'"
-        :ui="taskCardUi"
-      >
-        <template #header>
-          <div class="space-y-2">
-            <div class="flex min-w-0 items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <div
-                    class="inline-flex min-w-0 items-center gap-2 text-base font-semibold capitalize text-highlighted"
-                  >
-                    <UIcon name="i-lucide-list-checks" class="size-4 text-toned" />
-                    <UTooltip :text="String(task.name)">
-                      <span class="block min-w-0 truncate">{{ task.name }}</span>
-                    </UTooltip>
-                  </div>
-
-                  <UBadge v-if="task.queued" color="neutral" variant="soft">Queued</UBadge>
-                </div>
-              </div>
-
-              <div v-if="task.allow_disable" class="flex shrink-0 items-center justify-end">
-                <USwitch
-                  :model-value="task.enabled"
-                  :color="task.enabled ? 'success' : 'neutral'"
-                  label="Enabled"
-                  @update:model-value="() => void toggleTask(task)"
-                />
-              </div>
-            </div>
-
-            <p v-if="task.description" class="text-sm leading-6 text-default">
-              {{ task.description }}
-            </p>
-          </div>
         </template>
+      </UAlert>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div
-            class="col-span-2 rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-          >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
+      <UEmpty
+        v-if="hasResults && !isLoading && !loadError && 0 === tasks.length"
+        icon="i-lucide-list-checks"
+        title="No scheduled tasks"
+        description="Check your task configuration, then refresh."
+      />
+
+      <div v-if="0 < tasks.length" class="ws-card divide-y divide-default">
+        <article
+          v-for="task in tasks"
+          :id="task.name"
+          :key="task.name"
+          :aria-labelledby="`task-${task.name}`"
+          class="grid scroll-mt-24 grid-cols-2 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto]"
+        >
+          <div class="col-span-2 min-w-0 space-y-2 xl:col-span-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2
+                :id="`task-${task.name}`"
+                class="wrap-anywhere text-base font-semibold text-highlighted"
               >
-                <UIcon name="i-lucide-calendar-range" class="size-4 shrink-0" />
-                <span>Runs</span>
-              </div>
+                {{ formatTaskName(task.name) }}
+              </h2>
+              <UBadge v-if="task.queued" color="neutral" variant="soft" size="xs">Queued</UBadge>
+            </div>
+            <p v-if="task.description" class="text-sm text-toned">{{ task.description }}</p>
+            <USwitch
+              v-if="task.allow_disable"
+              :model-value="task.enabled"
+              :color="task.enabled ? 'success' : 'neutral'"
+              :disabled="isLoading || !!loadError || null !== pendingTask"
+              size="sm"
+              label="Enabled"
+              :aria-label="`Enable automatic scheduling for ${formatTaskName(task.name)}`"
+              @update:model-value="() => void toggleTask(task)"
+            />
+            <span v-else class="inline-flex items-center gap-1.5 text-xs text-muted">
+              <UIcon name="i-lucide-lock-keyhole" class="size-3.5" />
+              {{ task.enabled ? 'Enabled' : 'Disabled' }}
+            </span>
+          </div>
 
-              <div class="min-w-0 sm:ml-auto sm:text-right">
+          <dl class="col-span-2 min-w-0 space-y-2 text-sm xl:col-span-1">
+            <div class="space-y-1">
+              <dt class="text-xs text-muted">Schedule</dt>
+              <dd>
                 <NuxtLink
-                  class="block font-medium text-primary underline underline-offset-2"
+                  :to="cronHelpUrl + task.timer.replaceAll(' ', '_')"
                   target="_blank"
-                  :to="makeCronLink(task.timer)"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-start gap-1 text-primary hover:underline underline-offset-2"
+                  :aria-label="`${cronstrue.toString(task.timer)}. Explain cron schedule for ${formatTaskName(task.name)} (opens in a new tab)`"
                 >
                   {{ cronstrue.toString(task.timer) }}
+                  <UIcon name="i-lucide-arrow-up-right" class="mt-0.5 size-3.5 shrink-0" />
                 </NuxtLink>
-              </div>
+              </dd>
             </div>
-          </div>
-
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-          >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-clock-3" class="size-4 shrink-0" />
-                <span>Timer</span>
-              </div>
-
-              <div class="min-w-0 sm:ml-auto sm:text-right">
-                <UTooltip text="Edit cron timer.">
-                  <NuxtLink
-                    class="block break-all font-mono text-primary underline underline-offset-2"
-                    :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)"
-                  >
-                    {{ task.timer }}
-                  </NuxtLink>
-                </UTooltip>
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-          >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-settings-2" class="size-4 shrink-0" />
-                <span>Args</span>
-              </div>
-
-              <template v-if="task.args">
-                <div class="min-w-0 sm:ml-auto sm:text-right">
-                  <UTooltip text="Edit task arguments.">
-                    <NuxtLink
-                      class="block break-all font-mono text-primary underline underline-offset-2"
-                      :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)"
-                    >
-                      {{ task.args }}
-                    </NuxtLink>
-                  </UTooltip>
-                </div>
-              </template>
-              <div v-else class="min-w-0 text-toned sm:ml-auto sm:text-right">None</div>
-            </div>
-          </div>
-
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-          >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-history" class="size-4 shrink-0" />
-                <span>Prev Run</span>
-              </div>
-
-              <div class="min-w-0 sm:ml-auto sm:text-right">
-                <UTooltip
-                  v-if="task.prev_run"
-                  :text="`Last run was at: ${moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)}`"
+            <div class="flex min-w-0 items-baseline gap-2">
+              <dt class="shrink-0 text-xs text-muted">Timer</dt>
+              <dd class="min-w-0">
+                <NuxtLink
+                  :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_AT`, task.timer)"
+                  class="wrap-anywhere font-mono text-xs text-primary hover:underline underline-offset-2"
+                  :aria-label="`Edit ${formatTaskName(task.name)} timer in Environment`"
+                  >{{ task.timer }}</NuxtLink
                 >
-                  <button
-                    v-if="task.prev_run_event_id"
-                    type="button"
-                    class="cursor-help text-primary underline underline-offset-2"
-                    @click="selectedEventId = task.prev_run_event_id"
-                  >
-                    {{ moment(task.prev_run).fromNow() }}
-                  </button>
-                  <span v-else class="cursor-help">{{ moment(task.prev_run).fromNow() }}</span>
-                </UTooltip>
-                <span v-else>-</span>
-              </div>
+              </dd>
             </div>
-          </div>
+            <div class="flex min-w-0 items-baseline gap-2">
+              <dt class="shrink-0 text-xs text-muted">Arguments</dt>
+              <dd class="min-w-0">
+                <NuxtLink
+                  :to="makeEnvLink(`WS_CRON_${task.name.toUpperCase()}_ARGS`, task.args)"
+                  class="wrap-anywhere font-mono text-xs text-primary hover:underline underline-offset-2"
+                  :aria-label="`Edit ${formatTaskName(task.name)} arguments in Environment`"
+                  >{{ task.args || 'None' }}</NuxtLink
+                >
+              </dd>
+            </div>
+          </dl>
+
+          <dl class="min-w-0 space-y-1 text-sm">
+            <dt class="text-xs text-muted">Last run</dt>
+            <dd>
+              <UTooltip
+                v-if="task.prev_run"
+                :text="moment(task.prev_run).format(TOOLTIP_DATE_FORMAT)"
+              >
+                <button
+                  v-if="task.prev_run_event_id"
+                  type="button"
+                  class="text-left text-primary hover:underline underline-offset-2"
+                  :aria-label="`Inspect last run of ${formatTaskName(task.name)}`"
+                  @click="selectedEventId = task.prev_run_event_id"
+                >
+                  <time :datetime="task.prev_run">{{ moment(task.prev_run).fromNow() }}</time>
+                </button>
+                <time v-else :datetime="task.prev_run">{{ moment(task.prev_run).fromNow() }}</time>
+              </UTooltip>
+              <span v-else class="text-toned">No recorded run</span>
+            </dd>
+          </dl>
+
+          <dl class="min-w-0 space-y-1 text-sm">
+            <dt class="text-xs text-muted">Next run</dt>
+            <dd>
+              <span v-if="!task.enabled" class="text-toned">Disabled</span>
+              <UTooltip
+                v-else-if="task.next_run"
+                :text="moment(task.next_run).format(TOOLTIP_DATE_FORMAT)"
+              >
+                <time :datetime="task.next_run">{{ moment(task.next_run).fromNow() }}</time>
+              </UTooltip>
+              <span v-else class="text-toned">Not scheduled</span>
+            </dd>
+          </dl>
 
           <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
+            class="col-span-2 flex flex-wrap items-start gap-2 xl:col-span-1 xl:flex-col xl:items-end"
           >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-forward" class="size-4 shrink-0" />
-                <span>Next Run</span>
-              </div>
-
-              <div class="min-w-0 sm:ml-auto sm:text-right">
-                <template v-if="task.enabled">
-                  <UTooltip
-                    v-if="task.next_run"
-                    :text="`Next run will be at: ${moment(task.next_run).format(TOOLTIP_DATE_FORMAT)}`"
-                  >
-                    <span class="cursor-help">{{ moment(task.next_run).fromNow() }}</span>
-                  </UTooltip>
-                  <span v-else>Never</span>
-                </template>
-                <span v-else class="text-toned">Disabled</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <template #footer>
-          <div class="flex flex-wrap items-center justify-end gap-2">
             <UButton
-              color="neutral"
-              :variant="task.queued ? 'soft' : 'outline'"
+              color="primary"
+              variant="solid"
               size="sm"
-              icon="i-lucide-clock-3"
-              :ui="task.queued ? { leadingIcon: 'animate-spin' } : undefined"
-              @click="queueTask(task)"
+              icon="i-lucide-play"
+              :aria-label="`Run ${formatTaskName(task.name)}`"
+              :disabled="isLoading || !!loadError || null !== pendingTask"
+              @click="runTaskName = task.name"
             >
-              {{ task.queued ? 'Cancel Task' : 'Queue Task' }}
+              Run
             </UButton>
-
             <UButton
+              v-if="task.queued"
               color="neutral"
               variant="outline"
               size="sm"
-              icon="i-lucide-terminal"
-              @click="toConsoleCmd(task)"
+              icon="i-lucide-x"
+              :disabled="isLoading || !!loadError || null !== pendingTask"
+              @click="() => void setTaskQueued(task, false)"
             >
-              <span class="hidden sm:inline">Run via console</span>
-              <span class="sm:hidden">Run now</span>
+              Cancel queued task
             </UButton>
           </div>
-        </template>
-      </UCard>
-    </div>
+        </article>
+      </div>
+    </section>
 
-    <UCard class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
+    <details class="ws-panel-padded text-sm">
+      <summary class="cursor-pointer font-medium text-highlighted">Task options</summary>
+      <div class="mt-3 space-y-2 text-toned">
+        <p>
+          Queue long imports &amp; exports for background execution. Disabling a schedule does not
+          cancel queued work.
+        </p>
+      </div>
+    </details>
 
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
+    <UModal
+      v-model:open="runTaskOpen"
+      :title="runTask ? `Run ${formatTaskName(runTask.name)}` : 'Run task'"
+      :description="runTask?.description || undefined"
+      :dismissible="null === pendingTask"
+      :close="null === pendingTask"
+    >
+      <template v-if="runTask?.queued" #body>
+        <UAlert
+          color="warning"
+          variant="soft"
+          icon="i-lucide-info"
+          title="Already queued"
+          description="Running in CLI does not cancel the queued task."
+        />
       </template>
-
-      <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
-        <li>
-          For long running tasks like <strong>Import</strong> and <strong>Export</strong>, you
-          should queue the task to run in background. Running them via web console will take longer
-          if you have many backends or large libraries.
-        </li>
-        <li>Use the switch next to the task to enable or disable automatic scheduling.</li>
-        <li>
-          Clicking on <strong>Runs</strong> opens an external page for cron syntax help. Clicking on
-          <strong>Timer</strong> or <strong>Args</strong> opens the
-          <span><UIcon name="i-lucide-settings-2" class="inline size-4 align-text-bottom" /></span>
-          <strong>Env</strong> page to edit the related environment variable.
-        </li>
-        <li>
-          Clicking on <strong>Prev Run</strong> time will open the event details if the previous run
-          is available.
-        </li>
-      </ul>
-    </UCard>
+      <template #footer>
+        <div v-if="runTask" class="flex w-full flex-wrap justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-terminal"
+            :loading="isOpeningConsole"
+            :disabled="isLoading || !!loadError || null !== pendingTask"
+            @click="() => void openConsole(runTask)"
+          >
+            Run in CLI
+          </UButton>
+          <UButton
+            color="primary"
+            variant="solid"
+            icon="i-lucide-clock-3"
+            :loading="runTask.name === pendingTask && !isOpeningConsole"
+            :disabled="runTask.queued || isLoading || !!loadError || null !== pendingTask"
+            @click="() => void setTaskQueued(runTask, true)"
+          >
+            Queue task
+          </UButton>
+        </div>
+      </template>
+    </UModal>
 
     <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
       <template #body>
         <EventView
           v-if="selectedEventId"
           :id="selectedEventId"
-          @delete="() => void closeEventView()"
+          :actions-target="`#${eventActionsId}`"
+          :key="selectedEventId"
+          @deleted="() => void closeEventView()"
           @open-event="(id) => (selectedEventId = id)"
         />
+      </template>
+      <template #footer>
+        <div :id="eventActionsId" class="w-full" />
       </template>
     </UModal>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { navigateTo, useHead, useRoute } from '#app';
-import { useStorage } from '@vueuse/core';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue';
+import { navigateTo, useHead } from '#app';
+import {
+  NuxtLink,
+  UAlert,
+  UBadge,
+  UButton,
+  UEmpty,
+  UIcon,
+  UModal,
+  USwitch,
+  UTooltip,
+} from '#components';
 import cronstrue from 'cronstrue';
 import moment from 'moment';
 import EventView from '~/components/EventView.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import { useDialog } from '~/composables/useDialog';
-import type { GenericError, GenericResponse, TaskItem } from '~/types';
+import type { GenericResponse, TaskItem } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
-  awaitElement,
   makeEventName,
   makeConsoleCommand,
   notification,
   parse_api_response,
   request,
   TOOLTIP_DATE_FORMAT,
+  ucFirst,
 } from '~/utils';
 
 useHead({ title: 'Tasks' });
 
 const pageShell = requireTopLevelPageShell('tasks');
-
-const route = useRoute();
+const cronHelpUrl = 'https://crontab.guru/#';
 const dialog = useDialog();
 const tasks = ref<Array<TaskItem>>([]);
-const queued = ref<Array<string>>([]);
-const isLoading = ref<boolean>(false);
+const isLoading = ref(true);
+const hasResults = ref(false);
+const loadError = ref('');
+const pendingTask = ref<string | null>(null);
+const isOpeningConsole = ref(false);
+const runTaskName = ref<string | null>(null);
+const runTask = computed(() => tasks.value.find((task) => runTaskName.value === task.name) ?? null);
+const runTaskOpen = computed({
+  get: () => null !== runTask.value,
+  set: (value: boolean) => {
+    if (false === value && null === pendingTask.value) {
+      runTaskName.value = null;
+    }
+  },
+});
 const selectedEventId = ref<string | null>(null);
-const show_page_tips = useStorage<boolean>('show_page_tips', true);
+const queued = computed(() => tasks.value.filter((task) => task.queued).map((task) => task.name));
+const enabledCount = computed(() => tasks.value.filter((task) => task.enabled).length);
+const formatTaskName = (name: string): string => name.split('_').map(ucFirst).join(' ');
+let loadController: AbortController | null = null;
+let loadId = 0;
+let disposed = false;
 
-const taskCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'border-t border-default/70 px-4 py-4',
-};
-
-const queuedCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
+const eventActionsId = useId();
 const eventViewModalUi = {
   content: 'max-w-5xl',
   body: 'p-4 sm:p-5',
@@ -392,151 +389,234 @@ const eventViewTitle = computed(() =>
 );
 
 const loadContent = async (): Promise<void> => {
+  if (disposed) {
+    return;
+  }
+
+  loadController?.abort();
+  const controller = new AbortController();
+  loadController = controller;
+  const id = ++loadId;
   isLoading.value = true;
-  tasks.value = [];
+  loadError.value = '';
 
   try {
-    const response = await request('/tasks');
+    const response = await request('/tasks', { signal: controller.signal });
     const json = await parse_api_response<{ tasks: Array<TaskItem>; queued: Array<string> }>(
       response,
     );
 
-    if ('tasks' !== route.name) {
+    if (disposed || id !== loadId) {
       return;
     }
 
     if ('error' in json) {
-      notification(
-        'error',
-        'Error',
-        `Tasks request error. ${json.error.code}: ${json.error.message}`,
-      );
-      return;
+      throw new Error(`${json.error.code}: ${json.error.message}`);
+    }
+    if (!response.ok) {
+      throw new Error(`Tasks request failed (${response.status}).`);
     }
 
     tasks.value = json.tasks;
-    queued.value = json.queued;
+    hasResults.value = true;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Request error. ${message}`);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-onMounted(() => void loadContent());
-
-const toggleTask = async (task: TaskItem): Promise<void> => {
-  try {
-    const keyName = `WS_CRON_${task.name.toUpperCase()}`;
-    const oldState = task.enabled;
-    const update = await request(`/system/env/${keyName}`, {
-      method: 'POST',
-      body: JSON.stringify({ value: !task.enabled }),
-    });
-
-    if (200 !== update.status) {
-      const json = await parse_api_response<GenericResponse>(update);
-      if ('error' in json) {
-        const errorJson = json as GenericError;
-        notification(
-          'error',
-          'Error',
-          `Failed to toggle task '${task.name}' status. ${errorJson.error.message}`,
-        );
-      } else {
-        notification('error', 'Error', `Failed to toggle task '${task.name}' status.`);
-      }
-
-      const idx = tasks.value.findIndex((b) => b.name === task.name);
-      if (-1 !== idx) {
-        tasks.value[idx]!.enabled = oldState;
-      }
-
+    if (disposed || id !== loadId || controller.signal.aborted) {
       return;
     }
 
-    const response = await request(`/tasks/${task.name}`);
-    const updatedTask: TaskItem = await response.json();
-    const idx = tasks.value.findIndex((b) => b.name === task.name);
-    if (-1 !== idx) {
-      tasks.value[idx] = updatedTask;
+    loadError.value = error instanceof Error ? error.message : 'Unexpected request error';
+    notification('error', 'Tasks unavailable', loadError.value);
+  } finally {
+    if (!disposed && id === loadId) {
+      isLoading.value = false;
     }
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Request error. ${message}`);
   }
 };
 
-const queueTask = async (task: TaskItem): Promise<void> => {
-  const is_queued = Boolean(task.queued);
-
-  const { status: confirmStatus } = await dialog.confirmDialog({
-    title: is_queued ? 'Cancel Task' : 'Queue Task',
-    message: is_queued
-      ? `Remove '${task.name}' from the queue?`
-      : `Queue '${task.name}' to run in background?`,
-  });
-
-  if (true !== confirmStatus) {
+const toggleTask = async (task: TaskItem): Promise<void> => {
+  if (
+    disposed ||
+    isLoading.value ||
+    loadError.value ||
+    null !== pendingTask.value ||
+    !task.allow_disable ||
+    !tasks.value.includes(task)
+  ) {
     return;
   }
 
+  pendingTask.value = task.name;
+
   try {
-    const response = await request(`/tasks/${task.name}/queue`, {
-      method: is_queued ? 'DELETE' : 'POST',
+    const response = await request(`/system/env/WS_CRON_${task.name.toUpperCase()}`, {
+      method: 'POST',
+      body: JSON.stringify({ value: !task.enabled }),
     });
+    const json = await parse_api_response<GenericResponse>(response);
 
-    if (response.ok) {
-      notification(
-        'success',
-        'Success',
-        `Task '${task.name}' has been ${is_queued ? 'cancelled' : 'queued'}.`,
-      );
-      task.queued = !is_queued;
-
-      if (task.queued) {
-        queued.value.push(task.name);
-      } else {
-        queued.value = queued.value.filter((t) => t !== task.name);
-      }
-
-      if (true === task.queued) {
-        awaitElement('#queued_tasks', (_, e) =>
-          e.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-            inline: 'nearest',
-          }),
-        );
-      }
+    if (disposed) {
+      return;
     }
+    if ('error' in json) {
+      throw new Error(json.error.message);
+    }
+    if (!response.ok) {
+      throw new Error(`Schedule update failed (${response.status}).`);
+    }
+
+    task.enabled = !task.enabled;
+    notification(
+      'success',
+      'Schedule updated',
+      `'${formatTaskName(task.name)}' scheduling is ${task.enabled ? 'enabled' : 'disabled'}.`,
+    );
+    await loadContent();
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Request error. ${message}`);
+    if (!disposed) {
+      const message = error instanceof Error ? error.message : 'Unexpected request error';
+      notification('error', 'Schedule not updated', `'${formatTaskName(task.name)}': ${message}`);
+    }
+  } finally {
+    pendingTask.value = null;
   }
 };
 
-const makeCronLink = (timer: string): string => `https://crontab.guru/#${timer.replace(/ /g, '_')}`;
+const setTaskQueued = async (task: TaskItem | null, queued: boolean): Promise<void> => {
+  if (
+    null === task ||
+    disposed ||
+    isLoading.value ||
+    loadError.value ||
+    null !== pendingTask.value ||
+    !tasks.value.includes(task) ||
+    queued === Boolean(task.queued)
+  ) {
+    return;
+  }
 
-const makeEnvLink = (key: string, val: string | null = null): string => {
-  const search = new URLSearchParams();
-  search.set('callback', '/tasks');
-  search.set('edit', key);
+  const isQueued = Boolean(task.queued);
+  pendingTask.value = task.name;
 
-  if (val) {
-    search.set('value', val);
+  try {
+    if (isQueued) {
+      const { status } = await dialog.confirmDialog({
+        title: 'Cancel queued task',
+        confirmText: 'Cancel queued task',
+        confirmColor: 'neutral',
+        message: `Remove '${formatTaskName(task.name)}' from the queue?`,
+      });
+
+      if (true !== status) {
+        return;
+      }
+    }
+
+    if (
+      disposed ||
+      isLoading.value ||
+      loadError.value ||
+      !tasks.value.includes(task) ||
+      isQueued !== Boolean(task.queued)
+    ) {
+      return;
+    }
+
+    const response = await request(`/tasks/${task.name}/queue`, {
+      method: isQueued ? 'DELETE' : 'POST',
+    });
+
+    if (disposed) {
+      return;
+    }
+    if (!response.ok) {
+      const json = await parse_api_response<GenericResponse>(response);
+      throw new Error(
+        'error' in json ? json.error.message : `Queue update failed (${response.status}).`,
+      );
+    }
+
+    task.queued = queued;
+    if (queued) {
+      runTaskName.value = null;
+    }
+    notification(
+      'success',
+      isQueued ? 'Queued task cancelled' : 'Task queued',
+      `'${formatTaskName(task.name)}' ${isQueued ? 'was removed from the queue' : 'is waiting for background execution'}.`,
+    );
+    await loadContent();
+
+    if (!isQueued && !disposed) {
+      await nextTick();
+      if (!disposed) {
+        document
+          .getElementById('queued_tasks')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  } catch (error: unknown) {
+    if (!disposed) {
+      const message = error instanceof Error ? error.message : 'Unexpected request error';
+      notification('error', 'Queue not updated', `'${formatTaskName(task.name)}': ${message}`);
+    }
+  } finally {
+    pendingTask.value = null;
+  }
+};
+
+const makeEnvLink = (key: string, value?: string): string => {
+  const search = new URLSearchParams({ callback: '/tasks', edit: key });
+
+  if (value) {
+    search.set('value', value);
   }
 
   return `/env?${search.toString()}`;
 };
 
-const toConsoleCmd = async (task: TaskItem): Promise<void> => {
-  await navigateTo(makeConsoleCommand(`${task.command} ${task.args || ''}`));
+const openConsole = async (task: TaskItem | null): Promise<void> => {
+  if (
+    null === task ||
+    disposed ||
+    isLoading.value ||
+    loadError.value ||
+    null !== pendingTask.value ||
+    !tasks.value.includes(task)
+  ) {
+    return;
+  }
+
+  pendingTask.value = task.name;
+  isOpeningConsole.value = true;
+
+  try {
+    const command = `${task.command} ${task.args || ''}`.trim();
+    await navigateTo(makeConsoleCommand(command));
+  } catch (error: unknown) {
+    if (!disposed) {
+      const message =
+        error instanceof Error ? error.message : 'Unexpected command preparation error';
+      notification(
+        'error',
+        'Console could not be opened',
+        `'${formatTaskName(task.name)}': ${message}`,
+      );
+    }
+  } finally {
+    isOpeningConsole.value = false;
+    pendingTask.value = null;
+  }
 };
 
 const closeEventView = async (): Promise<void> => {
   selectedEventId.value = null;
   await loadContent();
 };
+
+onMounted(() => void loadContent());
+onBeforeUnmount(() => {
+  disposed = true;
+  loadId++;
+  loadController?.abort();
+});
 </script>

@@ -3,7 +3,6 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="space-y-1">
         <p class="text-sm font-semibold text-highlighted">Add backend to {{ api_user }}</p>
-        <p class="text-sm text-toned">Work through the staged setup and keep the current flow.</p>
       </div>
 
       <div
@@ -18,14 +17,13 @@
       <template #description>
         <ul class="list-disc space-y-2 pl-5 text-sm text-default">
           <li>
-            If you are adding new backend that is fresh and doesn't have your current watch state,
-            you should turn off import and enable only metadata import at the start to prevent
-            overriding your current play state. Visit the following guide
+            For a new backend without your watch history, disable play-state import and import only
+            metadata at first to avoid overwriting your current play state. See
             <NuxtLink to="/help/one-way-sync" class="inline-flex items-center gap-1 text-primary">
               <UIcon name="i-lucide-circle-help" class="size-4" />
               <span>One-way sync</span>
             </NuxtLink>
-            to learn more.
+            for setup instructions.
           </li>
           <li>
             Each backend has specific requirements. Review the
@@ -39,8 +37,7 @@
             page before adding.
           </li>
           <li v-if="api_user === 'main'">
-            Do not add identity backends manually after finishing the main identity backend setup.
-            Visit
+            After setting up the main identity's backends, use
             <NuxtLink
               target="_blank"
               to="/identities/provision"
@@ -51,16 +48,16 @@
               <span>&gt;</span>
               <span>Match &amp; Provision</span>
             </NuxtLink>
-            page to create their own identities and backends automatically.
+            to create the other identities and their backends. Do not add them manually.
           </li>
         </ul>
       </template>
     </UAlert>
 
     <form
-      id="backend_add_form"
+      :id="formId"
       class="space-y-5"
-      @submit.prevent="stage < 4 ? changeStep() : addBackend()"
+      @submit.prevent="stage < maxStages ? changeStep() : addBackend()"
     >
       <UAlert
         v-if="error"
@@ -84,15 +81,11 @@
 
         <div class="space-y-5">
           <div class="grid gap-4 lg:grid-cols-2">
-            <UFormField
-              label="Local User"
-              name="local_user"
-              description="The local user which this backend will be associated with."
-            >
+            <UFormField label="Local User" name="local_user">
               <UInput :model-value="api_user" icon="i-lucide-users" class="w-full" disabled />
             </UFormField>
 
-            <UFormField label="Type" name="backend_type" description="The backend type." required>
+            <UFormField label="Type" name="backend_type" required>
               <USelect
                 v-model="backend.type"
                 :items="backendTypeItems"
@@ -113,9 +106,8 @@
             />
 
             <p class="mt-2 text-sm text-toned">
-              Choose a unique name for this backend.
-              <strong>You cannot change it later.</strong> Backend name must be in
-              <strong>lower case a-z, 0-9 and _</strong> and cannot start with number.
+              Choose a unique name using <strong>lowercase a-z, 0-9 and _</strong>. It cannot start
+              with a number. <strong>You cannot change it later.</strong>
             </p>
           </UFormField>
 
@@ -155,18 +147,18 @@
             <div class="mt-2 space-y-2 text-sm text-toned">
               <template v-if="'plex' === backend.type">
                 <p>
-                  Enter the <strong>X-Plex-Token</strong>.
+                  Enter the <strong>X-Plex-Token</strong>. See
                   <NuxtLink
                     target="_blank"
                     to="https://support.plex.tv/articles/204059436"
                     class="text-primary"
                   >
-                    Visit This link
+                    Plex's token guide
                   </NuxtLink>
-                  to learn how to get the token.
+                  for instructions.
                 </p>
                 <p class="font-semibold text-warning">
-                  If you plan to provision identities, YOU MUST use an admin level token.
+                  Provisioning identities requires an admin token.
                 </p>
               </template>
 
@@ -176,13 +168,11 @@
                   <strong>Dashboard &gt; Settings &gt; API Keys</strong>.
                 </p>
                 <p>
-                  You can use <strong>username:password</strong> as API key and we will
-                  automatically generate limited token if you are unable to generate API Key. This
-                  should be used as last resort, and it's mostly untested.
+                  If you can't generate an API key, enter <strong>username:password</strong> to
+                  generate a limited token. Use this only as a last resort; it's mostly untested.
                 </p>
                 <p class="font-semibold text-error">
-                  If you plan to provision identities, YOU MUST use API KEY and not
-                  username:password.
+                  Provisioning identities requires an API key, not username:password.
                 </p>
               </template>
             </div>
@@ -211,7 +201,7 @@
                   icon="i-lucide-badge-check"
                   @click="() => plex_get_token()"
                 >
-                  Check auth request.
+                  Check auth request
                 </UButton>
 
                 <UButton
@@ -232,7 +222,7 @@
             v-if="'plex' === backend.type"
             label="User PIN"
             name="plex_user_pin"
-            description="If the user you are going to select has PIN enabled, you need to enter the pin here. Otherwise it will fail to authenticate."
+            description="Enter the selected Plex user's PIN if enabled. Authentication will fail without it."
           >
             <UInput
               v-model="backend.options.PLEX_USER_PIN"
@@ -304,9 +294,9 @@
               </div>
 
               <p class="mt-2 text-sm text-toned">
-                Try to use non <strong>.plex.direct</strong> urls if possible, as they often have
-                problems working in docker. If your custom domain is missing, add it in Plex server
-                settings under custom server access URLs.
+                Avoid <strong>.plex.direct</strong> URLs when possible; they often fail in Docker.
+                If your custom domain is missing, add it under Custom server access URLs in Plex
+                server settings.
               </p>
             </UFormField>
 
@@ -315,8 +305,7 @@
                 <div class="min-w-0">
                   <div class="text-sm font-medium text-highlighted">Invited guest</div>
                   <p class="mt-1 text-sm text-toned">
-                    This stops WatchState from attempting to generate access-tokens for different
-                    users.
+                    Stop WatchState from generating access tokens for other users.
                   </p>
                 </div>
 
@@ -338,8 +327,7 @@
               <div class="min-w-0">
                 <div class="text-sm font-medium text-highlighted">Validate SSL certificate</div>
                 <p class="mt-1 text-sm text-toned">
-                  Whether to validate SSL certificate of the backend server. Disable this if you are
-                  using self-signed certificates.
+                  Disable this if the backend uses a self-signed certificate.
                 </p>
               </div>
 
@@ -386,6 +374,8 @@
                 :loading="uuidLoading"
                 :disabled="uuidLoading || stage > 2"
                 icon="i-lucide-refresh-cw"
+                aria-label="Reload server identifier"
+                title="Reload server identifier"
                 @click="() => void getUUid()"
               >
                 <span class="hidden sm:inline">Reload</span>
@@ -406,7 +396,7 @@
         <UFormField
           label="User"
           name="backend_user"
-          description="Which user we should associate this backend with?"
+          description="Choose the backend user whose watch history to sync."
         >
           <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
             <USelect
@@ -460,9 +450,7 @@
                   </UTooltip>
                 </template>
                 <template v-else>
-                  <UTooltip
-                    text="Import only metadata no watched status, playlists or progress will be imported"
-                  >
+                  <UTooltip text="Import only metadata, not watched status, playlists or progress">
                     <span class="text-error underline cursor-help">metadata</span>
                   </UTooltip>
                 </template>
@@ -502,8 +490,8 @@
                   Create backup for this backend data
                 </p>
                 <p class="mt-1 text-sm text-toned">
-                  This will run a one time backup for the backend data. It runs before the forced
-                  export if both are enabled.
+                  Queue a one-time backup of this backend's play state. If forced export is also
+                  enabled, it's queued separately and doesn't wait for the backup to finish.
                 </p>
               </div>
 
@@ -539,8 +527,7 @@
                   Force export local data to this backend
                 </p>
                 <p class="mt-1 text-sm text-toned">
-                  THIS WILL SEND CURRENT WATCHSTATE DATA TO THE BACKEND OVERRIDING ANY EXISTING
-                  DATA.
+                  This overwrites the backend's play state with WatchState's local play state.
                 </p>
               </div>
 
@@ -550,24 +537,13 @@
         </div>
       </UCard>
 
-      <div class="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <UButton
-          type="button"
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-x"
-          class="justify-center"
-          @click="emit('close')"
-        >
-          Cancel
-        </UButton>
-
+      <Teleport defer :to="props.actionsTarget">
         <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
           <UButton
             v-if="stage >= 1"
             type="button"
             color="neutral"
-            variant="outline"
+            variant="ghost"
             icon="i-lucide-chevron-left"
             class="justify-center"
             @click="
@@ -581,12 +557,12 @@
 
           <UButton
             v-if="stage < maxStages"
-            type="button"
+            type="submit"
+            :form="formId"
             color="primary"
             variant="solid"
             trailing-icon="i-lucide-chevron-right"
             class="justify-center"
-            @click="changeStep()"
           >
             Next Step
           </UButton>
@@ -594,6 +570,7 @@
           <UButton
             v-else
             type="submit"
+            :form="formId"
             color="primary"
             variant="solid"
             icon="i-lucide-plus"
@@ -602,14 +579,27 @@
             Add Backend
           </UButton>
         </div>
-      </div>
+      </Teleport>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
-import { computed, onMounted, ref, toRaw, watch } from 'vue';
+import { computed, onMounted, ref, toRaw, useId, watch } from 'vue';
+import {
+  NuxtLink,
+  UAlert,
+  UButton,
+  UCard,
+  UFormField,
+  UIcon,
+  UInput,
+  USelect,
+  USeparator,
+  USwitch,
+  UTooltip,
+} from '#components';
 import { useBackendSetup } from '~/composables/useBackendSetup';
 import { useDirtyState } from '~/composables/useDirtyState';
 import { ag, awaitElement, notification, parse_api_response, request } from '~/utils';
@@ -626,11 +616,11 @@ const emit = defineEmits<{
   backupData: [backend: Backend];
   forceExport: [backend: Backend];
   forceImport: [backend: Backend];
-  close: [];
   'dirty-change': [dirty: boolean];
 }>();
 
-const props = defineProps<{ backends: Array<Backend> }>();
+const props = defineProps<{ backends: Array<Backend>; actionsTarget: string }>();
+const formId = useId();
 
 const backend = ref<Backend>({
   name: '',
@@ -741,8 +731,8 @@ const getUUid = async (): Promise<string | undefined> => {
   if (required_values.some((v) => !backend.value[v as keyof Backend])) {
     notification(
       'error',
-      'Error',
-      `Please fill all the required fields. ${required_values.join(', ')}.`,
+      'Backend ID unavailable',
+      `Fill the required fields: ${required_values.join(', ')}.`,
     );
     return;
   }
@@ -758,8 +748,8 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
   if (required_values.some((v) => !backend.value[v as keyof Backend])) {
     notification(
       'error',
-      'Error',
-      `Please fill all the required fields. ${required_values.join(', ')}.`,
+      'Access token unavailable',
+      `Fill the required fields: ${required_values.join(', ')}.`,
     );
     return;
   }
@@ -798,7 +788,7 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
     const json = await parse_api_response<BackendAccessTokenResponse>(response);
 
     if ('error' in json) {
-      n_proxy('error', 'Error', `${json.error.code}: ${json.error.message}`);
+      n_proxy('error', 'Access token unavailable', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
@@ -823,7 +813,7 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Request error.';
-    n_proxy('error', 'Error', `Request error. ${message}`, error);
+    n_proxy('error', 'Access token unavailable', message, error);
     return false;
   }
 };
@@ -840,8 +830,8 @@ const getUsers = async (
     if (showAlert) {
       notification(
         'error',
-        'Error',
-        `Please fill all the required fields. ${required_values.join(', ')}.`,
+        'Backend users unavailable',
+        `Fill the required fields: ${required_values.join(', ')}.`,
       );
     }
     return;
@@ -897,19 +887,23 @@ const changeStep = async (): Promise<void> => {
     if (required.some((v) => !backend.value[v as keyof Backend])) {
       required.forEach((v) => {
         if (!backend.value[v as keyof Backend]) {
-          notification('error', 'Error', `Please fill the required field: ${v}.`);
+          notification('error', 'Backend setup incomplete', `Fill the required field: ${v}.`);
         }
       });
       return;
     }
 
     if (false === /^[a-z_0-9]+$/.test(backend.value.name)) {
-      notification('error', 'Error', 'Backend name must be in lower case a-z, 0-9 and _ only.');
+      notification('error', 'Invalid backend name', 'Use only lowercase a-z, 0-9 and _.');
       return;
     }
 
     if (props.backends.find((b) => b.name === backend.value.name)) {
-      notification('error', 'Error', `Backend with name '${backend.value.name}' already exists.`);
+      notification(
+        'error',
+        'Backend name already used',
+        `Backend '${backend.value.name}' already exists.`,
+      );
       return;
     }
 
@@ -972,7 +966,7 @@ const changeStep = async (): Promise<void> => {
     if ('plex' === backend.value.type) {
       const selected = users.value.find((u) => u.id === backend.value.user);
       if (!selected) {
-        notification('error', 'Error', 'Selected user not found.');
+        notification('error', 'Backend user unavailable', 'Selected user not found.');
         return;
       }
 
@@ -981,7 +975,11 @@ const changeStep = async (): Promise<void> => {
       const token = updated?.token ?? selected.token;
 
       if (!token) {
-        notification('error', 'Error', 'Selected user does not have a valid token.');
+        notification(
+          'error',
+          'User token unavailable',
+          'Selected user does not have a valid token.',
+        );
         return;
       }
 
@@ -1007,7 +1005,7 @@ const addBackend = async (): Promise<boolean> => {
   if (required_values.some((v) => !backend.value[v as keyof Backend])) {
     required_values.forEach((v) => {
       if (!backend.value[v as keyof Backend]) {
-        notification('error', 'Error', `Please fill the required field: ${v}.`);
+        notification('error', 'Backend setup incomplete', `Fill the required field: ${v}.`);
       }
     });
     return false;
@@ -1042,15 +1040,11 @@ const addBackend = async (): Promise<boolean> => {
 
   const json = await parse_api_response<GenericResponse>(response);
   if ('error' in json) {
-    notification(
-      'error',
-      'Error',
-      `Failed to Add backend. (${json.error.code}: ${json.error.message}).`,
-    );
+    notification('error', 'Backend not added', `${json.error.code}: ${json.error.message}`);
     return false;
   }
 
-  notification('success', 'Information', `Backend ${backend.value.name} added successfully.`);
+  notification('success', 'Backend added', `Added '${backend.value.name}'.`);
 
   if (true === Boolean(backup_data?.value ?? false)) {
     emit('backupData', backend.value);

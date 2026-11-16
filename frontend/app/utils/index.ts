@@ -664,57 +664,25 @@ const getStorageValue = <T>(key: string, defaultValue: T, missingValue: T = defa
   return (undefined === stored.value ? defaultValue : stored.value) as T;
 };
 
-const setBodyOpacity = (value: string): boolean => {
-  const body = document.querySelector('body');
-  if (!body) {
-    return false;
-  }
-
-  body.style.opacity = value;
-  return true;
-};
-
-const clearBodyOpacity = (): boolean => {
-  const body = document.querySelector('body');
-  if (!body) {
-    return false;
-  }
-
-  body.style.removeProperty('opacity');
-  return true;
-};
-
 const syncOpacity = (): boolean => {
-  if (!getStorageValue<boolean>('bg_enable', true, false)) {
-    opacityLockCount = 0;
-    return clearBodyOpacity();
-  }
-
-  if (opacityLockCount > 0) {
-    return setBodyOpacity('1.0');
-  }
-
-  return setBodyOpacity(String(getStorageValue<number>('bg_opacity', 0.95)));
+  const enabled = getStorageValue<boolean>('bg_enable', true, false);
+  const opacity =
+    enabled && 0 === opacityLockCount
+      ? Math.min(0.4, Math.max(0, 1 - getStorageValue<number>('bg_opacity', 0.95)))
+      : 0;
+  document.documentElement.style.setProperty('--ws-artwork-opacity', String(opacity));
+  document.body?.style.removeProperty('opacity');
+  return enabled;
 };
 
 const enableOpacity = (): boolean => {
-  if (!getStorageValue<boolean>('bg_enable', true, false)) {
-    opacityLockCount = 0;
-    return false;
-  }
-
   opacityLockCount = Math.max(0, opacityLockCount - 1);
   return syncOpacity();
 };
 
 const disableOpacity = (): boolean => {
-  if (!getStorageValue<boolean>('bg_enable', true, false)) {
-    opacityLockCount = 0;
-    return false;
-  }
-
   opacityLockCount += 1;
-  return setBodyOpacity('1.0');
+  return syncOpacity();
 };
 
 /**

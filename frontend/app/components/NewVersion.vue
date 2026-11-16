@@ -1,21 +1,24 @@
 <template>
-  <UAlert color="info" variant="soft" icon="i-lucide-info" title="Update available">
+  <UAlert color="info" variant="soft" icon="i-lucide-info" title="WebUI updated">
     <template #description>
       <span>
-        A new WebUI version is installed.
-        <button
+        <UButton
           type="button"
-          class="font-semibold text-primary underline underline-offset-2"
+          color="neutral"
+          variant="outline"
+          size="xs"
+          icon="i-lucide-refresh-cw"
           @click="reloadPage"
         >
           Reload now
-        </button>
-        to use the latest assets.
+        </UButton>
       </span>
     </template>
   </UAlert>
 </template>
 
 <script setup lang="ts">
+import { UAlert, UButton } from '#components';
+
 const reloadPage = () => window.location.reload();
 </script>

@@ -601,8 +601,8 @@ final class UserStatisticsGeneratorTest extends TestCase
         }
         $report = Container::get(UserStatisticsGenerator::class)->generate($context);
 
-        self::assertCount(20, $report['recent']);
-        self::assertSame(range(24, 5), array_column($report['recent'], 'played_at'));
+        self::assertCount(UserStatisticsGenerator::RECENT_ITEMS_COUNT, $report['recent']);
+        self::assertSame(range(24, 25 - UserStatisticsGenerator::RECENT_ITEMS_COUNT), array_column($report['recent'], 'played_at'));
     }
 
     public function test_episode_numbers(): void

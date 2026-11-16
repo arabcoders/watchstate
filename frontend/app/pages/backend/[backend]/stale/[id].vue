@@ -1,10 +1,8 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
+    <PageHeader v-bind="pageShell" page-label="Stale references" description="">
       <template #kicker>
-        <span>{{ pageShell.sectionLabel }}</span>
-        <span>/</span>
-        <NuxtLink to="/backends" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
+        <NuxtLink to="/backends" class="hover:text-primary">Backends</NuxtLink>
         <span>/</span>
         <NuxtLink
           :to="`/backend/${backend}`"
@@ -12,7 +10,9 @@
           >{{ backend }}</NuxtLink
         >
         <span>/</span>
-        <span class="text-highlighted normal-case tracking-normal">Staleness</span>
+        <NuxtLink :to="`/backend/${backend}/libraries`" class="hover:text-primary">
+          {{ remote.library?.title ?? route.query.name ?? id }}
+        </NuxtLink>
       </template>
 
       <template #actions>
@@ -24,7 +24,7 @@
           :loading="isLoading"
           :disabled="isLoading"
           @click="() => void loadContent()"
-          label="Reload"
+          label="Refresh"
         />
       </template>
     </PageHeader>
@@ -39,7 +39,8 @@
       <template #description>
         <span>
           WatchState found <strong>{{ counts.stale }}</strong> items in the local database that no
-          longer exist in <strong>{{ remote.name }}</strong>
+          longer exist in <strong>{{ remote.name }}</strong
+          >&nbsp;
           <template v-if="remote.library?.title"
             >library <strong>{{ remote.library.title }}</strong></template
           >.
@@ -47,172 +48,34 @@
       </template>
     </UAlert>
 
-    <div v-if="0 < items.length" class="grid gap-4 xl:grid-cols-2">
-      <Lazy v-for="item in items" :key="item.id" :unrender="true" :min-height="343" class="block">
-        <UCard
-          class="h-full shadow-sm"
-          :class="item.watched ? 'ring-1 ring-success/20' : ''"
-          :ui="resultCardUi"
-        >
-          <template #header>
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <div
-                  class="flex min-w-0 items-start gap-2 text-base font-semibold leading-6 text-highlighted"
-                >
-                  <UIcon
-                    :name="'episode' === item.type.toLowerCase() ? 'i-lucide-tv' : 'i-lucide-film'"
-                    class="mt-0.5 size-4 shrink-0 text-toned"
-                  />
-
-                  <div class="min-w-0 flex-1">
-                    <FloatingImage
-                      :image="`/history/${item.id}/images/poster`"
-                      v-if="poster_enable"
-                    >
-                      <UTooltip :text="String(makeName(item))">
-                        <NuxtLink
-                          :to="`/history/${item.id}`"
-                          class="block truncate text-highlighted hover:text-primary"
-                        >
-                          {{ makeName(item) }}
-                        </NuxtLink>
-                      </UTooltip>
-                    </FloatingImage>
-
-                    <UTooltip v-else :text="String(makeName(item))">
-                      <NuxtLink
-                        :to="`/history/${item.id}`"
-                        class="block truncate text-highlighted hover:text-primary"
-                      >
-                        {{ makeName(item) }}
-                      </NuxtLink>
-                    </UTooltip>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <div class="space-y-3">
-            <div
-              class="flex items-start gap-2 rounded-md border border-default bg-elevated/20 px-3 py-2 text-sm text-default"
-            >
-              <button
-                type="button"
-                class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                @click="item.expand_title = !item.expand_title"
-              >
-                <UIcon name="i-lucide-heading" class="size-4" />
-              </button>
-
-              <div
-                class="min-w-0 flex-1"
-                :class="item.expand_title ? 'wrap-break-word' : 'truncate'"
-              >
-                <NuxtLink
-                  :to="makeSearchLink('subtitle', item.content_title ?? item.title)"
-                  class="hover:text-primary"
-                >
-                  {{ item.content_title ?? item.title }}
-                </NuxtLink>
-              </div>
-
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                icon="i-lucide-copy"
-                @click="copyText(item.content_title ?? item.title, false)"
-              />
-            </div>
-
-            <div
-              class="flex items-start gap-2 rounded-md border border-default bg-elevated/20 px-3 py-2 text-sm text-default"
-            >
-              <button
-                type="button"
-                class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                @click="item.expand_path = !item.expand_path"
-              >
-                <UIcon name="i-lucide-file-text" class="size-4" />
-              </button>
-
-              <div
-                class="min-w-0 flex-1"
-                :class="item.expand_path ? 'wrap-break-word' : 'truncate'"
-              >
-                <NuxtLink
-                  v-if="item.content_path"
-                  :to="makeSearchLink('path', item.content_path)"
-                  class="hover:text-primary"
-                >
-                  {{ item.content_path }}
-                </NuxtLink>
-                <span v-else>No path found.</span>
-              </div>
-
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                icon="i-lucide-copy"
-                @click="copyText(item.content_path || '', false)"
-              />
-            </div>
-
-            <div
-              class="rounded-md border border-default bg-elevated/20 px-3 py-2 text-sm text-default"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-highlighted">
-                <UIcon name="i-lucide-server" class="size-4 text-toned" />
-                <span>Has metadata from</span>
-              </div>
-
-              <div class="flex flex-wrap gap-2">
-                <NuxtLink
-                  v-for="reportedBackend in item.reported_by"
-                  :key="`${item.id}-rb-${reportedBackend}`"
-                  :to="`/backend/${reportedBackend}`"
-                  class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default"
-                >
-                  <UIcon name="i-lucide-server" class="size-3.5" />
-                  {{ reportedBackend }}
-                </NuxtLink>
-
-                <NuxtLink
-                  v-for="missingBackend in item.not_reported_by"
-                  :key="`${item.id}-nrb-${missingBackend}`"
-                  :to="`/backend/${missingBackend}`"
-                  class="inline-flex items-center gap-1.5 rounded-md border border-error/30 bg-error/10 px-2.5 py-1 text-xs font-medium text-error"
-                >
-                  <UIcon name="i-lucide-circle-alert" class="size-3.5" />
-                  {{ missingBackend }}
-                </NuxtLink>
-              </div>
-            </div>
-          </div>
-
-          <template #footer>
-            <div class="grid grid-cols-2 gap-2.5">
-              <div
-                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-              >
+    <div v-if="0 < items.length" class="ws-card divide-y divide-default">
+      <Lazy v-for="item in items" :key="item.id" :unrender="true" :min-height="216">
+        <article class="flex items-start gap-3 p-4 sm:p-5">
+          <StatisticsPoster
+            v-if="poster_enable"
+            :key="`${apiUser}:${item.id}`"
+            :history-id="Number(item.id)"
+            :title="String(makeName(item))"
+            :user="apiUser"
+            preview
+            class="hidden w-16 shrink-0 sm:block"
+          />
+          <div class="min-w-0 flex-1 space-y-4">
+            <div class="space-y-2">
+              <h2 class="flex min-w-0 items-start gap-2 text-sm font-semibold text-highlighted">
                 <UIcon
-                  :name="item.watched ? 'i-lucide-eye' : 'i-lucide-eye-off'"
-                  class="size-4 shrink-0 text-toned"
+                  :name="'episode' === item.type.toLowerCase() ? 'i-lucide-tv' : 'i-lucide-film'"
+                  class="mt-0.5 size-4 shrink-0 text-toned"
                 />
-                <span :class="item.watched ? 'text-success' : 'text-error'">
-                  {{ item.watched ? 'Played' : 'Unplayed' }}
-                </span>
-              </div>
-
-              <div
-                class="flex items-center justify-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 text-center text-sm font-medium text-default"
-              >
-                <UIcon name="i-lucide-calendar" class="size-4 shrink-0 text-toned" />
+                <NuxtLink :to="`/history/${item.id}`" class="wrap-anywhere hover:text-primary">{{
+                  makeName(item)
+                }}</NuxtLink>
+              </h2>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-toned">
+                <span class="font-mono">#{{ item.id }}</span>
+                <UBadge :color="item.watched ? 'success' : 'neutral'" variant="soft" size="xs">
+                  {{ item.watched ? 'Watched' : 'Unwatched' }}
+                </UBadge>
                 <UTooltip
                   :text="`Record updated at: ${moment.unix(item.updated_at).format(TOOLTIP_DATE_FORMAT)}`"
                 >
@@ -220,8 +83,117 @@
                 </UTooltip>
               </div>
             </div>
-          </template>
-        </UCard>
+
+            <dl class="min-w-0 space-y-3 text-sm">
+              <div class="grid min-w-0 gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start">
+                <dt class="text-xs text-muted">Subtitle</dt>
+                <dd class="flex min-w-0 items-start gap-2">
+                  <NuxtLink
+                    :to="makeSearchLink('subtitle', item.content_title ?? item.title)"
+                    class="min-w-0 flex-1 hover:text-primary"
+                    :class="item.expand_title ? 'wrap-anywhere' : 'truncate'"
+                  >
+                    {{ item.content_title ?? item.title }}
+                  </NuxtLink>
+                  <UTooltip :text="item.expand_title ? 'Collapse subtitle' : 'Expand subtitle'">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      :icon="item.expand_title ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                      :aria-label="item.expand_title ? 'Collapse subtitle' : 'Expand subtitle'"
+                      :aria-expanded="!!item.expand_title"
+                      @click="item.expand_title = !item.expand_title"
+                    />
+                  </UTooltip>
+                  <UTooltip text="Copy subtitle">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      icon="i-lucide-copy"
+                      aria-label="Copy subtitle"
+                      @click="copyText(item.content_title ?? item.title, false)"
+                    />
+                  </UTooltip>
+                </dd>
+              </div>
+              <div class="grid min-w-0 gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start">
+                <dt class="text-xs text-muted">File</dt>
+                <dd class="flex min-w-0 items-start gap-2">
+                  <NuxtLink
+                    v-if="item.content_path"
+                    :to="makeSearchLink('path', item.content_path)"
+                    class="min-w-0 flex-1 font-mono text-xs hover:text-primary"
+                    :class="item.expand_path ? 'wrap-anywhere' : 'truncate'"
+                  >
+                    {{ item.content_path }}
+                  </NuxtLink>
+                  <span v-else class="flex-1 text-toned">No path</span>
+                  <UTooltip :text="item.expand_path ? 'Collapse file path' : 'Expand file path'">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      :icon="item.expand_path ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+                      :aria-label="item.expand_path ? 'Collapse file path' : 'Expand file path'"
+                      :aria-expanded="!!item.expand_path"
+                      :disabled="!item.content_path"
+                      @click="item.expand_path = !item.expand_path"
+                    />
+                  </UTooltip>
+                  <UTooltip text="Copy file path">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      icon="i-lucide-copy"
+                      aria-label="Copy file path"
+                      :disabled="!item.content_path"
+                      @click="copyText(item.content_path || '', false)"
+                    />
+                  </UTooltip>
+                </dd>
+              </div>
+              <div class="grid min-w-0 gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start">
+                <dt class="text-xs text-muted">Metadata from</dt>
+                <dd class="flex flex-wrap gap-2">
+                  <NuxtLink
+                    v-for="reportedBackend in item.reported_by"
+                    :key="reportedBackend"
+                    :to="`/backend/${reportedBackend}`"
+                    class="inline-flex items-center gap-1.5 text-xs text-default hover:text-primary"
+                  >
+                    <UIcon name="i-lucide-server" class="size-3.5" />
+                    {{ reportedBackend }}
+                  </NuxtLink>
+                  <span v-if="0 === item.reported_by.length" class="text-toned">None</span>
+                </dd>
+              </div>
+              <div
+                v-if="0 < item.not_reported_by.length"
+                class="grid min-w-0 gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start"
+              >
+                <dt class="text-xs text-muted">Missing metadata</dt>
+                <dd class="flex flex-wrap gap-2">
+                  <NuxtLink
+                    v-for="missingBackend in item.not_reported_by"
+                    :key="missingBackend"
+                    :to="`/backend/${missingBackend}`"
+                    class="inline-flex items-center gap-1.5 text-xs text-error hover:underline underline-offset-2"
+                  >
+                    <UIcon name="i-lucide-circle-alert" class="size-3.5" />
+                    {{ missingBackend }}
+                  </NuxtLink>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </article>
       </Lazy>
     </div>
 
@@ -230,17 +202,14 @@
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
+      title="Checking stale references"
       :ui="{ icon: 'animate-spin' }"
     />
 
-    <UAlert
-      v-else-if="hasLoaded"
-      color="success"
-      variant="soft"
+    <UEmpty
+      v-else-if="hasLoaded && !loadError"
       icon="i-lucide-circle-check"
-      title="Success"
+      title="No stale references"
     >
       <template #description>
         <span>
@@ -253,48 +222,31 @@
           references.
         </span>
       </template>
-    </UAlert>
+    </UEmpty>
 
-    <UCard class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
+    <UAlert
+      v-if="loadError"
+      color="error"
+      variant="soft"
+      icon="i-lucide-triangle-alert"
+      title="Couldn't check stale references"
+      :description="loadError"
+    />
 
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
-      </template>
-
-      <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
-        <li>This page compares local database references against the selected backend library.</li>
-        <li>Remote data is cached in memory to speed up reloads.</li>
-        <li>
-          Stale references are usually harmless, but workflows like webhook pushes can fail if they
-          still point to items that no longer exist remotely.
-        </li>
-      </ul>
-    </UCard>
+    <p v-if="0 < items.length" class="text-sm text-toned">
+      Stale references can cause webhook updates to fail when they point to items no longer on the
+      backend.
+    </p>
   </main>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute, useHead } from '#app';
+import { NuxtLink, UAlert, UBadge, UButton, UEmpty, UIcon, UTooltip } from '#components';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
-import FloatingImage from '~/components/FloatingImage.vue';
+import StatisticsPoster from '~/components/StatisticsPoster.vue';
 import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
@@ -315,17 +267,6 @@ import type {
   ExpandableUIState,
 } from '~/types';
 
-const resultCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'border-t border-default px-4 py-4',
-};
-
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
 const route = useRoute();
 const id = route.params.id as string;
 const backend = route.params.backend as string;
@@ -338,20 +279,27 @@ const remote = ref<StaleBackendInfo>({} as StaleBackendInfo);
 const counts = ref<StaleCounts>({ remote: 0, local: 0, stale: 0 });
 const isLoading = ref<boolean>(false);
 const hasLoaded = ref<boolean>(false);
-const show_page_tips = useStorage('show_page_tips', true);
+const loadError = ref('');
 const poster_enable = useStorage('poster_enable', true);
+const apiUser = useStorage<string>('api_user', 'main');
 
 useHead({ title: `Backends: ${backend} - Staleness` });
 
 const loadContent = async (): Promise<void> => {
   isLoading.value = true;
+  loadError.value = '';
 
   try {
     const response = await request(`/backend/${backend}/stale/${id}`);
     const data = await parse_api_response<StaleResponse>(response);
 
     if ('error' in data) {
-      notification('error', 'Error', `${data.error.code}: ${data.error.message}`);
+      loadError.value = `${data.error.code}: ${data.error.message}`;
+      notification(
+        'error',
+        'Stale reference check failed',
+        `${data.error.code}: ${data.error.message}`,
+      );
       return;
     }
 
@@ -366,7 +314,8 @@ const loadContent = async (): Promise<void> => {
     });
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : 'Unknown error occurred';
-    notification('error', 'Error', `Request error. ${errorMessage}`);
+    loadError.value = errorMessage;
+    notification('error', 'Stale reference check failed', errorMessage);
   } finally {
     isLoading.value = false;
   }

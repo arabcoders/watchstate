@@ -1,212 +1,191 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
+    <PageHeader
+      v-bind="pageShell"
+      description="Clean up expired records, old reports, and generated files."
+    >
+      <template #kicker>
+        <span>{{ pageShell.sectionLabel }}</span>
+        <span>/</span>
+        <span>Installation-wide</span>
+      </template>
       <template #actions>
-        <UTooltip text="Reload pruners">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-refresh-cw"
-            :loading="isLoading"
-            :disabled="isLoading"
-            aria-label="Reload pruners"
-            @click="loadContent"
-          >
-            <span class="hidden sm:inline">Reload</span>
-          </UButton>
-        </UTooltip>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-refresh-cw"
+          :loading="isLoading"
+          :disabled="isLoading || null !== openingMode"
+          @click="() => void loadContent()"
+        >
+          Refresh
+        </UButton>
       </template>
     </PageHeader>
 
-    <UAlert
-      v-if="isLoading"
-      color="info"
-      variant="soft"
-      icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
-      :ui="{ icon: 'animate-spin' }"
-    />
+    <section aria-label="Prune operations" :aria-busy="isLoading">
+      <UAlert
+        v-if="isLoading"
+        color="info"
+        variant="soft"
+        icon="i-lucide-loader-circle"
+        title="Loading pruners"
+        :ui="{ icon: 'animate-spin' }"
+      />
 
-    <UAlert
-      v-else-if="pruners.length < 1"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-triangle-alert"
-      title="No pruners found"
-      description="There are no configured prune handlers to display."
-    />
+      <UAlert
+        v-else-if="loadError"
+        color="error"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Unable to load pruners"
+        :description="loadError"
+      />
 
-    <div v-else class="grid gap-4 xl:grid-cols-2">
-      <UCard
-        v-for="pruner in pruners"
-        :key="pruner.name"
-        class="h-full shadow-sm"
-        :class="pruner.enabled ? '' : 'opacity-85'"
-        :ui="prunerCardUi"
-      >
-        <template #header>
-          <div class="space-y-2">
-            <div class="flex min-w-0 items-start gap-3">
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <div
-                    class="inline-flex min-w-0 items-center gap-2 text-base font-semibold text-highlighted"
-                  >
-                    <UIcon name="i-lucide-scissors" class="size-4 text-toned" />
-                    <UTooltip :text="pruner.name">
-                      <span class="block min-w-0 truncate">{{ pruner.display_name }}</span>
-                    </UTooltip>
-                  </div>
+      <UEmpty v-else-if="0 === pruners.length" icon="i-lucide-scissors" title="No pruners found" />
 
-                  <UBadge v-if="!pruner.enabled" color="neutral" variant="soft"> Disabled </UBadge>
-                </div>
-              </div>
-            </div>
-
-            <p v-if="pruner.description" class="text-sm leading-6 text-default">
+      <div v-else class="ws-card divide-y divide-default">
+        <article
+          v-for="pruner in pruners"
+          :id="pruner.name"
+          :key="pruner.name"
+          :aria-labelledby="`pruner-${pruner.name}`"
+          class="grid scroll-mt-24 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_auto]"
+        >
+          <div class="min-w-0 space-y-2">
+            <h2
+              :id="`pruner-${pruner.name}`"
+              class="wrap-anywhere text-base font-semibold text-highlighted"
+            >
+              <UTooltip :text="pruner.name">
+                <span>{{ pruner.display_name }}</span>
+              </UTooltip>
+            </h2>
+            <p v-if="pruner.description" class="text-sm text-toned">
               {{ pruner.description }}
             </p>
           </div>
-        </template>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div
-            class="col-span-2 rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-          >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-calendar-range" class="size-4 shrink-0" />
-                <span>Runs</span>
-              </div>
-
-              <div class="min-w-0 sm:ml-auto sm:text-right">
-                <template v-if="pruner.cron">
+          <dl class="min-w-0 space-y-2 text-sm">
+            <div class="space-y-1">
+              <dt class="text-xs text-muted">Schedule</dt>
+              <dd>
+                <template v-if="null !== pruner.cron">
                   <NuxtLink
-                    class="block font-medium text-primary underline underline-offset-2"
+                    :to="cronHelpUrl + pruner.cron.replaceAll(' ', '_')"
                     target="_blank"
-                    :to="makeCronLink(pruner.cron)"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-start gap-1 text-primary hover:underline underline-offset-2"
+                    :aria-label="`Explain cron schedule for ${pruner.display_name} (opens in a new tab)`"
                   >
-                    {{ cronstrue.toString(pruner.cron) }}
+                    {{ describeSchedule(pruner.cron) }}
+                    <UIcon name="i-lucide-arrow-up-right" class="mt-0.5 size-3.5 shrink-0" />
                   </NuxtLink>
                 </template>
                 <span v-else class="text-toned">Every run</span>
-              </div>
+              </dd>
             </div>
-          </div>
+            <div class="flex min-w-0 items-baseline gap-2">
+              <dt class="shrink-0 text-xs text-muted">Timer</dt>
+              <dd class="wrap-anywhere font-mono text-xs">{{ pruner.cron ?? 'Always' }}</dd>
+            </div>
+          </dl>
 
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-          >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
+          <dl class="min-w-0 space-y-1 text-sm">
+            <dt class="text-xs text-muted">Next run</dt>
+            <dd>
+              <span v-if="!pruner.enabled" class="text-toned">Disabled</span>
+              <UTooltip
+                v-else-if="pruner.next_run"
+                :text="moment(pruner.next_run).format(TOOLTIP_DATE_FORMAT)"
               >
-                <UIcon name="i-lucide-clock-3" class="size-4 shrink-0" />
-                <span>Timer</span>
-              </div>
+                <time :datetime="pruner.next_run" class="cursor-help">
+                  {{ moment(pruner.next_run).fromNow() }}
+                </time>
+              </UTooltip>
+              <span v-else class="text-toned">
+                {{ null === pruner.cron ? 'Every run' : 'Unknown' }}
+              </span>
+            </dd>
+          </dl>
 
-              <div class="min-w-0 sm:ml-auto sm:text-right">
-                <span class="block break-all font-mono">
-                  {{ pruner.cron ?? 'Always' }}
-                </span>
-              </div>
-            </div>
+          <div class="flex flex-wrap items-start gap-2 xl:flex-col xl:items-end">
+            <UButton
+              color="primary"
+              variant="solid"
+              size="sm"
+              icon="i-lucide-play"
+              :disabled="isLoading || !!loadError || null !== openingMode"
+              :aria-label="`Run ${pruner.display_name}`"
+              @click="runPrunerName = pruner.name"
+            >
+              Run
+            </UButton>
           </div>
+        </article>
+      </div>
+    </section>
 
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
+    <section class="ws-panel-padded text-sm">
+      <button
+        type="button"
+        class="flex w-full items-center justify-between gap-3 text-left font-medium text-highlighted"
+        :aria-expanded="show_page_tips"
+        aria-controls="prune-page-tips"
+        @click="show_page_tips = !show_page_tips"
+      >
+        <span>Tips</span>
+        <UIcon
+          :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          class="size-4 text-toned"
+        />
+      </button>
+      <div v-show="show_page_tips" id="prune-page-tips" class="mt-3 space-y-2 text-toned">
+        <p>Disabled pruners can still be run manually.</p>
+        <p>Pruners marked Always run with every scheduled pruning task.</p>
+      </div>
+    </section>
+
+    <UModal
+      v-model:open="runPrunerOpen"
+      :title="runPruner ? `Run ${runPruner.display_name}` : 'Run pruner'"
+      :description="runPruner?.description || undefined"
+      :dismissible="null === openingMode"
+      :close="null === openingMode"
+    >
+      <template #footer>
+        <div v-if="runPruner" class="flex w-full flex-wrap justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-terminal"
+            :loading="'dry-run' === openingMode"
+            :disabled="isLoading || !!loadError || null !== openingMode"
+            @click="() => void toConsoleCmd(runPruner, false)"
           >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div
-                class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-              >
-                <UIcon name="i-lucide-forward" class="size-4 shrink-0" />
-                <span>Next Run</span>
-              </div>
-
-              <div class="min-w-0 sm:ml-auto sm:text-right">
-                <template v-if="pruner.enabled">
-                  <UTooltip
-                    v-if="pruner.next_run"
-                    :text="`Next run will be at: ${moment(pruner.next_run).format(TOOLTIP_DATE_FORMAT)}`"
-                  >
-                    <span class="cursor-help">{{ moment(pruner.next_run).fromNow() }}</span>
-                  </UTooltip>
-                  <span v-else>Every run</span>
-                </template>
-                <span v-else class="text-toned">Disabled</span>
-              </div>
-            </div>
-          </div>
+            Dry run
+          </UButton>
+          <UButton
+            color="primary"
+            variant="solid"
+            icon="i-lucide-terminal"
+            :loading="'execute' === openingMode"
+            :disabled="isLoading || !!loadError || null !== openingMode"
+            @click="() => void toConsoleCmd(runPruner, true)"
+          >
+            Execute
+          </UButton>
         </div>
-
-        <template #footer>
-          <div class="flex flex-wrap items-center justify-end gap-2">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-terminal"
-              @click="toConsoleCmd(pruner, false)"
-            >
-              Dry Run
-            </UButton>
-
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-terminal"
-              @click="toConsoleCmd(pruner, true)"
-            >
-              Execute
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </div>
-
-    <UCard class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
-
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
       </template>
-
-      <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
-        <li><strong>Dry Run</strong> shows what would be removed without making any changes.</li>
-        <li><strong>Execute</strong> performs the actual pruning operation, if applicable.</li>
-        <li>
-          Pruners run automatically based on their cron schedule. Use the button to trigger them
-          manually.
-        </li>
-      </ul>
-    </UCard>
+    </UModal>
   </main>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { navigateTo, useHead, useRoute } from '#app';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { navigateTo, useHead } from '#app';
+import { NuxtLink, UAlert, UButton, UEmpty, UIcon, UModal, UTooltip } from '#components';
 import { useStorage } from '@vueuse/core';
 import cronstrue from 'cronstrue';
 import moment from 'moment';
@@ -224,60 +203,100 @@ import {
 useHead({ title: 'Prune' });
 
 const pageShell = requireTopLevelPageShell('prune');
-
-const route = useRoute();
+const cronHelpUrl = 'https://crontab.guru/#';
 const pruners = ref<Array<PrunerItem>>([]);
-const isLoading = ref<boolean>(false);
+const isLoading = ref(false);
+const loadError = ref('');
+const openingMode = ref<'dry-run' | 'execute' | null>(null);
+const runPrunerName = ref<string | null>(null);
+const runPruner = computed(
+  () => pruners.value.find((pruner) => runPrunerName.value === pruner.name) ?? null,
+);
+const runPrunerOpen = computed({
+  get: () => null !== runPruner.value,
+  set: (open: boolean) => {
+    if (false === open && null === openingMode.value) {
+      runPrunerName.value = null;
+    }
+  },
+});
 const show_page_tips = useStorage<boolean>('show_prune_page_tips', true);
+let disposed = false;
 
-const prunerCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'border-t border-default/70 px-4 py-4',
-};
-
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
+const describeSchedule = (cron: string): string => {
+  try {
+    return cronstrue.toString(cron);
+  } catch {
+    return 'Invalid cron schedule';
+  }
 };
 
 const loadContent = async (): Promise<void> => {
+  if (disposed || isLoading.value || null !== openingMode.value) {
+    return;
+  }
+
   isLoading.value = true;
+  loadError.value = '';
+  runPrunerName.value = null;
   pruners.value = [];
 
   try {
     const response = await request('/prune');
     const json = await parse_api_response<{ pruners: Array<PrunerItem> }>(response);
 
-    if ('prune' !== route.name) {
+    if (disposed) {
       return;
     }
-
     if ('error' in json) {
-      notification(
-        'error',
-        'Error',
-        `Pruners request error. ${json.error.code}: ${json.error.message}`,
-      );
-      return;
+      throw new Error(`${json.error.code}: ${json.error.message}`);
+    }
+    if (!response.ok) {
+      throw new Error(`Pruners request failed (${response.status}).`);
     }
 
     pruners.value = json.pruners;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Request error. ${message}`);
+    if (!disposed) {
+      loadError.value = error instanceof Error ? error.message : 'Unexpected request error';
+      notification('error', 'Pruners unavailable', loadError.value);
+    }
   } finally {
     isLoading.value = false;
   }
 };
 
-onMounted(() => void loadContent());
+const toConsoleCmd = async (pruner: PrunerItem | null, execute: boolean): Promise<void> => {
+  if (
+    null === pruner ||
+    disposed ||
+    isLoading.value ||
+    loadError.value ||
+    null !== openingMode.value ||
+    !pruners.value.includes(pruner)
+  ) {
+    return;
+  }
 
-const makeCronLink = (timer: string): string => `https://crontab.guru/#${timer.replace(/ /g, '_')}`;
+  openingMode.value = execute ? 'execute' : 'dry-run';
 
-const toConsoleCmd = async (pruner: PrunerItem, execute: boolean): Promise<void> => {
-  const base = `system:prune --run --prune "${pruner.name}"`;
-  const cmd = execute ? `${base} --execute` : `${base} -vvv`;
-  await navigateTo(makeConsoleCommand(cmd));
+  try {
+    const base = `system:prune --run --prune "${pruner.name}"`;
+    const cmd = execute ? `${base} --execute` : `${base} -vvv`;
+    await navigateTo(makeConsoleCommand(cmd));
+  } catch (error: unknown) {
+    if (!disposed) {
+      const message =
+        error instanceof Error ? error.message : 'Unexpected command preparation error';
+      notification('error', 'Console could not be opened', `'${pruner.display_name}': ${message}`);
+    }
+  } finally {
+    openingMode.value = null;
+  }
 };
+
+onMounted(() => void loadContent());
+onBeforeUnmount(() => {
+  disposed = true;
+});
 </script>

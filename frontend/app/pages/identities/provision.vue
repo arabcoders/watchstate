@@ -20,8 +20,8 @@
         />
 
         <UButton
-          color="neutral"
-          variant="outline"
+          color="primary"
+          variant="solid"
           size="sm"
           icon="i-lucide-plus"
           @click="addNewIdentity"
@@ -46,9 +46,17 @@
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading data. Please wait..."
+      title="Loading identity members"
       :ui="{ icon: 'animate-spin' }"
+    />
+
+    <UAlert
+      v-if="!isLoading && loadError"
+      color="error"
+      variant="soft"
+      icon="i-lucide-triangle-alert"
+      title="Unable to load identity members"
+      :description="loadError"
     />
 
     <UAlert
@@ -61,9 +69,8 @@
       <template #description>
         <div class="space-y-2 text-sm text-default">
           <p>
-            The following members are missing a PIN. Click on
-            <UIcon name="i-lucide-lock-open" class="inline size-4 align-text-bottom" /> to set the
-            member PIN. Otherwise you will not be able to proceed.
+            Set a PIN for each member below before saving or exporting the mapping, or provisioning
+            identities.
           </p>
           <div class="flex flex-wrap gap-2">
             <UBadge
@@ -79,13 +86,11 @@
       </template>
     </UAlert>
 
-    <UAlert
-      v-if="matched?.length < 1 && !isLoading && !allowSingleBackendIdentities"
-      color="error"
-      variant="soft"
-      icon="i-lucide-triangle-alert"
-      title="No matched identities."
-      description="Click on the add button to add an identity group."
+    <UEmpty
+      v-if="matched?.length < 1 && !isLoading && !loadError && !allowSingleBackendIdentities"
+      icon="i-lucide-users"
+      title="No matched identities"
+      description="Add an identity group to associate backend members."
     />
 
     <div v-if="matched.length > 0" class="grid gap-4 xl:grid-cols-2">
@@ -132,19 +137,18 @@
         >
           <template #item="{ element }">
             <div class="ws-identity-chip" :class="setClass(element)">
-              <button
+              <UButton
                 v-if="element?.protected"
                 type="button"
-                class="inline-flex items-center text-toned hover:text-primary"
+                color="neutral"
+                variant="outline"
+                size="xs"
+                :icon="element?.options?.PLEX_USER_PIN ? 'i-lucide-lock' : 'i-lucide-lock-open'"
+                aria-label="Set or view user PIN"
                 @click="setMemberPin(element)"
               >
-                <UTooltip text="Click to set/view user PIN">
-                  <UIcon
-                    :name="element?.options?.PLEX_USER_PIN ? 'i-lucide-lock' : 'i-lucide-lock-open'"
-                    class="size-4"
-                  />
-                </UTooltip>
-              </button>
+                PIN
+              </UButton>
 
               <span class="min-w-0">
                 <span class="font-medium text-highlighted"
@@ -159,12 +163,12 @@
           </template>
 
           <template #footer>
-            <div
+            <UEmpty
               v-if="group.members.length < 1"
-              class="ws-identity-chip ws-identity-chip-placeholder"
-            >
-              <span class="font-medium text-toned">Drop members here.</span>
-            </div>
+              size="sm"
+              variant="naked"
+              title="Drop members here"
+            />
           </template>
         </Draggable>
       </UCard>
@@ -207,19 +211,18 @@
         >
           <template #item="{ element }">
             <div class="ws-identity-chip" :class="setClass(element)">
-              <button
+              <UButton
                 v-if="element?.protected && allowSingleBackendIdentities"
                 type="button"
-                class="inline-flex items-center text-toned hover:text-primary"
+                color="neutral"
+                variant="outline"
+                size="xs"
+                :icon="element?.options?.PLEX_USER_PIN ? 'i-lucide-lock' : 'i-lucide-lock-open'"
+                aria-label="Set or view user PIN"
                 @click="setMemberPin(element)"
               >
-                <UTooltip text="Click to set/view user PIN">
-                  <UIcon
-                    :name="element?.options?.PLEX_USER_PIN ? 'i-lucide-lock' : 'i-lucide-lock-open'"
-                    class="size-4"
-                  />
-                </UTooltip>
-              </button>
+                PIN
+              </UButton>
 
               <UIcon
                 v-else-if="element?.protected && !allowSingleBackendIdentities"
@@ -240,151 +243,135 @@
           </template>
         </Draggable>
 
-        <UAlert
-          v-if="unmatched?.length < 1"
-          color="success"
-          variant="soft"
+        <UEmpty
+          v-if="unmatched?.length < 1 && !loadError"
+          size="sm"
+          variant="naked"
           icon="i-lucide-circle-check"
-          description="All members are associated."
-          class="mt-4"
+          title="All members are associated"
         />
       </template>
     </UCard>
 
-    <UCard v-if="!isLoading" :ui="formCardUi">
-      <template #header>
-        <div class="text-base font-semibold text-highlighted">Execution options</div>
-      </template>
+    <section v-if="!isLoading" class="space-y-4" aria-labelledby="execution-options-title">
+      <h2 id="execution-options-title" class="text-base font-semibold text-highlighted">
+        Execution options
+      </h2>
 
-      <div class="space-y-4">
-        <div class="space-y-3">
-          <div
-            v-if="hasIdentities"
-            class="rounded-md border border-default bg-elevated/20 px-3 py-3"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-highlighted">Re-create local identities</div>
-                <p class="mt-1 text-sm text-toned">
-                  Delete current local identity data before creating the new set.
-                </p>
-              </div>
-
-              <USwitch v-model="recreate" color="neutral" />
-            </div>
+      <div class="divide-y divide-default">
+        <div v-if="hasIdentities" class="flex items-center justify-between gap-6 py-4">
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-highlighted">Re-create local identities</div>
+            <p class="mt-1 text-sm text-toned">
+              Delete current local identity data before creating the new set.
+            </p>
           </div>
 
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-highlighted">Generate remote backups</div>
-                <p class="mt-1 text-sm text-toned">
-                  Create an initial backup for each identity remote backend dataset.
-                </p>
-              </div>
-
-              <USwitch v-model="backup" color="neutral" />
-            </div>
-          </div>
-
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-highlighted">Skip mapper save</div>
-                <p class="mt-1 text-sm text-toned">
-                  Do not save the current mapping before running.
-                </p>
-              </div>
-
-              <USwitch v-model="noSave" color="neutral" />
-            </div>
-          </div>
-
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-highlighted">Dry run</div>
-                <p class="mt-1 text-sm text-toned">Preview the operation without making changes.</p>
-              </div>
-
-              <USwitch v-model="dryRun" color="neutral" />
-            </div>
-          </div>
-
-          <div
-            v-if="1 === backendCount"
-            class="rounded-md border border-default bg-elevated/20 px-3 py-3"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-highlighted">
-                  Allow single backend identities
-                </div>
-                <p class="mt-1 text-sm text-toned">
-                  Create identities from the single configured backend without requiring member
-                  mapping.
-                </p>
-              </div>
-
-              <USwitch v-model="allowSingleBackendIdentities" color="neutral" />
-            </div>
-          </div>
+          <USwitch v-model="recreate" color="neutral" aria-label="Re-create local identities" />
         </div>
 
-        <UAlert
-          v-if="allowSingleBackendIdentities && 1 === backendCount"
-          color="success"
-          variant="soft"
-          icon="i-lucide-info"
-          title="Single Backend Mode"
-        >
-          <template #description>
-            <p class="text-sm text-default">
-              You are in <strong>single backend mode</strong>. The system will create individual
-              identities from your single configured backend without requiring member mapping. Each
-              identity will be set up independently.
+        <div class="flex items-center justify-between gap-6 py-4">
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-highlighted">Generate remote backups</div>
+            <p class="mt-1 text-sm text-toned">
+              Create an initial backup of each identity's remote backend data.
             </p>
-          </template>
-        </UAlert>
+          </div>
+
+          <USwitch v-model="backup" color="neutral" aria-label="Generate remote backups" />
+        </div>
+
+        <div class="flex items-center justify-between gap-6 py-4">
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-highlighted">Skip mapper save</div>
+            <p class="mt-1 text-sm text-toned">Do not save the current mapping before running.</p>
+          </div>
+
+          <USwitch v-model="noSave" color="neutral" aria-label="Skip mapper save" />
+        </div>
+
+        <div class="flex items-center justify-between gap-6 py-4">
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-highlighted">Dry run</div>
+            <p class="mt-1 text-sm text-toned">Preview identity changes without applying them.</p>
+          </div>
+
+          <USwitch v-model="dryRun" color="neutral" aria-label="Dry run" />
+        </div>
+
+        <div v-if="1 === backendCount" class="flex items-center justify-between gap-6 py-4">
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-highlighted">Allow single backend identities</div>
+            <p class="mt-1 text-sm text-toned">
+              Create identities from the single configured backend without requiring member mapping.
+            </p>
+          </div>
+
+          <USwitch
+            v-model="allowSingleBackendIdentities"
+            color="neutral"
+            aria-label="Allow single backend identities"
+          />
+        </div>
       </div>
 
-      <template #footer>
-        <div class="flex gap-2 flex-row justify-end">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-save"
-            :disabled="membersWithNoPin.length > 0"
-            @click="
-              () => {
-                void saveMap();
-              }
-            "
-            label="Save mapping"
-          />
+      <UAlert
+        v-if="allowSingleBackendIdentities && 1 === backendCount"
+        color="success"
+        variant="soft"
+        icon="i-lucide-info"
+        title="Single Backend Mode"
+      >
+        <template #description>
+          <p class="text-sm text-default">
+            Create a separate identity for each unmatched member of the configured backend. Member
+            mapping is not required.
+          </p>
+        </template>
+      </UAlert>
 
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-users"
-            :disabled="membersWithNoPin.length > 0"
-            @click="provisionIdentities"
-          >
-            <span v-if="!dryRun">
-              <span v-if="recreate || !hasIdentities"
-                >{{ recreate ? 'Re-create' : 'Create' }} identities</span
-              >
-              <span v-else>Update identities</span>
-            </span>
-            <span v-else
-              >Test create identities<span v-if="hasIdentities"> (Safe operation)</span></span
+      <UAlert
+        v-if="dryRun && !noSave"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Dry run can still save mapping changes"
+        description="Enable Skip mapper save to keep the saved mapping unchanged."
+      />
+
+      <div class="flex flex-wrap justify-end gap-2">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-save"
+          :disabled="membersWithNoPin.length > 0"
+          @click="
+            () => {
+              void saveMap();
+            }
+          "
+          label="Save mapping"
+        />
+
+        <UButton
+          :color="recreate && !dryRun ? 'error' : 'primary'"
+          variant="solid"
+          size="sm"
+          icon="i-lucide-users"
+          :disabled="membersWithNoPin.length > 0"
+          @click="provisionIdentities"
+        >
+          <span v-if="!dryRun">
+            <span v-if="recreate || !hasIdentities"
+              >{{ recreate ? 'Re-create' : 'Create' }} identities</span
             >
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+            <span v-else>Update identities</span>
+          </span>
+          <span v-else>Test provisioning</span>
+        </UButton>
+      </div>
+    </section>
 
     <UCard class="shadow-sm" :ui="tipsCardUi">
       <template #header>
@@ -410,55 +397,36 @@
 
       <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
         <li>
-          This page lets you guide the system in matching identities across different backends.
-        </li>
-        <li>
-          When you click <code>Create identities</code>, your mapping will be uploaded unless you’ve
-          selected <code>Do not save mapper</code>. Based on your choice, the system will either
-          delete and recreate the local identities, or try to update the existing ones.
+          Creating or updating identities saves the mapping unless <code>Skip mapper save</code> is
+          enabled. <code>Re-create local identities</code> deletes existing local identity data
+          before creating the new set; otherwise, existing identities are updated.
         </li>
         <li class="font-semibold text-error">
-          Warning: If you choose not to delete the existing local identities and the matching
-          changes for any reason, you may end up with duplicate identities. We strongly recommend
-          deleting the current local identities.
+          Updating existing identities after changing the mapping can create duplicates. We
+          recommend re-creating local identities.
         </li>
         <li>
-          Clicking <code>Save mapping</code> will only save your current mapping to the system. It
-          will <strong>not</strong> create any identities.
+          <code>Save mapping</code> saves only the mapping. It does <strong>not</strong> create
+          identities.
         </li>
         <li>
-          Clicking the
-          <UIcon name="i-lucide-file-output" class="inline size-4 align-text-bottom" /> icon will
-          download the current mapping as a YAML file. You can review and manually upload it to the
-          system later if needed.
+          <code>Export</code> downloads the mapping as YAML for review or manual upload later.
         </li>
         <li>
-          Members in the <b>Not matched</b> group aren’t currently linked to any others and likely
-          won’t be matched automatically.
+          <b>Unmatched Members</b> are not linked to other members and are unlikely to match
+          automatically. Drag them into a group to match accounts manually.
         </li>
         <li>Each identity group must have at least two members to be considered a valid group.</li>
-        <li>
-          You can drag and drop members from the <b>Not matched</b> group into any other group to
-          manually associate them.
-        </li>
-        <li>
-          An identity group can only include <b>one</b> member from <b>each</b> backend. If you try
-          to add a second member from the same backend, an error will be shown.
-        </li>
+        <li>Each identity group can contain only <b>one</b> member from <b>each</b> backend.</li>
         <li>
           The display name format is: <code>backend_name@normalized_name (real_username)</code>. The
           <code>(real_username)</code> part only appears if it’s different from the
           <code>normalized_name</code>.
         </li>
+        <li>Member results are cached for 5 minutes and may be out of date.</li>
         <li>
-          There is a 5-minute cache when retrieving members from the API, so the data you see might
-          be slightly out of date.
-        </li>
-        <li>
-          Backend members with red border and icon of
-          <UIcon name="i-lucide-lock-open" class="inline size-4 align-text-bottom" /> are protected
-          by PIN, and you need to click on the icon to set the PIN. Otherwise, you will not be able
-          to proceed.
+          PIN-protected members with a red border need a PIN before you can save or export the
+          mapping, or provision identities.
         </li>
       </ul>
     </UCard>
@@ -469,7 +437,17 @@
 import { computed, nextTick, onMounted, ref, toRaw } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { navigateTo, useRoute } from '#app';
-import { NuxtLink } from '#components';
+import {
+  NuxtLink,
+  UAlert,
+  UBadge,
+  UButton,
+  UCard,
+  UEmpty,
+  UIcon,
+  USwitch,
+  UTooltip,
+} from '#components';
 import moment from 'moment';
 import Draggable from 'vuedraggable';
 import PageHeader from '~/components/PageHeader.vue';
@@ -506,6 +484,7 @@ type IdentityGroup = {
 const matched = ref<Array<IdentityGroup>>([]);
 const unmatched = ref<Array<IdentityMember>>([]);
 const isLoading = ref<boolean>(false);
+const loadError = ref<string>('');
 const toastIsVisible = ref<boolean>(false);
 const recreate = ref<boolean>(false);
 const backup = ref<boolean>(false);
@@ -516,7 +495,7 @@ const allowSingleBackendIdentities = ref<boolean>(false);
 const backendCount = ref<number>(0);
 const expires = ref<string | undefined>();
 const headerDescription = computed(() => {
-  let desc = 'Drag and drop backend members into groups to build identity associations.';
+  let desc = 'Match user accounts across backends.';
   if (expires.value) {
     desc += ` Cached results expire ${moment(expires.value).fromNow()}.`;
   }
@@ -538,12 +517,6 @@ const groupCardUi = {
   body: 'px-4 pb-4 pt-0',
 };
 
-const formCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'border-t border-default px-4 py-4',
-};
-
 const tipsCardUi = {
   header: 'p-4',
   body: 'px-4 pb-4 pt-0',
@@ -557,9 +530,9 @@ const addNewIdentity = (): void => {
 const loadContent = async (force?: boolean): Promise<void> => {
   if (matched.value.length > 0) {
     const { status } = await useDialog().confirmDialog({
-      title: 'Reload data',
-      message: 'Reloading will remove all modifications. Are you sure?',
-      confirmColor: 'error',
+      title: 'Reload identity members?',
+      message: 'Reloading will discard all changes on this page.',
+      confirmColor: 'neutral',
     });
 
     if (true !== status) {
@@ -570,6 +543,7 @@ const loadContent = async (force?: boolean): Promise<void> => {
   matched.value = [];
   unmatched.value = [];
   isLoading.value = true;
+  loadError.value = '';
 
   try {
     const response = await request(`/identities/provision${force ? '?force=1' : ''}`, {
@@ -589,7 +563,8 @@ const loadContent = async (force?: boolean): Promise<void> => {
     }
 
     if ('error' in json) {
-      notification('error', 'Error', json.error.message || 'Unknown error');
+      loadError.value = json.error.message || 'Unknown error';
+      notification('error', 'Identity members unavailable', json.error.message || 'Unknown error');
       return;
     }
 
@@ -602,7 +577,8 @@ const loadContent = async (force?: boolean): Promise<void> => {
     expires.value = json?.expires;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', message);
+    loadError.value = message;
+    notification('error', 'Identity members unavailable', message);
   } finally {
     isLoading.value = false;
   }
@@ -613,7 +589,7 @@ const generateFile = async (): Promise<void> => {
   const data = formatData();
 
   if (!data.identities.length) {
-    notification('error', 'Error', 'No data to export.');
+    notification('error', 'Mapping not exported', 'No data to export.');
     return;
   }
 
@@ -631,7 +607,7 @@ const generateFile = async (): Promise<void> => {
   if (showSaveFilePicker) {
     response.then(async (res) => {
       if (!res.body) {
-        notification('error', 'Error', 'No data returned from export request.');
+        notification('error', 'Mapping not exported', 'No data returned from export request.');
         return;
       }
 
@@ -685,7 +661,7 @@ const checkBackend = (e: DragEvent): boolean => {
       nextTick(() => {
         notification(
           'error',
-          'error',
+          'Backend member already mapped',
           `A member from '${draggedMember.backend}' backend is already mapped in this identity.`,
           3001,
           {
@@ -706,6 +682,7 @@ const deleteGroup = async (i: number) => {
     const { status } = await useDialog().confirmDialog({
       title: 'Delete group',
       message: `Delete identity group #${i + 1}? Members will be moved to unmatched.`,
+      confirmText: 'Delete group',
       confirmColor: 'error',
     });
 
@@ -724,7 +701,7 @@ const saveMap = async (no_toast: boolean = false): Promise<boolean> => {
 
   if (!data.identities.length) {
     if (!no_toast) {
-      notification('error', 'Error', 'No mapping data to save.');
+      notification('error', 'Mapping not saved', 'No mapping data to save.');
     }
     return true;
   }
@@ -738,26 +715,26 @@ const saveMap = async (no_toast: boolean = false): Promise<boolean> => {
     const response = await parse_api_response<GenericResponse>(req);
     if ('error' in response) {
       if (!no_toast) {
-        notification('error', 'Error', `${req.status}: ${response.error.message}`);
+        notification('error', 'Mapping not saved', `${req.status}: ${response.error.message}`);
       }
       return false;
     }
 
     if (200 <= req.status && 300 > req.status) {
       if (!no_toast) {
-        notification('success', 'Success', response.info.message);
+        notification('success', 'Mapping saved', response.info.message);
       }
       return true;
     }
 
     if (!no_toast) {
-      notification('error', 'Error', `${req.status}: Request failed`);
+      notification('error', 'Mapping not saved', `${req.status}: Request failed`);
     }
 
     return false;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Error: ${message}`);
+    notification('error', 'Mapping not saved', message);
   }
 
   return false;
@@ -803,7 +780,7 @@ const provisionIdentities = async (): Promise<void> => {
   const data = formatData();
 
   if (!allowSingleBackendIdentities.value && 0 === data.identities.length) {
-    notification('error', 'Error', 'No identity mapping data to provision.');
+    notification('error', 'Identities not provisioned', 'No identity mapping data to provision.');
     return;
   }
 
@@ -828,18 +805,22 @@ const provisionIdentities = async (): Promise<void> => {
     const response = await parse_api_response<GenericResponse>(req);
 
     if ('error' in response) {
-      notification('error', 'Error', `${req.status}: ${response.error.message}`);
+      notification(
+        'error',
+        'Identity provisioning failed',
+        `${req.status}: ${response.error.message}`,
+      );
       return;
     }
 
-    notification('success', 'Success', response.info.message);
+    notification('success', 'Identity provisioning complete', response.info.message);
 
     if (false === dryRun.value) {
       await navigateTo('/identities');
     }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Error: ${message}`);
+    notification('error', 'Identity provisioning failed', message);
   }
 };
 
@@ -872,7 +853,7 @@ const setMemberPin = async (user: IdentityMember): Promise<void> => {
   }
 
   if (4 !== pin.length) {
-    notification('error', 'Error', 'PIN must be at least 4 characters.');
+    notification('error', 'Invalid PIN', 'PIN must be exactly 4 characters.');
     return;
   }
 
@@ -927,7 +908,7 @@ onMounted(async (): Promise<void> => {
   if ('main' !== api_user.value) {
     notification(
       'error',
-      'Error',
+      'Main identity required',
       'The identity provision page is only available for the main identity.',
     );
     await navigateTo({ name: 'backends' });
@@ -958,11 +939,5 @@ onMounted(async (): Promise<void> => {
 
 .ws-identity-chip.is-success {
   border-color: color-mix(in srgb, var(--ui-color-success-500) 55%, transparent);
-}
-
-.ws-identity-chip-placeholder {
-  cursor: default;
-  border-style: dashed;
-  background: transparent;
 }
 </style>

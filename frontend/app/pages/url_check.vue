@@ -1,143 +1,172 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
-      <template #actions>
-        <UTooltip v-if="hasResponse" text="Copy request and response">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-copy"
-            @click="copyText(JSON.stringify(response, null, 2))"
-          >
-            <span class="hidden sm:inline">Copy</span>
-          </UButton>
-        </UTooltip>
-      </template>
-    </PageHeader>
+    <PageHeader v-bind="pageShell" />
 
-    <UCard class="shadow-sm" :ui="formCardUi">
-      <template #header>
-        <div class="inline-flex items-center gap-2 text-base font-semibold text-highlighted">
-          <UIcon name="i-lucide-send" class="size-4 shrink-0 text-toned" />
-          <span>Request</span>
-        </div>
-      </template>
-
-      <form class="space-y-4" @submit.prevent="check_url">
-        <UAlert
-          v-if="has_template_values()"
-          color="warning"
-          variant="soft"
-          icon="i-lucide-triangle-alert"
-          title="Template values found"
-          description="Replace values in [...] before testing when needed."
+    <form class="space-y-6" :aria-busy="is_loading" @submit.prevent="check_url">
+      <UFormField label="Template" name="use-template" class="sm:max-w-md">
+        <USelect
+          id="use-template"
+          v-model="use_template"
+          :items="templateItems"
+          value-key="value"
+          placeholder="Select a template"
+          icon="i-lucide-file-text"
+          class="w-full"
+          :disabled="is_loading"
         />
+      </UFormField>
 
-        <UFormField label="Template" name="use-template">
+      <UAlert
+        v-if="has_template_values()"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-triangle-alert"
+        title="Template values found"
+        description="Replace placeholders such as [API_KEY] before sending."
+      />
+
+      <div class="grid items-end gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]">
+        <UFormField label="Method" name="method">
           <USelect
-            id="use-template"
-            v-model="use_template"
-            :items="templateItems"
-            value-key="value"
-            placeholder="Select a template"
-            icon="i-lucide-file-text"
+            id="method"
+            v-model="item.method"
+            :items="methods"
             class="w-full"
             :disabled="is_loading"
           />
         </UFormField>
 
         <UFormField label="URL" name="url" required>
-          <div class="flex flex-col gap-2 sm:flex-row">
-            <USelect
-              v-model="item.method"
-              :items="methods"
-              class="sm:w-40"
-              :disabled="is_loading"
-            />
-
-            <UInput
-              id="url"
-              v-model="item.url"
-              type="text"
-              autocomplete="off"
-              placeholder="https://example.com/api/v1/"
-              icon="i-lucide-link"
-              class="flex-1"
-              :disabled="is_loading"
-            />
-          </div>
+          <UInput
+            id="url"
+            v-model="item.url"
+            type="text"
+            autocomplete="off"
+            placeholder="https://example.com/api/v1/"
+            icon="i-lucide-link"
+            class="w-full"
+            :disabled="is_loading"
+          />
         </UFormField>
 
-        <div class="space-y-3">
-          <div class="flex items-center justify-between gap-3">
-            <div class="text-sm font-medium text-highlighted">Headers</div>
+        <UButton
+          type="submit"
+          color="primary"
+          variant="solid"
+          size="md"
+          icon="i-lucide-send"
+          class="justify-center"
+          :loading="is_loading"
+          :disabled="invalid_form || is_loading"
+        >
+          Send request
+        </UButton>
+      </div>
 
+      <section aria-labelledby="request-headers-heading" class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <h2 id="request-headers-heading" class="text-sm font-semibold text-highlighted">
+            Headers
+          </h2>
+          <UButton
+            type="button"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-plus"
+            :disabled="is_loading"
+            @click="add_header()"
+          >
+            Add header
+          </UButton>
+        </div>
+
+        <div v-if="0 < item.headers.length" class="space-y-2">
+          <div
+            v-for="(header, index) in item.headers"
+            :key="index"
+            class="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
+          >
+            <UInput
+              v-model="header.key"
+              type="text"
+              placeholder="Header name"
+              :aria-label="`Header ${index + 1} name`"
+              class="w-full"
+              :disabled="is_loading"
+              @update:model-value="revealedHeaders.delete(`form:${index}`)"
+            />
+            <UInput
+              v-model="header.value"
+              :type="
+                header.sensitive && !revealedHeaders.has(`form:${index}`) ? 'password' : 'text'
+              "
+              placeholder="Value"
+              :aria-label="`Header ${index + 1} value`"
+              autocomplete="off"
+              autocapitalize="none"
+              :spellcheck="false"
+              class="w-full"
+              :disabled="is_loading"
+            >
+              <template v-if="header.sensitive" #trailing>
+                <UTooltip
+                  :text="revealedHeaders.has(`form:${index}`) ? 'Hide value' : 'Show value'"
+                >
+                  <UButton
+                    type="button"
+                    color="neutral"
+                    variant="ghost"
+                    square
+                    size="xs"
+                    :icon="
+                      revealedHeaders.has(`form:${index}`) ? 'i-lucide-eye-off' : 'i-lucide-eye'
+                    "
+                    :aria-label="revealedHeaders.has(`form:${index}`) ? 'Hide value' : 'Show value'"
+                    :aria-pressed="revealedHeaders.has(`form:${index}`)"
+                    :disabled="is_loading"
+                    @click="toggleHeaderVisibility(`form:${index}`)"
+                  />
+                </UTooltip>
+              </template>
+            </UInput>
             <UButton
               type="button"
               color="neutral"
               variant="outline"
-              size="sm"
-              icon="i-lucide-plus"
+              icon="i-lucide-trash-2"
+              class="justify-center"
               :disabled="is_loading"
-              @click="add_header()"
+              @click="
+                () => {
+                  item.headers.splice(index, 1);
+                  revealedHeaders.clear();
+                }
+              "
             >
-              Add
+              Remove
             </UButton>
           </div>
-
-          <div v-if="item.headers.length > 0" class="space-y-2">
-            <div
-              v-for="(header, index) in item.headers"
-              :key="index"
-              class="flex flex-col gap-2 rounded-md border border-default bg-elevated/40 px-3 py-3 sm:flex-row"
-            >
-              <UInput
-                v-model="header.key"
-                type="text"
-                placeholder="Header Key"
-                class="flex-1"
-                :disabled="is_loading"
-              />
-              <UInput
-                v-model="header.value"
-                type="text"
-                placeholder="Header Value"
-                class="flex-1"
-                :disabled="is_loading"
-              />
-              <UButton
-                type="button"
-                color="neutral"
-                variant="outline"
-                icon="i-lucide-x"
-                class="shrink-0 whitespace-nowrap"
-                :disabled="is_loading"
-                @click="
-                  () => {
-                    item.headers.splice(index, 1);
-                  }
-                "
-              >
-                Remove
-              </UButton>
-            </div>
-          </div>
-
-          <UAlert
-            v-else
-            color="neutral"
-            variant="soft"
-            icon="i-lucide-info"
-            title="No custom headers"
-            description="Add headers only when the target endpoint requires them."
-          />
         </div>
-      </form>
 
-      <template #footer>
-        <div class="flex flex-wrap items-center justify-end gap-2">
+        <UEmpty v-else size="sm" variant="naked" icon="i-lucide-list" title="No custom headers" />
+      </section>
+
+      <div class="flex flex-wrap justify-end gap-2">
+        <UButton
+          type="button"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-rotate-ccw"
+          :disabled="is_loading"
+          @click="reset_form"
+        >
+          Reset
+        </UButton>
+        <UTooltip text="Copy cURL, including sensitive header values">
           <UButton
+            type="button"
             color="neutral"
             variant="outline"
             size="sm"
@@ -145,170 +174,190 @@
             :disabled="invalid_form || is_loading"
             @click="generateCurl"
           >
-            Copy CURL
+            Copy cURL
           </UButton>
+        </UTooltip>
+      </div>
+    </form>
 
+    <UAlert
+      v-if="requestError"
+      color="error"
+      variant="soft"
+      icon="i-lucide-triangle-alert"
+      title="Request failed"
+      :description="requestError"
+    />
+
+    <section
+      v-if="hasResponse"
+      aria-labelledby="response-heading"
+      class="space-y-4 border-t border-default pt-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0 space-y-2">
+          <div class="flex items-center gap-3">
+            <h2 id="response-heading" class="text-lg font-semibold text-highlighted">Response</h2>
+            <span
+              :class="statusToneClass(response.response.status)"
+              class="font-mono text-sm font-semibold"
+            >
+              <span class="sr-only">Status </span>{{ response.response.status }}
+            </span>
+          </div>
+          <p class="wrap-anywhere font-mono text-xs text-toned">
+            {{ response.request.method }} {{ response.request.url }}
+          </p>
+        </div>
+        <UTooltip text="Copy request and response, including sensitive header values">
           <UButton
             color="neutral"
             variant="outline"
             size="sm"
-            icon="i-lucide-rotate-ccw"
-            :disabled="is_loading"
-            @click="reset_form"
+            icon="i-lucide-copy"
+            aria-label="Copy request and response"
+            @click="copyText(JSON.stringify(response, null, 2))"
           >
-            Reset
+            Copy
           </UButton>
+        </UTooltip>
+      </div>
 
-          <UButton
-            color="primary"
-            variant="solid"
-            size="sm"
-            icon="i-lucide-send"
-            :loading="is_loading"
-            :disabled="invalid_form || is_loading"
-            @click="check_url"
-          >
-            Send Request
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+      <UTabs v-model="activeResultTab" :items="resultTabs" variant="pill" color="neutral" size="sm">
+        <template #request>
+          <UTable :data="requestHeaderRows" :columns="headerColumns" sticky="header" :ui="tableUi">
+            <template #empty>
+              <UEmpty size="sm" variant="naked" icon="i-lucide-list" title="No request headers" />
+            </template>
 
-    <div v-if="hasResponse" class="grid gap-4 xl:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-      <UCard class="shadow-sm" :ui="summaryCardUi">
-        <template #header>
-          <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-activity" class="size-4 text-toned" />
-            <span>Summary</span>
-          </div>
+            <template #key-cell="{ row }">
+              <span class="font-mono text-xs text-highlighted">{{ row.original.key }}</span>
+            </template>
+
+            <template #value-cell="{ row }">
+              <div class="flex items-start gap-2">
+                <span class="ws-wrap-anywhere min-w-0 text-default">
+                  {{
+                    row.original.sensitive && !revealedHeaders.has(`request:${row.original.key}`)
+                      ? '••••••••'
+                      : row.original.value
+                  }}
+                </span>
+                <UTooltip
+                  v-if="row.original.sensitive"
+                  :text="
+                    revealedHeaders.has(`request:${row.original.key}`) ? 'Hide value' : 'Show value'
+                  "
+                >
+                  <UButton
+                    type="button"
+                    color="neutral"
+                    variant="ghost"
+                    square
+                    size="xs"
+                    class="shrink-0"
+                    :icon="
+                      revealedHeaders.has(`request:${row.original.key}`)
+                        ? 'i-lucide-eye-off'
+                        : 'i-lucide-eye'
+                    "
+                    :aria-label="
+                      revealedHeaders.has(`request:${row.original.key}`)
+                        ? 'Hide value'
+                        : 'Show value'
+                    "
+                    :aria-pressed="revealedHeaders.has(`request:${row.original.key}`)"
+                    @click="toggleHeaderVisibility(`request:${row.original.key}`)"
+                  />
+                </UTooltip>
+              </div>
+            </template>
+          </UTable>
         </template>
 
-        <div class="space-y-3">
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-3 text-sm text-default"
-          >
-            <div class="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-toned">
-              Method
-            </div>
-            <div class="font-mono text-highlighted">{{ response.request.method }}</div>
-          </div>
+        <template #response>
+          <UTable :data="responseHeaderRows" :columns="headerColumns" sticky="header" :ui="tableUi">
+            <template #empty>
+              <UEmpty size="sm" variant="naked" icon="i-lucide-list" title="No response headers" />
+            </template>
 
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-3 text-sm text-default"
-          >
-            <div class="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-toned">URL</div>
-            <div class="ws-wrap-anywhere font-mono text-xs text-highlighted">
-              {{ response.request.url }}
-            </div>
-          </div>
+            <template #key-cell="{ row }">
+              <span class="font-mono text-xs text-highlighted">{{ row.original.key }}</span>
+            </template>
 
-          <div
-            class="rounded-md border border-default bg-elevated/40 px-3 py-3 text-sm text-default"
-          >
-            <div class="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-toned">
-              Status
-            </div>
-            <div :class="statusToneClass(response.response.status)" class="font-mono font-semibold">
-              {{ response.response.status }}
-            </div>
-          </div>
-        </div>
-      </UCard>
-
-      <UCard class="shadow-sm" :ui="resultCardUi">
-        <template #header>
-          <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
-            <span>Details</span>
-          </div>
+            <template #value-cell="{ row }">
+              <div class="flex items-start gap-2">
+                <span class="min-w-0 wrap-anywhere" :class="headerToneClass(row.original.key)">
+                  {{
+                    row.original.sensitive && !revealedHeaders.has(`response:${row.original.key}`)
+                      ? '••••••••'
+                      : row.original.value
+                  }}
+                </span>
+                <UTooltip
+                  v-if="row.original.sensitive"
+                  :text="
+                    revealedHeaders.has(`response:${row.original.key}`)
+                      ? 'Hide value'
+                      : 'Show value'
+                  "
+                >
+                  <UButton
+                    type="button"
+                    color="neutral"
+                    variant="ghost"
+                    square
+                    size="xs"
+                    class="shrink-0"
+                    :icon="
+                      revealedHeaders.has(`response:${row.original.key}`)
+                        ? 'i-lucide-eye-off'
+                        : 'i-lucide-eye'
+                    "
+                    :aria-label="
+                      revealedHeaders.has(`response:${row.original.key}`)
+                        ? 'Hide value'
+                        : 'Show value'
+                    "
+                    :aria-pressed="revealedHeaders.has(`response:${row.original.key}`)"
+                    @click="toggleHeaderVisibility(`response:${row.original.key}`)"
+                  />
+                </UTooltip>
+              </div>
+            </template>
+          </UTable>
         </template>
 
-        <UTabs v-model="activeResultTab" :items="resultTabs" variant="pill" color="neutral">
-          <template #request>
-            <UTable
-              :data="requestHeaderRows"
-              :columns="headerColumns"
-              sticky="header"
-              :ui="tableUi"
-            >
-              <template #empty>
-                <div class="py-6 text-center text-sm text-toned">No request headers found.</div>
-              </template>
-
-              <template #key-cell="{ row }">
-                <span class="font-medium text-highlighted">{{ uc_words(row.original.key) }}</span>
-              </template>
-
-              <template #value-cell="{ row }">
-                <span class="ws-wrap-anywhere text-default">{{ row.original.value }}</span>
-              </template>
-            </UTable>
-          </template>
-
-          <template #response>
-            <UTable
-              :data="responseHeaderRows"
-              :columns="headerColumns"
-              sticky="header"
-              :ui="tableUi"
-            >
-              <template #empty>
-                <div class="py-6 text-center text-sm text-toned">No response headers found.</div>
-              </template>
-
-              <template #key-cell="{ row }">
-                <span class="font-medium text-highlighted">{{ uc_words(row.original.key) }}</span>
-              </template>
-
-              <template #value-cell="{ row }">
-                <span :class="headerToneClass(row.original.key)">{{ row.original.value }}</span>
-              </template>
-            </UTable>
-          </template>
-
-          <template #body>
-            <pre
-              class="ws-terminal-panel ws-terminal-panel-lg rounded-md bg-elevated text-sm text-default"
-            ><code>{{ response.response.body ? tryParse(response.response.body) : 'Empty body' }}</code></pre>
-          </template>
-        </UTabs>
-      </UCard>
-    </div>
+        <template #body>
+          <pre
+            class="ws-terminal-panel ws-terminal-panel-lg rounded-md bg-elevated text-sm text-default"
+          ><code>{{ response.response.body ? tryParse(response.response.body) : 'Empty body' }}</code></pre>
+        </template>
+      </UTabs>
+    </section>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useHead } from '#app';
+import {
+  UAlert,
+  UButton,
+  UEmpty,
+  UFormField,
+  UInput,
+  USelect,
+  UTable,
+  UTabs,
+  UTooltip,
+} from '#components';
 import type { TableColumn } from '@nuxt/ui';
 import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { copyText, notification, parse_api_response, request } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
-
-type HeaderItem = {
-  key: string;
-  value: string;
-};
-
-type Item = {
-  url: string;
-  method: string;
-  headers: Array<HeaderItem>;
-};
-
-type URLCheckResponse = {
-  request: {
-    url: string;
-    method: string;
-    headers: Record<string, string>;
-  };
-  response: {
-    status: number | null;
-    headers: Record<string, string>;
-    body: string;
-  };
-};
+import type { URLCheckHeader, URLCheckRequest, URLCheckResponse } from '~/types';
 
 useHead({ title: 'URL Checker' });
 
@@ -317,7 +366,7 @@ const dialog = useDialog();
 
 const use_template = ref<string>('');
 const activeResultTab = ref<string>('request');
-const templates = ref<Array<{ id: number; key: string; override: Item }>>([
+const templates = ref<Array<{ id: number; key: string; override: URLCheckRequest }>>([
   {
     id: 1,
     key: 'Jellyfin/Emby Server: Info',
@@ -326,7 +375,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       url: 'http://[ip:port]/system/Info',
       headers: [
         { key: 'Accept', value: 'application/json' },
-        { key: 'Authorization', value: 'MediaBrowser Token="[API_KEY]"' },
+        { key: 'Authorization', value: 'MediaBrowser Token="[API_KEY]"', sensitive: true },
       ],
     },
   },
@@ -338,7 +387,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       url: 'http://[ip:port]/',
       headers: [
         { key: 'Accept', value: 'application/json' },
-        { key: 'X-Plex-Token', value: '[PLEX_TOKEN]' },
+        { key: 'X-Plex-Token', value: '[PLEX_TOKEN]', sensitive: true },
       ],
     },
   },
@@ -350,7 +399,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       url: 'http://[ip:port]/library/sections',
       headers: [
         { key: 'Accept', value: 'application/json' },
-        { key: 'X-Plex-Token', value: '[PLEX_TOKEN]' },
+        { key: 'X-Plex-Token', value: '[PLEX_TOKEN]', sensitive: true },
       ],
     },
   },
@@ -360,7 +409,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
     override: {
       method: 'GET',
       url: 'http://plex.tv/api/users',
-      headers: [{ key: 'X-Plex-Token', value: '[PLEX_TOKEN]' }],
+      headers: [{ key: 'X-Plex-Token', value: '[PLEX_TOKEN]', sensitive: true }],
     },
   },
   {
@@ -370,7 +419,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       method: 'GET',
       url: 'http://plex.tv/api/v2/home/users/',
       headers: [
-        { key: 'X-Plex-Token', value: '[PLEX_TOKEN]' },
+        { key: 'X-Plex-Token', value: '[PLEX_TOKEN]', sensitive: true },
         { key: 'X-Plex-Client-Identifier', value: '[machineIdentifier]' },
       ],
     },
@@ -383,7 +432,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
       url: 'http://[ip:port]/items',
       headers: [
         { key: 'Accept', value: 'application/json' },
-        { key: 'Authorization', value: 'MediaBrowser Token="[API_KEY]"' },
+        { key: 'Authorization', value: 'MediaBrowser Token="[API_KEY]"', sensitive: true },
       ],
     },
   },
@@ -393,7 +442,7 @@ const templates = ref<Array<{ id: number; key: string; override: Item }>>([
     override: {
       method: 'GET',
       url: 'https://plex.tv/api/v2/user',
-      headers: [{ key: 'X-Plex-Token', value: '[PLEX_TOKEN]' }],
+      headers: [{ key: 'X-Plex-Token', value: '[PLEX_TOKEN]', sensitive: true }],
     },
   },
 ]);
@@ -407,9 +456,9 @@ const templateItems = computed<Array<{ label: string; value: string }>>(() =>
 );
 
 const resultTabs = [
-  { label: 'Request Headers', value: 'request', slot: 'request', icon: 'i-lucide-arrow-up-right' },
+  { label: 'Request headers', value: 'request', slot: 'request', icon: 'i-lucide-arrow-up-right' },
   {
-    label: 'Response Headers',
+    label: 'Response headers',
     value: 'response',
     slot: 'response',
     icon: 'i-lucide-arrow-down-left',
@@ -417,29 +466,13 @@ const resultTabs = [
   { label: 'Body', value: 'body', slot: 'body', icon: 'i-lucide-file-text' },
 ];
 
-const formCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-  footer: 'px-4 pb-4 pt-0',
-};
-
-const summaryCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
-const resultCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
 const tableUi = {
   root: 'max-h-[28rem] overflow-auto rounded-md border border-default bg-elevated/20',
   th: 'px-3 py-2 text-sm text-left font-medium text-toned',
   td: 'px-3 py-2 text-sm text-default align-top whitespace-normal break-all',
 };
 
-const headerColumns: Array<TableColumn<HeaderItem>> = [
+const headerColumns: Array<TableColumn<URLCheckHeader>> = [
   {
     accessorKey: 'key',
     header: 'Header',
@@ -455,30 +488,51 @@ const headerColumns: Array<TableColumn<HeaderItem>> = [
   },
 ];
 
-const defaultData = (): Item => ({ url: '', method: 'GET', headers: [] });
+const defaultData = (): URLCheckRequest => ({ url: '', method: 'GET', headers: [] });
 const defaultResponse = (): URLCheckResponse => ({
   request: { url: '', method: 'GET', headers: {} },
   response: { status: null, headers: {}, body: '' },
 });
 
-const cloneItem = (value: Item): Item => JSON.parse(JSON.stringify(value)) as Item;
+const cloneItem = (value: URLCheckRequest): URLCheckRequest =>
+  JSON.parse(JSON.stringify(value)) as URLCheckRequest;
 
-const item = ref<Item>(defaultData());
+const item = ref<URLCheckRequest>(defaultData());
 const is_loading = ref<boolean>(false);
+const requestError = ref('');
 const response = ref<URLCheckResponse>(defaultResponse());
+const revealedHeaders = ref(new Set<string>());
+const sensitiveHeaders = ref(new Set<string>());
 
 const hasResponse = computed<boolean>(() => null !== response.value.response.status);
-const requestHeaderRows = computed<Array<HeaderItem>>(() =>
-  Object.entries(response.value.request.headers ?? {}).map(([key, value]) => ({ key, value })),
+const requestHeaderRows = computed<Array<URLCheckHeader>>(() =>
+  Object.entries(response.value.request.headers ?? {}).map(([key, value]) => ({
+    key,
+    value,
+    sensitive: sensitiveHeaders.value.has(key.trim().toLowerCase()),
+  })),
 );
-const responseHeaderRows = computed<Array<HeaderItem>>(() =>
-  Object.entries(response.value.response.headers ?? {}).map(([key, value]) => ({ key, value })),
+const responseHeaderRows = computed<Array<URLCheckHeader>>(() =>
+  Object.entries(response.value.response.headers ?? {}).map(([key, value]) => ({
+    key,
+    value,
+    sensitive: sensitiveHeaders.value.has(key.trim().toLowerCase()),
+  })),
 );
 
+const toggleHeaderVisibility = (key: string): void => {
+  if (revealedHeaders.value.has(key)) {
+    revealedHeaders.value.delete(key);
+    return;
+  }
+
+  revealedHeaders.value.add(key);
+};
+
 const mergeTemplateHeaders = (
-  currentHeaders: Array<HeaderItem>,
-  templateHeaders: Array<HeaderItem>,
-): Array<HeaderItem> => {
+  currentHeaders: Array<URLCheckHeader>,
+  templateHeaders: Array<URLCheckHeader>,
+): Array<URLCheckHeader> => {
   const currentValues = new Map<string, string>();
 
   for (const header of currentHeaders) {
@@ -496,7 +550,10 @@ const mergeTemplateHeaders = (
       return { ...header };
     }
 
-    return { key: header.key, value: preservedValue };
+    return {
+      ...header,
+      value: preservedValue,
+    };
   });
 };
 
@@ -507,13 +564,14 @@ watch(use_template, async (newValue: string) => {
 
   const template = templates.value.find((t) => t.key === newValue);
   if (!template) {
-    notification('error', 'Error', 'Template not found');
+    notification('error', 'Template unavailable', 'Template not found.');
     return;
   }
 
   const nextItem = cloneItem(template.override);
   nextItem.headers = mergeTemplateHeaders(item.value.headers, nextItem.headers);
   item.value = nextItem;
+  revealedHeaders.value.clear();
   await nextTick();
   use_template.value = '';
 });
@@ -521,6 +579,9 @@ watch(use_template, async (newValue: string) => {
 const reset_form = (): void => {
   item.value = defaultData();
   response.value = defaultResponse();
+  requestError.value = '';
+  revealedHeaders.value.clear();
+  sensitiveHeaders.value.clear();
   activeResultTab.value = 'request';
 };
 
@@ -557,16 +618,21 @@ const add_header = (k?: string, v?: string): void => {
 };
 
 const check_url = async (): Promise<void> => {
+  if (is_loading.value) {
+    return;
+  }
+
   if (true === invalid_form.value) {
-    notification('error', 'Error', 'Please fill in all required fields.');
+    notification('error', 'Request not sent', 'Enter a valid URL and select a method.');
     return;
   }
 
   if (has_template_values()) {
     const { status } = await dialog.confirmDialog({
       title: 'Template values found',
-      message: 'The form contains template values. Do you want to continue?',
-      confirmColor: 'warning',
+      message: 'Send the request without replacing its placeholders?',
+      confirmText: 'Send request',
+      confirmColor: 'neutral',
     });
 
     if (true !== status) {
@@ -575,6 +641,13 @@ const check_url = async (): Promise<void> => {
   }
 
   is_loading.value = true;
+  requestError.value = '';
+  revealedHeaders.value.clear();
+  sensitiveHeaders.value = new Set(
+    item.value.headers
+      .filter((header) => header.sensitive)
+      .map((header) => header.key.trim().toLowerCase()),
+  );
 
   try {
     response.value = defaultResponse();
@@ -582,17 +655,18 @@ const check_url = async (): Promise<void> => {
 
     const resp = await request('/system/url/check', {
       method: 'POST',
-      body: JSON.stringify(item.value),
+      body: JSON.stringify({
+        url: item.value.url,
+        method: item.value.method,
+        headers: item.value.headers.map(({ key, value }) => ({ key, value })),
+      }),
     });
 
     const json = await parse_api_response<URLCheckResponse>(resp);
 
     if ('error' in json) {
-      notification(
-        'error',
-        'Error',
-        `${json.error.code ?? resp.status}: ${json.error.message ?? 'Unknown error'}`,
-      );
+      requestError.value = `${json.error.code ?? resp.status}: ${json.error.message ?? 'Unknown error'}`;
+      notification('error', 'Request failed', requestError.value);
       return;
     }
 
@@ -600,14 +674,12 @@ const check_url = async (): Promise<void> => {
     activeResultTab.value = 'response';
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `failed to send request. ${message}`);
+    requestError.value = message;
+    notification('error', 'Request failed', message);
   } finally {
     is_loading.value = false;
   }
 };
-
-const uc_words = (str: string): string =>
-  str.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 
 const tryParse = (body: string): string => {
   try {
@@ -672,32 +744,28 @@ const generateCurl = (): void => {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Failed to generate cURL command. ${message}`);
+    notification('error', 'cURL command unavailable', message);
   }
 };
 
 const statusToneClass = (status: number | null): string | undefined => {
-  if (status === null) {
+  if (null === status) {
     return undefined;
   }
 
-  if (status >= 200 && status < 300) {
-    return 'text-emerald-500';
+  if (200 <= status && 300 > status) {
+    return 'text-success';
   }
 
-  if (status >= 300 && status < 400) {
-    return 'text-amber-500';
+  if (300 <= status && 400 > status) {
+    return 'text-warning';
   }
 
-  if (status >= 400 && status < 500) {
-    return 'text-red-500';
-  }
-
-  if (status >= 500) {
-    return 'text-violet-500';
+  if (400 <= status) {
+    return 'text-error';
   }
 };
 
 const headerToneClass = (key: string): string =>
-  key.toLowerCase().startsWith('ws-') ? 'font-medium text-red-500' : 'text-default';
+  key.toLowerCase().startsWith('ws-') ? 'font-medium text-error' : 'text-default';
 </script>

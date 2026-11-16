@@ -1,3 +1,10 @@
+export interface GuideEntry {
+  title: string;
+  description?: string;
+  url: string;
+  icon: string;
+}
+
 export interface UserStatisticsCounts {
   total: number;
   watched: number;
@@ -34,10 +41,21 @@ export interface RecentHistoryCard extends UserStatisticsItem {
   watched?: boolean;
 }
 
+export interface StatisticsPosterProps {
+  historyId?: number;
+  image?: string | null;
+  title: string;
+  user: string;
+  preview?: boolean;
+}
+
 export interface RecentHistoryCardsProps {
   items: Array<RecentHistoryCard>;
   user: string;
   posterEnable: boolean;
+  timestampLabel?: string;
+  showState?: boolean;
+  attribution?: Record<number, string>;
 }
 
 export interface UserStatisticsReport {
@@ -590,7 +608,7 @@ export interface EventsItem {
   event: string;
   /** Event reference (optional) */
   reference?: string;
-  /** Event status code (0=pending, 1=running, 4=complete, etc.) */
+  /** Event status code (0=pending, 1=running, 2=successful, 3=failed, 4=cancelled) */
   status: number;
   /** Human-readable status name */
   status_name: string;
@@ -646,8 +664,62 @@ export interface SystemStats {
   transport: PendingStats;
 }
 
+export interface SystemProcess {
+  user: string;
+  pid: string;
+  cpu: string;
+  mem: string;
+  vsz: string;
+  rss: string;
+  tty: string;
+  stat: string;
+  start: string;
+  time: string;
+  command: string;
+}
+
+export interface URLCheckHeader {
+  key: string;
+  value: string;
+  sensitive?: boolean;
+}
+
+export interface URLCheckRequest {
+  url: string;
+  method: string;
+  headers: Array<URLCheckHeader>;
+}
+
+export interface URLCheckResponse {
+  request: {
+    url: string;
+    method: string;
+    headers: Record<string, string>;
+  };
+  response: {
+    status: number | null;
+    headers: Record<string, string>;
+    body: string;
+  };
+}
+
+export interface HeaderStatusProps {
+  stats: SystemStats;
+  loading: boolean;
+  error?: string;
+}
+
 export interface PendingStats {
   pending: number;
+}
+
+export interface IndexLogFile {
+  type: string;
+  filename: string;
+  date: number;
+  size: number;
+  modified: string;
+  lines: Array<LogEntry | ServerJsonLogEntry>;
 }
 
 /**
@@ -708,6 +780,12 @@ export interface BackupItem {
   date: string;
   /** Type of backup (e.g., 'automatic', 'manual') */
   type: string;
+}
+
+export interface BackupRestoreTargetItem {
+  label: string;
+  value?: string;
+  type?: 'label' | 'item';
 }
 
 /**
@@ -774,8 +852,8 @@ export interface IgnoreItem {
   type: string;
   /** If true, rule is scoped */
   scoped: boolean;
-  /** If scoped, the id it is scoped to */
-  scoped_to?: string | null;
+  /** Source backend item ID for a scoped rule */
+  scoped_to?: string | number | null;
   /** Optional title for the rule */
   title?: string | null;
   /** Creation date (ISO string) */
@@ -988,6 +1066,11 @@ export interface SuppressionItem {
   type: 'contains' | 'regex';
 }
 
+export interface SuppressionResponse {
+  items: Array<SuppressionItem>;
+  types: Array<SuppressionItem['type']>;
+}
+
 /**
  * Represents a backend member in the identity provisioning UI.
  */
@@ -1101,6 +1184,7 @@ export interface PlayableItem {
  * Search item structure from /api/backend/{backend}/search endpoint.
  */
 export interface SearchItem {
+  poster?: string | null;
   /** Unique item ID */
   id: string | number;
   /** Item type ('movie', 'episode', 'show') */
@@ -1418,6 +1502,7 @@ export interface LibraryItem {
  * Mismatched item structure from /api/backend/{backend}/mismatched endpoint.
  */
 export interface MismatchedItem {
+  poster?: string | null;
   /** Item title */
   title: string;
   /** Item type (e.g., 'Movie', 'Series', etc.) */
@@ -1437,6 +1522,7 @@ export interface MismatchedItem {
 }
 
 export interface UnmatchedItem {
+  poster?: string | null;
   id?: string | number;
   /** Item title */
   title: string;

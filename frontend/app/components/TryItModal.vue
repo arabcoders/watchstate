@@ -13,7 +13,6 @@
           variant="soft"
           icon="i-lucide-triangle-alert"
           title="Deprecated endpoint"
-          description="This route is marked as deprecated in the spec."
         />
 
         <UAlert
@@ -22,16 +21,15 @@
           variant="soft"
           icon="i-lucide-server-off"
           title="No backend selected"
-          description="Select a configured backend from the dropdown at the top of the page first."
+          description="Choose a Test backend on the OpenAPI page."
         />
 
-        <UAlert
+        <UEmpty
           v-if="!hasFormFields"
-          color="neutral"
-          variant="soft"
+          size="sm"
+          variant="naked"
           icon="i-lucide-info"
           title="No parameters"
-          description="This endpoint has no configurable parameters."
         />
 
         <section v-if="pathParams.length > 0" class="space-y-3">
@@ -42,7 +40,7 @@
           >
             <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
               <UIcon name="i-lucide-slash" class="size-4 text-toned" />
-              <span>Path Parameters</span>
+              <span>Path parameters</span>
             </div>
             <div class="flex items-center gap-2">
               <UBadge color="neutral" variant="outline" size="sm">
@@ -84,7 +82,7 @@
           >
             <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
               <UIcon name="i-lucide-list" class="size-4 text-toned" />
-              <span>Query Parameters</span>
+              <span>Query parameters</span>
             </div>
             <div class="flex items-center gap-2">
               <UBadge color="neutral" variant="outline" size="sm">
@@ -153,7 +151,7 @@
                 :disabled="isLoading"
                 @click="addHeaderRow()"
               >
-                Add
+                Add header
               </UButton>
             </div>
             <div
@@ -164,14 +162,14 @@
               <UInput
                 v-model="row.key"
                 type="text"
-                placeholder="Header Key"
+                placeholder="Header name"
                 class="flex-1"
                 :disabled="isLoading"
               />
               <UInput
                 v-model="row.value"
                 type="text"
-                placeholder="Header Value"
+                placeholder="Value"
                 class="flex-1"
                 :disabled="isLoading"
               />
@@ -180,6 +178,8 @@
                 color="neutral"
                 variant="outline"
                 icon="i-lucide-x"
+                aria-label="Remove header"
+                title="Remove header"
                 size="xs"
                 class="shrink-0"
                 :disabled="isLoading"
@@ -188,7 +188,9 @@
                     headerRows.splice(index, 1);
                   }
                 "
-              />
+              >
+                Remove
+              </UButton>
             </div>
           </div>
         </section>
@@ -201,7 +203,7 @@
           >
             <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
               <UIcon name="i-lucide-arrow-up-from-line" class="size-4 text-toned" />
-              <span>Request Body</span>
+              <span>Request body</span>
             </div>
             <div class="flex items-center gap-2">
               <UBadge color="neutral" variant="outline" size="sm">
@@ -271,6 +273,7 @@
                 variant="ghost"
                 size="xs"
                 icon="i-lucide-copy"
+                aria-label="Copy response body"
                 :disabled="!response.response.body"
                 @click="copyText(formatBodyText(response.response.body))"
               />
@@ -287,7 +290,7 @@
             <template #request>
               <UTable :data="requestHeaderRows" :columns="headerColumns" :ui="tableUi">
                 <template #empty>
-                  <div class="py-4 text-center text-xs text-toned">No request headers.</div>
+                  <UEmpty size="sm" variant="naked" title="No request headers" />
                 </template>
                 <template #key-cell="{ row }">
                   <span class="font-medium text-highlighted">{{ ucWords(row.original.key) }}</span>
@@ -300,7 +303,7 @@
             <template #response>
               <UTable :data="responseHeaderRows" :columns="headerColumns" :ui="tableUi">
                 <template #empty>
-                  <div class="py-4 text-center text-xs text-toned">No response headers.</div>
+                  <UEmpty size="sm" variant="naked" title="No response headers" />
                 </template>
                 <template #key-cell="{ row }">
                   <span class="font-medium text-highlighted">{{ ucWords(row.original.key) }}</span>
@@ -341,13 +344,14 @@
           Copy cURL
         </UButton>
         <UButton
-          :color="isDestructive ? 'error' : 'primary'"
+          color="primary"
+          variant="solid"
           :icon="isDestructive ? 'i-lucide-triangle-alert' : 'i-lucide-send'"
           :loading="isLoading"
           :disabled="!canSend"
           @click="send"
         >
-          Send Request
+          Send request
         </UButton>
       </div>
     </template>
@@ -356,6 +360,19 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import {
+  UAlert,
+  UBadge,
+  UButton,
+  UEmpty,
+  UFormField,
+  UIcon,
+  UInput,
+  UModal,
+  UTable,
+  UTabs,
+  UTooltip,
+} from '#components';
 import type { TableColumn } from '@nuxt/ui';
 import ParamInput from '~/components/ParamInput.vue';
 import { copyText, notification, parse_api_response, request } from '~/utils';
@@ -404,8 +421,13 @@ const headerColumns: Array<TableColumn<HeaderItem>> = [
 ];
 
 const resultTabs = [
-  { label: 'Request', value: 'request', slot: 'request', icon: 'i-lucide-arrow-up-right' },
-  { label: 'Response', value: 'response', slot: 'response', icon: 'i-lucide-arrow-down-left' },
+  { label: 'Request headers', value: 'request', slot: 'request', icon: 'i-lucide-arrow-up-right' },
+  {
+    label: 'Response headers',
+    value: 'response',
+    slot: 'response',
+    icon: 'i-lucide-arrow-down-left',
+  },
   { label: 'Body', value: 'body', slot: 'body', icon: 'i-lucide-file-text' },
 ];
 
@@ -673,7 +695,8 @@ const send = async (): Promise<void> => {
   if (isDestructive.value) {
     const { status } = await dialog.confirmDialog({
       title: 'Confirm destructive request',
-      message: `This will send a ${props.route?.method} request to ${props.backend.name}. Continue?`,
+      message: `Send ${props.route?.method} ${props.route?.path} to ${props.backend.name}? This can change or delete backend data.`,
+      confirmText: 'Send request',
       confirmColor: 'error',
     });
 

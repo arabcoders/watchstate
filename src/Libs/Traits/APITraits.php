@@ -9,6 +9,9 @@ use App\Backends\Common\Cache as BackendCache;
 use App\Backends\Common\ClientInterface;
 use App\Backends\Common\ClientInterface as iClient;
 use App\Backends\Common\Context;
+use App\Backends\Emby\EmbyClient;
+use App\Backends\Jellyfin\JellyfinClient;
+use App\Backends\Plex\PlexClient;
 use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Container;
@@ -207,6 +210,74 @@ trait APITraits
         }
 
         return $clients[$backend]->getWebUrl($type, $id);
+    }
+
+    /**
+     * Build a poster proxy URL from metadata already returned by the backend.
+     *
+     * @param iClient $client The backend client.
+     * @param array<string,mixed> $entity The remote entity data.
+     * @param array<string,mixed> $raw The available raw backend item.
+     *
+     * @return string|null The API-relative poster URL.
+     */
+    protected function getBackendPosterUrl(iClient $client, array $entity, array $raw = []): ?string
+    {
+        $context = $client->getContext();
+        $type = ag($entity, iState::COLUMN_TYPE);
+
+        if (false === in_array($type, iState::TYPES_LIST, true)) {
+            return null;
+        }
+
+        if (PlexClient::CLIENT_NAME === $context->clientName) {
+            $image = iState::TYPE_EPISODE === $type
+                ? ag($raw, 'grandparentThumb') ?? ag($raw, 'parentThumb') ?? ag($raw, 'thumb')
+                : ag($raw, 'thumb');
+
+            if (false === is_string($image) || '' === ($image = trim($image))) {
+                return null;
+            }
+
+            $parts = parse_url($image);
+            if (
+                false === $parts
+                || isset($parts['scheme'])
+                || isset($parts['host'])
+                || isset($parts['user'])
+                || isset($parts['pass'])
+                || true === str_starts_with($image, '//')
+            ) {
+                return null;
+            }
+
+            $path = new Uri($parts['path'] ?? '')->getPath();
+        } elseif (true === in_array($context->clientName, [JellyfinClient::CLIENT_NAME, EmbyClient::CLIENT_NAME], true)) {
+            $via = ag($entity, iState::COLUMN_VIA, $context->backendName);
+            $metadata = ag($entity, iState::COLUMN_META_DATA . '.' . $via, []);
+            $id = iState::TYPE_EPISODE === $type
+                ? ag($metadata, iState::COLUMN_META_SHOW) ?? ag($raw, 'SeriesId')
+                : ag($metadata, iState::COLUMN_ID) ?? ag($raw, 'Id');
+
+            if (false === is_string($id) && false === is_int($id) || '' === (string) $id) {
+                return null;
+            }
+
+            $path = ($client->getImagesUrl($id)['poster'] ?? null)?->getPath() ?? '';
+        } else {
+            return null;
+        }
+
+        $basePath = rtrim($context->backendUrl->getPath(), '/');
+        if ('' !== $basePath && true === str_starts_with($path, $basePath . '/')) {
+            $path = substr($path, strlen($basePath));
+        }
+
+        if ('' === ltrim($path, '/')) {
+            return null;
+        }
+
+        return '/backend/' . rawurlencode($context->backendName) . '/proxy/' . ltrim($path, '/');
     }
 
     /**

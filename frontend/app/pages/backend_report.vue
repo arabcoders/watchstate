@@ -1,47 +1,63 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell">
-      <template #kicker>
-        <span>{{ pageShell.pageLabel }}</span>
-        <span v-if="apiUser">/</span>
-        <span v-if="apiUser">{{ ucFirst(apiUser) }}</span>
-      </template>
-
-      <template #actions>
-        <UButton
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-refresh-cw"
-          :loading="isLoading"
-          :disabled="isLoading"
-          @click="void loadReport()"
-        >
-          Reload
-        </UButton>
-
-        <UDropdownMenu v-if="summary" :items="exportMenuItems">
+    <div class="space-y-4">
+      <PageHeader v-bind="pageShell">
+        <template #actions>
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-lucide-download"
-            trailing-icon="i-lucide-chevron-down"
-            :loading="null !== exporting"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            :disabled="isLoading || isQueueing"
+            @click="void loadReport()"
           >
-            Export
+            Reload
           </UButton>
-        </UDropdownMenu>
 
-        <UButton
-          color="primary"
-          icon="i-lucide-play"
-          :loading="isQueueing"
-          :disabled="isQueueing || true === reportState?.queued"
-          @click="void queueReport()"
-        >
-          Queue report
-        </UButton>
-      </template>
-    </PageHeader>
+          <UDropdownMenu v-if="summary" :items="exportMenuItems">
+            <UButton
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-download"
+              trailing-icon="i-lucide-chevron-down"
+              :loading="null !== exporting"
+              :disabled="null !== exporting"
+            >
+              Export
+            </UButton>
+          </UDropdownMenu>
+
+          <UButton
+            color="primary"
+            variant="solid"
+            icon="i-lucide-play"
+            :loading="isQueueing"
+            :disabled="isLoading || isQueueing || true === reportState?.queued"
+            @click="void queueReport()"
+          >
+            {{ reportState?.queued ? 'Queued' : report ? 'Queue refresh' : 'Generate report' }}
+          </UButton>
+        </template>
+      </PageHeader>
+
+      <dl class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-toned">
+        <div class="flex min-w-0 items-center gap-2">
+          <dt>Identity:</dt>
+          <dd class="wrap-break-word font-medium text-default">{{ apiUser }}</dd>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <dt>Last completed:</dt>
+          <dd>
+            <UTooltip v-if="report?.completed_at" :text="relativeDate(report.completed_at)">
+              <time :datetime="moment.unix(report.completed_at).toISOString()" class="cursor-help">
+                {{ formatDate(report.completed_at) }}
+              </time>
+            </UTooltip>
+            <span v-else>{{ report ? 'Unknown' : 'No report loaded' }}</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
 
     <UAlert
       v-if="reportState?.queued"
@@ -49,25 +65,38 @@
       variant="soft"
       icon="i-lucide-clock-3"
       title="Report queued"
-      description="Backend statistics are queued or being generated. Reload after the task completes."
+      description="Reload to check for a completed report."
     />
 
-    <UAlert
-      v-if="false === isLoading && null === report"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-file-warning"
+    <UEmpty
+      v-if="
+        false === isLoading &&
+        !loadError &&
+        reportState &&
+        !reportState.queued &&
+        null === reportState.report
+      "
+      icon="i-lucide-chart-no-axes-column"
       title="No report found"
-      description="Queue a backend report to collect local media statistics."
+      description="Generate a report for this identity to collect local media statistics."
     />
 
     <UAlert
-      v-else-if="false === isLoading && report && null === summary"
+      v-else-if="false === isLoading && reportState?.report && null === summary"
       color="warning"
       variant="soft"
       icon="i-lucide-user-round-x"
       title="Identity not included"
-      description="The selected identity was not present when this report was generated. Queue a new report."
+      description="Generate a report for the selected identity."
+    />
+
+    <UAlert
+      v-if="loadError"
+      color="error"
+      variant="soft"
+      icon="i-lucide-triangle-alert"
+      title="Couldn't load backend report"
+      :description="loadError"
     />
 
     <UAlert
@@ -75,42 +104,17 @@
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading backend statistics. Please wait..."
+      title="Loading backend report"
       :ui="{ icon: 'animate-spin' }"
     />
 
     <template v-if="report && summary">
       <section class="space-y-3">
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="toggleSection('summary')"
-        >
-          <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-chart-no-axes-column" class="size-4 text-toned" />
-            <span>Summary</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <UTooltip :text="formatDate(report.completed_at)">
-              <span class="cursor-help text-xs font-normal text-toned">
-                Generated {{ relativeDate(report.completed_at) }}
-              </span>
-            </UTooltip>
-            <UIcon
-              name="i-lucide-chevron-right"
-              :class="[
-                'size-4 text-toned transition-transform',
-                isSectionOpen('summary') ? 'rotate-90' : '',
-              ]"
-            />
-          </div>
-        </button>
-
-        <div
-          v-if="isSectionOpen('summary')"
-          class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
-        >
+        <h2 class="flex items-center gap-2 text-sm font-semibold text-highlighted">
+          <UIcon name="i-lucide-chart-no-axes-column" class="size-4 text-toned" />
+          Summary
+        </h2>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           <StatCard
             v-for="card in summaryCards"
             :key="card.label"
@@ -125,28 +129,61 @@
       <section v-for="[backend, backendSummary] in backendEntries" :key="backend" class="space-y-3">
         <button
           type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
+          class="ws-panel-padded flex w-full flex-wrap items-center justify-between gap-3 text-left"
+          :aria-expanded="isSectionOpen(`backend-${backend}`)"
           @click="toggleSection(`backend-${backend}`)"
         >
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-database" class="size-4 text-toned" />
             <span>{{ backend }}</span>
+            <span v-if="false === backendSummary.configured" class="text-xs font-normal text-toned">
+              Not configured
+            </span>
           </div>
-          <UIcon
-            name="i-lucide-chevron-right"
-            :class="[
-              'size-4 shrink-0 text-toned transition-transform',
-              isSectionOpen(`backend-${backend}`) ? 'rotate-90' : '',
-            ]"
-          />
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+              <span class="text-toned">
+                Watched
+                <strong class="font-semibold text-success">
+                  {{ formatNumber(backendSummary.watched) }}
+                </strong>
+              </span>
+              <span class="text-toned">
+                Unwatched
+                <strong class="font-semibold text-highlighted">
+                  {{ formatNumber(backendSummary.unwatched) }}
+                </strong>
+              </span>
+              <span class="text-toned">
+                In progress
+                <strong class="font-semibold text-info">
+                  {{ formatNumber(backendSummary.in_progress) }}
+                </strong>
+              </span>
+              <span class="text-toned">
+                Total
+                <strong class="font-semibold text-highlighted">
+                  {{ formatNumber(backendSummary.total) }}
+                </strong>
+              </span>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-right"
+              :class="[
+                'size-4 shrink-0 text-toned transition-transform',
+                isSectionOpen(`backend-${backend}`) ? 'rotate-90' : '',
+              ]"
+            />
+          </div>
         </button>
 
-        <div
+        <UEmpty
           v-if="isSectionOpen(`backend-${backend}`) && 0 === backendSummary.libraries.length"
-          class="text-sm text-toned"
-        >
-          No linked local records.
-        </div>
+          size="sm"
+          variant="naked"
+          icon="i-lucide-library"
+          title="No linked local records"
+        />
 
         <div
           v-else-if="isSectionOpen(`backend-${backend}`)"
@@ -215,15 +252,16 @@
         </div>
       </section>
 
-      <section v-if="originEntries.length > 0" class="space-y-3">
+      <section v-if="0 < originEntries.length" class="space-y-3">
         <button
           type="button"
           class="flex w-full items-center justify-between gap-3 text-left"
+          :aria-expanded="isSectionOpen('origins')"
           @click="toggleSection('origins')"
         >
           <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
             <UIcon name="i-lucide-git-branch" class="size-4 text-toned" />
-            <span>Record Origins ({{ originEntries.length }})</span>
+            <span>Record origins ({{ originEntries.length }})</span>
           </div>
           <UIcon
             name="i-lucide-chevron-right"
@@ -251,8 +289,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useHead } from '#app';
+import { UAlert, UButton, UDropdownMenu, UEmpty, UIcon, UTooltip } from '#components';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
 import PageHeader from '~/components/PageHeader.vue';
@@ -270,10 +309,16 @@ const apiUser = useStorage<string>('api_user', 'main');
 useHead(() => ({ title: `${ucFirst(apiUser.value)} @ Backend Report` }));
 const reportState = ref<BackendReportResponse | null>(null);
 const isLoading = ref(false);
+const loadError = ref('');
 const isQueueing = ref(false);
 const exporting = ref<'markdown' | 'json' | 'csv' | null>(null);
-const collapsedSections = ref<Record<string, boolean>>({});
-const report = computed(() => reportState.value?.report ?? null);
+const collapsedSections = ref<Record<string, boolean>>({ origins: true });
+let identityVersion = 0;
+let loadRequest = 0;
+const report = computed(() => {
+  const completedReport = reportState.value?.report;
+  return apiUser.value === completedReport?.identity ? completedReport : null;
+});
 const summary = computed(() => report.value?.summary ?? null);
 const backendEntries = computed<Array<[string, BackendReportBackendSummary]>>(() =>
   Object.entries(summary.value?.backends ?? {}),
@@ -357,70 +402,127 @@ const relativeDate = (value: number | null): string => {
 };
 
 const loadReport = async (): Promise<void> => {
+  const requestId = ++loadRequest;
+  const version = identityVersion;
+  const identity = apiUser.value;
   isLoading.value = true;
+  loadError.value = '';
+
   try {
-    const response = await request('/state/backend-report');
+    const response = await request('/state/backend-report', { headers: { 'X-User': identity } });
     const json = await parse_api_response<BackendReportResponse>(response);
+    if (version !== identityVersion || requestId !== loadRequest) {
+      return;
+    }
+
     if ('error' in json) {
-      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+      loadError.value = `${json.error.code}: ${json.error.message}`;
+      notification('error', 'Report not loaded', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
     reportState.value = json;
   } catch (e: unknown) {
-    const error = e as Error;
-    notification('error', 'Error', `Request error. ${error.message}`);
+    if (version !== identityVersion || requestId !== loadRequest) {
+      return;
+    }
+
+    loadError.value = e instanceof Error ? e.message : 'Unknown error occurred';
+    notification('error', 'Report not loaded', loadError.value);
   } finally {
-    isLoading.value = false;
+    if (version === identityVersion && requestId === loadRequest) {
+      isLoading.value = false;
+    }
   }
 };
 
 const queueReport = async (): Promise<void> => {
+  if (isLoading.value || isQueueing.value || reportState.value?.queued) {
+    return;
+  }
+
+  const version = identityVersion;
+  const identity = apiUser.value;
   isQueueing.value = true;
+
   try {
-    const response = await request('/state/backend-report/run', { method: 'POST' });
+    const response = await request('/state/backend-report/run', {
+      method: 'POST',
+      headers: { 'X-User': identity },
+    });
     const json = await parse_api_response<BackendReportRunResponse>(response);
+    if (version !== identityVersion) {
+      return;
+    }
+
     if (false === response.ok) {
       if ('error' in json) {
-        notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+        notification('error', 'Report not queued', `${json.error.code}: ${json.error.message}`);
       } else {
         notification(
           'error',
-          'Error',
-          `Request failed. HTTP ${response.status}: ${response.statusText}`,
+          'Report not queued',
+          `HTTP ${response.status}: ${response.statusText}`,
         );
       }
       return;
     }
 
     if ('error' in json) {
-      notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+      notification('error', 'Report not queued', `${json.error.code}: ${json.error.message}`);
       return;
     }
 
+    reportState.value = {
+      report: reportState.value?.report ?? null,
+      queued: true,
+      queued_event: json.event_id,
+    };
     notification(json.queued ? 'success' : 'info', 'Backend Report', json.message);
     await loadReport();
   } catch (e: unknown) {
-    const error = e as Error;
-    notification('error', 'Error', `Request error. ${error.message}`);
+    if (version === identityVersion) {
+      const error = e instanceof Error ? e.message : 'Unknown error occurred';
+      notification('error', 'Report not queued', error);
+    }
   } finally {
-    isQueueing.value = false;
+    if (version === identityVersion) {
+      isQueueing.value = false;
+    }
   }
 };
 
 const exportReport = async (format: 'markdown' | 'json' | 'csv'): Promise<void> => {
+  if (null !== exporting.value || !report.value) {
+    return;
+  }
+
+  const version = identityVersion;
+  const identity = apiUser.value;
   exporting.value = format;
+
   try {
-    const response = await request(`/state/backend-report/export/${format}`);
+    const response = await request(`/state/backend-report/export/${format}`, {
+      headers: { 'X-User': identity },
+    });
+    if (version !== identityVersion) {
+      return;
+    }
+
     if (false === response.ok) {
       const json = await parse_api_response<BackendReportResponse>(response);
-      if ('error' in json) {
-        notification('error', 'Error', `API Error. ${json.error.code}: ${json.error.message}`);
+      if (version === identityVersion && 'error' in json) {
+        notification('error', 'Report not exported', `${json.error.code}: ${json.error.message}`);
       }
       return;
     }
 
-    const url = URL.createObjectURL(await response.blob());
+    const blob = await response.blob();
+    if (version !== identityVersion) {
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `backend-report-${format}.${'markdown' === format ? 'md' : format}`;
@@ -429,10 +531,14 @@ const exportReport = async (format: 'markdown' | 'json' | 'csv'): Promise<void> 
     link.remove();
     URL.revokeObjectURL(url);
   } catch (e: unknown) {
-    const error = e as Error;
-    notification('error', 'Error', `Request error. ${error.message}`);
+    if (version === identityVersion) {
+      const error = e instanceof Error ? e.message : 'Unknown error occurred';
+      notification('error', 'Report not exported', error);
+    }
   } finally {
-    exporting.value = null;
+    if (version === identityVersion) {
+      exporting.value = null;
+    }
   }
 };
 
@@ -458,6 +564,19 @@ const exportMenuItems = computed(() => [
     },
   ],
 ]);
+
+watch(
+  apiUser,
+  () => {
+    identityVersion++;
+    reportState.value = null;
+    loadError.value = '';
+    isQueueing.value = false;
+    exporting.value = null;
+    void loadReport();
+  },
+  { flush: 'sync' },
+);
 
 onMounted((): void => {
   void loadReport();

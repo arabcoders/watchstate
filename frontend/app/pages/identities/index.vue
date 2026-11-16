@@ -1,77 +1,226 @@
 <template>
-  <div class="space-y-6">
-    <PageHeader v-bind="pageShell">
+  <main class="w-full min-w-0 max-w-full space-y-6">
+    <PageHeader
+      v-bind="pageShell"
+      description="Each identity keeps separate watch history & backend settings."
+    >
       <template #actions>
-        <UButton
-          v-if="identities.length > 0"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-refresh-cw"
-          :loading="isSyncing"
-          :disabled="isLoading || isSyncing"
-          @click="syncBackends"
-          label="Sync Backends"
-        />
-
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-users-round"
-          to="/identities/provision"
-          label="Match & Provision"
-        />
-
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-plus"
-          :disabled="isLoading"
-          @click="openAddIdentityForm"
-          label="Add Identity"
-        />
-
         <UButton
           color="neutral"
           variant="outline"
           size="sm"
           icon="i-lucide-refresh-cw"
           :loading="isLoading"
-          :disabled="isLoading"
-          @click="loadContent"
-          label="Reload"
-        />
+          :disabled="isLoading || isSyncing || isAdding || isNavigating"
+          aria-label="Refresh identities"
+          @click="() => void loadContent()"
+        >
+          Refresh
+        </UButton>
       </template>
     </PageHeader>
+
+    <section aria-label="Identity directory" :aria-busy="isLoading" class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div aria-live="polite" class="space-y-1">
+          <p v-if="hasResults" class="text-sm text-toned">
+            <strong class="font-medium text-highlighted">{{ identities.length }}</strong>
+            {{ 1 === identities.length ? 'identity' : 'identities' }}
+          </p>
+          <p
+            v-if="isLoading"
+            role="status"
+            class="inline-flex items-center gap-1.5 text-xs text-muted"
+          >
+            <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+            {{ hasResults ? 'Refreshing identities…' : 'Loading identities…' }}
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-users-round"
+            to="/identities/provision"
+            :disabled="isSyncing || isAdding || isNavigating"
+          >
+            Match & Provision
+          </UButton>
+          <UButton
+            color="primary"
+            variant="solid"
+            size="sm"
+            icon="i-lucide-plus"
+            :disabled="managementDisabled"
+            @click="openAddIdentityForm"
+          >
+            Add Identity
+          </UButton>
+        </div>
+      </div>
+
+      <UAlert
+        v-if="loadError"
+        color="error"
+        variant="soft"
+        icon="i-lucide-circle-alert"
+        :title="hasResults ? 'Identities could not be refreshed' : 'Identities could not be loaded'"
+      >
+        <template #description>
+          <div class="space-y-2">
+            <p class="wrap-break-word">{{ loadError }}</p>
+            <p v-if="hasResults">
+              Showing the last loaded identities. Refresh before making changes.
+            </p>
+          </div>
+        </template>
+        <template #actions>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :disabled="isLoading || isSyncing || isAdding || isNavigating"
+            @click="() => void loadContent()"
+          >
+            Retry
+          </UButton>
+        </template>
+      </UAlert>
+
+      <UEmpty
+        v-if="hasResults && !isLoading && !loadError && 0 === identities.length"
+        icon="i-lucide-users"
+        title="No identities"
+        description="Add an identity, or use Match & Provision to link backend users."
+      />
+
+      <div v-if="0 < identities.length" class="ws-card divide-y divide-default">
+        <article
+          v-for="identity in identities"
+          :key="identity.identity"
+          class="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-6 sm:p-5 lg:grid-cols-[14rem_minmax(0,1fr)_auto]"
+        >
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <UIcon name="i-lucide-user" class="size-4 shrink-0 text-toned" />
+              <h2 class="wrap-anywhere text-base font-semibold text-highlighted">
+                {{ ucFirst(identity.identity) }}
+              </h2>
+              <UBadge v-if="'main' === identity.identity" color="neutral" variant="soft" size="xs">
+                Primary
+              </UBadge>
+            </div>
+          </div>
+
+          <div class="min-w-0 space-y-1 sm:col-start-1 lg:col-start-auto">
+            <p class="text-xs text-muted">Backends</p>
+            <div v-if="0 < identity.backends.length" class="flex flex-wrap gap-x-4 gap-y-1">
+              <UButton
+                v-for="backend in identity.backends"
+                :key="backend"
+                color="neutral"
+                variant="link"
+                size="sm"
+                icon="i-lucide-server"
+                class="min-w-0 px-0"
+                :ui="{ label: 'wrap-anywhere whitespace-normal text-left' }"
+                :disabled="managementDisabled"
+                :aria-label="`Open ${backend} as ${identity.identity}`"
+                @click="() => void identityLink(identity, backend)"
+              >
+                {{ backend }}
+              </UButton>
+            </div>
+            <p v-else class="text-sm text-toned">No backends configured</p>
+          </div>
+
+          <div
+            class="flex flex-wrap items-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-end lg:col-start-auto lg:row-span-1 lg:row-start-auto"
+          >
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-pencil"
+              :disabled="managementDisabled"
+              :aria-label="`Edit ${identity.identity}`"
+              @click="openEditIdentity(identity.identity)"
+            >
+              Edit
+            </UButton>
+            <UButton
+              v-if="'main' !== identity.identity"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :disabled="managementDisabled"
+              :to="`/identities/${identity.identity}/delete?redirect=/identities`"
+              :aria-label="`Delete ${identity.identity}`"
+            >
+              Delete
+            </UButton>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section
+      v-if="0 < identities.length"
+      aria-labelledby="sync-backends-title"
+      class="ws-panel-padded flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="space-y-1">
+        <h2 id="sync-backends-title" class="text-sm font-semibold text-highlighted">
+          Shared backend settings
+        </h2>
+        <p class="max-w-3xl text-sm text-toned">
+          Copy shared backend settings from main to linked identities.
+        </p>
+      </div>
+      <UButton
+        color="neutral"
+        variant="outline"
+        size="sm"
+        icon="i-lucide-copy"
+        class="self-start sm:shrink-0"
+        :loading="isSyncing"
+        :disabled="managementDisabled"
+        @click="() => void syncBackends()"
+      >
+        Sync Backends
+      </UButton>
+    </section>
 
     <UModal
       :open="toggleForm"
       title="Add Identity"
       :ui="addIdentityModalUi"
+      :dismissible="!isAdding"
+      :close="{ disabled: isAdding }"
       @update:open="handleAddIdentityOpenChange"
     >
       <template #body>
-        <form v-if="toggleForm" class="space-y-4" @submit.prevent="addIdentity">
+        <form
+          v-if="toggleForm"
+          :id="addIdentityFormId"
+          class="space-y-4"
+          @submit.prevent="addIdentity"
+        >
           <UAlert
             v-if="formError"
             color="error"
             variant="soft"
-            icon="i-lucide-triangle-alert"
-            title="Error"
-            :close="{
-              onClick: () => {
-                formError = null;
-              },
-            }"
+            icon="i-lucide-circle-alert"
+            title="Identity not added"
             :description="formError"
           />
-
           <UFormField
             label="Identity name"
             name="identity"
-            description="Identity name must be unique and only contain lowercase letters (a-z), numbers (0-9), and underscores (_)."
+            description="Use a unique name with lowercase letters, numbers & underscores."
           >
             <UInput
               v-model="newIdentityName"
@@ -79,35 +228,27 @@
               required
               icon="i-lucide-user"
               class="w-full"
-              placeholder="Enter identity name (lowercase a-z, 0-9, _)"
+              placeholder="e.g. alex"
+              :disabled="isAdding"
             />
           </UFormField>
-
-          <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-x"
-              @click="() => void cancelAddIdentity()"
-            >
-              Cancel
-            </UButton>
-
-            <UButton
-              type="submit"
-              color="primary"
-              variant="solid"
-              size="sm"
-              icon="i-lucide-circle-check"
-              :loading="isAdding"
-              :disabled="isAdding"
-            >
-              Add Identity
-            </UButton>
-          </div>
         </form>
+      </template>
+      <template #footer>
+        <div class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+          <UButton
+            :form="addIdentityFormId"
+            type="submit"
+            color="primary"
+            variant="solid"
+            size="sm"
+            icon="i-lucide-plus"
+            :loading="isAdding"
+            :disabled="managementDisabled"
+          >
+            Add Identity
+          </UButton>
+        </div>
       </template>
     </UModal>
 
@@ -120,200 +261,81 @@
       <template #body>
         <IdentityEditForm
           v-if="editIdentityOpen && editIdentityId"
+          :key="editIdentityId"
           :identity-id="editIdentityId"
-          @close="() => void requestCloseEditIdentity()"
+          :actions-target="`#${editIdentityFooterId}`"
           @saved="() => void handleIdentityEdited()"
           @dirty-change="(dirty) => (editIdentityDirty = dirty)"
         />
       </template>
+      <template #footer>
+        <div :id="editIdentityFooterId" class="w-full" />
+      </template>
     </UModal>
-
-    <UAlert
-      v-if="identities.length < 1 && isLoading"
-      color="info"
-      variant="soft"
-      icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading identities. Please wait..."
-      :ui="{ icon: 'animate-spin' }"
-    />
-
-    <UAlert
-      v-else-if="identities.length < 1"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-info"
-      title="No Identities Found"
-    >
-      <template #description>
-        <div class="flex flex-wrap items-center gap-2 text-sm text-default">
-          <span>No identities found.</span>
-          <UButton
-            color="primary"
-            variant="link"
-            size="sm"
-            class="px-0"
-            @click="openAddIdentityForm"
-          >
-            Add a new identity
-          </UButton>
-        </div>
-      </template>
-    </UAlert>
-
-    <div v-else class="grid gap-4 xl:grid-cols-2">
-      <UCard
-        v-for="identity in identities"
-        :key="identity.identity"
-        class="h-full shadow-sm"
-        :ui="identityCardUi"
-      >
-        <template #header>
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex items-center gap-2">
-              <UIcon name="i-lucide-user" class="size-4 shrink-0 text-toned" />
-              <UTooltip :text="String(ucFirst(identity.identity))">
-                <h2 class="truncate text-base font-semibold">
-                  {{ ucFirst(identity.identity) }}
-                </h2>
-              </UTooltip>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <UButton
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-settings"
-                @click="openEditIdentity(identity.identity)"
-                label="Edit"
-              />
-
-              <UButton
-                v-if="identity.identity !== 'main'"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-trash-2"
-                :to="`/identities/${identity.identity}/delete?redirect=/identities`"
-                label="Delete"
-              />
-            </div>
-          </div>
-        </template>
-
-        <div class="space-y-3 text-sm text-default">
-          <div v-if="identity.backends.length > 0" class="flex flex-wrap gap-2">
-            <button
-              v-for="backend in identity.backends"
-              :key="backend"
-              type="button"
-              class="inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default hover:bg-elevated/60"
-              @click="identityLink(identity.identity, `/backend/${backend}`)"
-            >
-              <UIcon name="i-lucide-server" class="size-3.5 shrink-0 text-toned" />
-              {{ backend }}
-            </button>
-          </div>
-
-          <UBadge v-else color="warning" variant="soft" icon="i-lucide-triangle-alert"
-            >No backends configured</UBadge
-          >
-        </div>
-      </UCard>
-    </div>
-
-    <UCard v-if="identities.length > 0" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
-
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
-      </template>
-
-      <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
-        <li>The <strong>main</strong> identity is the primary identity and cannot be deleted.</li>
-        <li>Each identity can have their own set of backends configured independently.</li>
-        <li>
-          Use <code>Sync Backends</code> here to safely propagate shared backend configuration
-          changes from the main identity without creating, deleting, or rematching identities.
-        </li>
-        <li>
-          Server configurations are validated against the system specification before saving. While
-          this may help prevent misconfigurations, it's recommended to double-check configurations
-          manually. The validation is not foolproof and may miss certain issues.
-        </li>
-      </ul>
-    </UCard>
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
-import { navigateTo, useHead, useRoute } from '#app';
+import { computed, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
+import { navigateTo, useHead, useRouter } from '#app';
+import { UAlert, UBadge, UButton, UEmpty, UFormField, UIcon, UInput, UModal } from '#components';
 import { useStorage } from '@vueuse/core';
 import IdentityEditForm from '~/components/IdentityEditForm.vue';
 import PageHeader from '~/components/PageHeader.vue';
+import { useDialog } from '~/composables/useDialog';
 import { useDirtyCloseGuard } from '~/composables/useDirtyCloseGuard';
 import { useDirtyState } from '~/composables/useDirtyState';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import { notification, parse_api_response, request, ucFirst } from '~/utils';
 import type { GenericResponse, IdentityListItem } from '~/types';
 
-useHead({ title: 'Identity Management' });
+useHead({ title: 'Identities' });
 
 const pageShell = requireTopLevelPageShell('identities');
-
-const route = useRoute();
+const addIdentityFormId = useId();
+const editIdentityFooterId = useId();
+const router = useRouter();
+const dialog = useDialog();
+const apiUser = useStorage<string>('api_user', 'main', undefined, { flush: 'sync' });
 const identities = ref<Array<IdentityListItem>>([]);
-const toggleForm = ref<boolean>(false);
-const editIdentityOpen = ref<boolean>(false);
-const editIdentityId = ref<string>('');
-const editIdentityDirty = ref<boolean>(false);
-const isLoading = ref<boolean>(false);
-const isSyncing = ref<boolean>(false);
-const isAdding = ref<boolean>(false);
-const newIdentityName = ref<string>('');
+const toggleForm = ref(false);
+const editIdentityOpen = ref(false);
+const editIdentityId = ref('');
+const editIdentityDirty = ref(false);
+const isLoading = ref(true);
+const hasResults = ref(false);
+const loadError = ref('');
+const isSyncing = ref(false);
+const isAdding = ref(false);
+const isNavigating = ref(false);
+const newIdentityName = ref('');
 const formError = ref<string | null>(null);
-const show_page_tips = useStorage('show_page_tips', true);
+const managementDisabled = computed(
+  () =>
+    !hasResults.value ||
+    isLoading.value ||
+    !!loadError.value ||
+    isSyncing.value ||
+    isAdding.value ||
+    isNavigating.value,
+);
 const addIdentityDirtySource = computed(() => ({
   identity: newIdentityName.value.trim().toLowerCase(),
 }));
 const { isDirty: isAddIdentityDirty, markClean: markAddIdentityClean } =
   useDirtyState(addIdentityDirtySource);
+let loadController: AbortController | null = null;
+let loadId = 0;
+let disposed = false;
+let pendingIdentity: { identity: string; path: string } | null = null;
 
 const addIdentityModalUi = {
   content: 'max-w-xl',
   body: 'p-4 sm:p-5',
 };
-
 const editIdentityModalUi = {
   content: 'max-w-6xl',
   body: 'p-4 sm:p-5',
-};
-
-const identityCardUi = {
-  header: 'p-4',
-  body: 'p-4',
-};
-
-const tipsCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
 };
 
 const resetAddIdentityForm = (): void => {
@@ -322,71 +344,100 @@ const resetAddIdentityForm = (): void => {
   markAddIdentityClean();
 };
 
-const { handleOpenChange: handleAddIdentityOpenChange, requestClose: requestCloseAddIdentity } =
-  useDirtyCloseGuard(toggleForm, {
-    dirty: isAddIdentityDirty,
-    onDiscard: async () => {
+const { handleOpenChange: handleAddIdentityOpenChange } = useDirtyCloseGuard(toggleForm, {
+  dirty: isAddIdentityDirty,
+  onDiscard: () => {
+    if (!disposed) {
       resetAddIdentityForm();
-    },
-  });
+    }
+  },
+});
 
-const { handleOpenChange: handleEditIdentityOpenChange, requestClose: requestCloseEditIdentity } =
-  useDirtyCloseGuard(editIdentityOpen, {
-    dirty: editIdentityDirty,
-    onDiscard: async () => {
+const { handleOpenChange: handleEditIdentityOpenChange } = useDirtyCloseGuard(editIdentityOpen, {
+  dirty: editIdentityDirty,
+  onDiscard: () => {
+    if (!disposed) {
       editIdentityDirty.value = false;
       editIdentityId.value = '';
-    },
-  });
+    }
+  },
+});
 
 const openAddIdentityForm = (): void => {
+  if (disposed || managementDisabled.value) {
+    return;
+  }
+
   resetAddIdentityForm();
   toggleForm.value = true;
 };
 
 const openEditIdentity = (identityId: string): void => {
+  if (
+    disposed ||
+    managementDisabled.value ||
+    !identities.value.some((identity) => identityId === identity.identity)
+  ) {
+    return;
+  }
+
   editIdentityDirty.value = false;
   editIdentityId.value = identityId;
   editIdentityOpen.value = true;
 };
 
 const loadContent = async (): Promise<void> => {
-  identities.value = [];
+  if (disposed) {
+    return;
+  }
+
+  loadController?.abort();
+  const controller = new AbortController();
+  loadController = controller;
+  const id = ++loadId;
   isLoading.value = true;
+  loadError.value = '';
 
   try {
-    const response = await request('/identities');
+    const response = await request('/identities', { signal: controller.signal });
     const json = await parse_api_response<{ identities: Array<IdentityListItem> }>(response);
 
-    if ('identities' !== route.name) {
+    if (disposed || id !== loadId) {
       return;
     }
-
     if ('error' in json) {
-      notification('error', 'Error', `Failed to load identities. ${json.error.message}`);
+      throw new Error(json.error.message);
+    }
+    if (!response.ok) {
+      throw new Error(`Identities request failed (${response.status}).`);
+    }
+
+    identities.value = json.identities;
+    hasResults.value = true;
+  } catch (error: unknown) {
+    if (disposed || id !== loadId || controller.signal.aborted) {
       return;
     }
 
-    identities.value = json.identities || [];
-    useHead({ title: 'Identity Management' });
-  } catch (e: unknown) {
-    const error = e as Error;
-    notification('error', 'Error', `Failed to load identities. ${error.message}`);
+    loadError.value = error instanceof Error ? error.message : 'Unexpected request error';
+    notification('error', 'Identities unavailable', loadError.value);
   } finally {
-    isLoading.value = false;
+    if (!disposed && id === loadId) {
+      isLoading.value = false;
+    }
   }
 };
 
 const addIdentity = async (): Promise<void> => {
-  if (true === isAdding.value) {
+  if (disposed || managementDisabled.value || !toggleForm.value) {
     return;
   }
 
   formError.value = null;
   const identity = newIdentityName.value.trim().toLowerCase();
 
-  if (0 === identity.length) {
-    formError.value = 'Please enter an identity name';
+  if (!/^[a-z0-9_]+$/.test(identity)) {
+    formError.value = 'Use lowercase letters, numbers & underscores for the identity name.';
     return;
   }
 
@@ -397,51 +448,102 @@ const addIdentity = async (): Promise<void> => {
       method: 'POST',
       body: JSON.stringify({ identity }),
     });
-    const result = await parse_api_response<GenericResponse>(response);
-
-    if (!response.ok && 'error' in result) {
-      formError.value = result.error?.message || 'Failed to create identity';
+    if (disposed) {
       return;
     }
+    if (!response.ok) {
+      const result = await parse_api_response<GenericResponse>(response);
+      if ('error' in result) {
+        throw new Error(result.error.message);
+      }
+      throw new Error(`Identity creation failed (${response.status}).`);
+    }
 
-    notification('success', 'Success', `Identity '${identity}' created successfully`);
+    notification('success', 'Identity added', `'${identity}' is ready to configure.`);
     resetAddIdentityForm();
     toggleForm.value = false;
     await loadContent();
-  } catch (e: unknown) {
-    const error = e as Error;
-    formError.value = `Failed to create identity. ${error.message}`;
+  } catch (error: unknown) {
+    if (!disposed) {
+      formError.value = error instanceof Error ? error.message : 'Unexpected request error';
+    }
   } finally {
-    isAdding.value = false;
+    if (!disposed) {
+      isAdding.value = false;
+    }
   }
 };
 
-const cancelAddIdentity = async (): Promise<void> => {
-  await requestCloseAddIdentity();
-};
-
 const handleIdentityEdited = async (): Promise<void> => {
+  if (disposed || !editIdentityOpen.value) {
+    return;
+  }
+
   editIdentityDirty.value = false;
   editIdentityOpen.value = false;
   editIdentityId.value = '';
   await loadContent();
 };
 
-const identityLink = async (identity: string, url: string): Promise<void> => {
-  const api_user = useStorage('api_user', 'main');
-  api_user.value = identity || 'main';
-  await nextTick();
-  await navigateTo(url);
+watch(
+  () => router.currentRoute.value.path,
+  (path) => {
+    if (pendingIdentity && pendingIdentity.path === path) {
+      apiUser.value = pendingIdentity.identity;
+      pendingIdentity = null;
+    }
+  },
+  { flush: 'sync' },
+);
+
+const identityLink = async (identity: IdentityListItem, backend: string): Promise<void> => {
+  if (
+    disposed ||
+    managementDisabled.value ||
+    !identities.value.includes(identity) ||
+    !identity.backends.includes(backend)
+  ) {
+    return;
+  }
+
+  const path = `/backend/${encodeURIComponent(backend)}`;
+  pendingIdentity = { identity: identity.identity, path };
+  isNavigating.value = true;
+
+  try {
+    await navigateTo(path);
+  } catch (error: unknown) {
+    if (!disposed) {
+      const message = error instanceof Error ? error.message : 'Unexpected navigation error';
+      notification('error', 'Backend could not be opened', message);
+    }
+  } finally {
+    pendingIdentity = null;
+    if (!disposed) {
+      isNavigating.value = false;
+    }
+  }
 };
 
 const syncBackends = async (): Promise<void> => {
-  if (true === isSyncing.value) {
+  if (disposed || managementDisabled.value || 0 === identities.value.length) {
     return;
   }
 
   isSyncing.value = true;
 
   try {
+    const { status } = await dialog.confirmDialog({
+      title: 'Sync shared backend settings?',
+      message:
+        'Copy shared backend settings from main to existing linked identity backends? This does not sync watch history or create, delete, or rematch identities.',
+      confirmText: 'Sync Backends',
+    });
+
+    if (true !== status || disposed || isLoading.value || loadError.value) {
+      return;
+    }
+
     const response = await request('/identities/provision/sync-backends', {
       method: 'POST',
       body: JSON.stringify({ dry_run: false }),
@@ -454,31 +556,49 @@ const syncBackends = async (): Promise<void> => {
       }
     >(response);
 
-    if ('error' in result) {
-      notification('error', 'Error', `Failed to sync backends. ${result.error.message}`);
+    if (disposed) {
       return;
+    }
+    if ('error' in result) {
+      throw new Error(result.error.message);
+    }
+    if (!response.ok) {
+      throw new Error(`Backend settings sync failed (${response.status}).`);
     }
 
     const failedCount = Number(result.failed_count ?? 0);
-    const level = failedCount > 0 ? 'warning' : 'success';
-    const title = failedCount > 0 ? 'Warning' : 'Success';
     const details = [
       result.info.message,
-      `Updated: ${Number(result.updated_count ?? 0)}`,
-      `Skipped: ${Number(result.skipped_count ?? 0)}`,
-      `Failed: ${failedCount}`,
+      `Updated: ${Number(result.updated_count ?? 0)}.`,
+      `Skipped: ${Number(result.skipped_count ?? 0)}.`,
+      `Failed: ${failedCount}.`,
     ].join(' ');
 
-    notification(level, title, details);
+    notification(
+      0 < failedCount ? 'warning' : 'success',
+      0 < failedCount ? 'Some backend settings were not synced' : 'Backend settings synced',
+      details,
+    );
+    await loadContent();
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    notification('error', 'Error', `Failed to sync backends. ${message}`);
+    if (!disposed) {
+      const message = error instanceof Error ? error.message : 'Unexpected request error';
+      notification('error', 'Backend settings not synced', message);
+    }
   } finally {
-    isSyncing.value = false;
+    if (!disposed) {
+      isSyncing.value = false;
+    }
   }
 };
 
 markAddIdentityClean();
 
-onMounted(() => loadContent());
+onMounted(() => void loadContent());
+onBeforeUnmount(() => {
+  disposed = true;
+  pendingIdentity = null;
+  loadId++;
+  loadController?.abort();
+});
 </script>

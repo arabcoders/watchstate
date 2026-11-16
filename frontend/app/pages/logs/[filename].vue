@@ -1,119 +1,140 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell" description="">
-      <template #icon>
-        <UIcon :name="pageShell.icon" :class="['size-4', stream ? 'animate-spin' : '']" />
-      </template>
+    <PageHeader
+      v-bind="pageShell"
+      :page-label="filename"
+      description=""
+      content-class="min-w-0 space-y-2 wrap-anywhere"
+    >
       <template #kicker>
         <span>{{ pageShell.sectionLabel }}</span>
         <span>/</span>
         <NuxtLink to="/logs" class="hover:text-primary">{{ pageShell.pageLabel }}</NuxtLink>
-        <span>/</span>
-        <span class="truncate text-highlighted normal-case tracking-normal">{{ filename }}</span>
       </template>
       <template #actions>
         <template v-if="!error">
-          <UTooltip v-if="!autoScroll" text="Go to bottom">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-chevron-down"
-              @click="scrollToBottom"
-            >
-              Bottom
-            </UButton>
-          </UTooltip>
-
-          <UInput
-            v-if="toggleFilter"
-            v-model.lazy="query"
-            type="search"
-            placeholder="Filter log entries"
-            icon="i-lucide-filter"
-            autofocus
-            size="sm"
-            class="w-full sm:w-72"
-          />
-
-          <UButton
-            icon="i-lucide-filter"
-            :variant="toggleFilter ? 'soft' : 'outline'"
-            color="neutral"
-            size="sm"
-            @click="
-              () => {
-                toggleFilter = !toggleFilter;
-              }
-            "
-          >
-            Filter
-          </UButton>
-
-          <USelect
-            v-model="selectedLevels"
-            :items="levelFilterItems"
-            value-key="value"
-            label-key="label"
-            multiple
-            size="sm"
-            icon="i-lucide-list-filter"
-            class="w-44 shrink-0 sm:w-48"
-            :ui="{ content: 'min-w-48' }"
-          >
-            <template #default>{{ levelFilterLabel }}</template>
-          </USelect>
-
           <UButton
             color="neutral"
-            :variant="searchForm ? 'soft' : 'outline'"
+            variant="outline"
             size="sm"
-            icon="i-lucide-search"
-            @click="searchForm = !searchForm"
+            icon="i-lucide-download"
+            :loading="isDownloading"
+            @click="downloadFile"
           >
-            <span class="hidden sm:inline">Search</span>
+            Download
           </UButton>
 
           <UButton
-            icon="i-lucide-wrap-text"
-            :variant="wrapLines ? 'soft' : 'outline'"
             color="neutral"
+            variant="outline"
             size="sm"
-            @click="
-              () => {
-                wrapLines = !wrapLines;
-              }
-            "
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            @click="reloadLog"
           >
-            Wrap
+            Refresh
           </UButton>
 
-          <UTooltip text="Delete logfile.">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-trash-2"
+            @click="deleteFile"
+          >
+            Delete
+          </UButton>
+        </template>
+      </template>
+    </PageHeader>
+
+    <UAlert
+      v-if="error"
+      color="warning"
+      variant="soft"
+      icon="i-lucide-triangle-alert"
+      title="API Error"
+      close
+      @update:open="(open) => (!open ? router.push('/logs') : undefined)"
+    >
+      <template #description>
+        <p class="text-sm text-default">{{ error }}</p>
+      </template>
+    </UAlert>
+
+    <section
+      v-else
+      aria-labelledby="log-entries-heading"
+      :aria-busy="isLoading"
+      class="min-w-0 overflow-hidden rounded-xl border border-default"
+    >
+      <div class="space-y-3 bg-elevated/30 px-3 py-3 sm:px-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-baseline gap-2">
+            <h2 id="log-entries-heading" class="text-sm font-semibold text-highlighted">Entries</h2>
+            <span v-if="hasResults" class="text-xs tabular-nums text-toned">
+              {{ rows.length }}{{ hasActiveFilter ? ` of ${data.length}` : '' }}
+            </span>
+          </div>
+          <div class="flex items-center gap-3 text-xs text-toned">
+            <span v-if="stream" class="inline-flex items-center gap-1.5 text-success">
+              <span class="size-1.5 rounded-full bg-success" aria-hidden="true" />
+              Live
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex min-w-0 flex-wrap items-center gap-2">
+            <UButton
+              icon="i-lucide-filter"
+              :variant="toggleFilter ? 'soft' : 'outline'"
+              color="neutral"
+              size="sm"
+              :aria-pressed="toggleFilter"
+              aria-controls="log-text-filter"
+              @click="toggleFilter = !toggleFilter"
+            >
+              Filter
+            </UButton>
+            <USelect
+              v-model="selectedLevels"
+              :items="levelFilterItems"
+              value-key="value"
+              label-key="label"
+              multiple
+              size="sm"
+              icon="i-lucide-list-filter"
+              aria-label="Filter log levels"
+              class="w-44 shrink-0 sm:w-48"
+              :ui="{ content: 'min-w-48' }"
+            >
+              <template #default>{{ levelFilterLabel }}</template>
+            </USelect>
             <UButton
               color="neutral"
-              variant="outline"
+              :variant="searchForm ? 'soft' : 'outline'"
               size="sm"
-              icon="i-lucide-trash-2"
-              @click="deleteFile"
+              icon="i-lucide-search"
+              :aria-expanded="searchForm"
+              aria-controls="log-file-search"
+              @click="searchForm = !searchForm"
             >
-              Delete
+              Search file
             </UButton>
-          </UTooltip>
+          </div>
 
-          <UTooltip text="Download file.">
+          <div class="flex flex-wrap items-center gap-2">
             <UButton
+              icon="i-lucide-wrap-text"
+              :variant="wrapLines ? 'soft' : 'outline'"
               color="neutral"
-              variant="outline"
               size="sm"
-              icon="i-lucide-download"
-              :loading="isDownloading"
-              @click="downloadFile"
+              :aria-pressed="wrapLines"
+              @click="wrapLines = !wrapLines"
             >
-              Download
+              Wrap
             </UButton>
-          </UTooltip>
-
-          <UTooltip text="Copy text">
             <UDropdownMenu :items="copyMenuItems" :content="{ align: 'end' }" :modal="false">
               <UButton
                 color="neutral"
@@ -125,32 +146,38 @@
                 Copy
               </UButton>
             </UDropdownMenu>
-          </UTooltip>
-
-          <UButton
-            icon="i-lucide-refresh-cw"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            @click="reloadLog"
-          >
-            Refresh
-          </UButton>
-        </template>
-      </template>
-    </PageHeader>
-
-    <UCard v-if="searchForm && !error" class="ws-card shadow-sm" :ui="panelCardUi">
-      <template #header>
-        <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-          <UIcon name="i-lucide-search" class="size-4 text-toned" />
-          <span>Search Logs</span>
+            <UButton
+              v-if="!autoScroll"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-arrow-down-to-line"
+              @click="scrollToBottom"
+            >
+              Bottom
+            </UButton>
+          </div>
         </div>
-      </template>
 
-      <form class="space-y-3" @submit.prevent="void searchLog()">
-        <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
-          <UFormField label="Search" name="search">
+        <UFormField v-if="toggleFilter" id="log-text-filter" label="Filter entries" name="filter">
+          <UInput
+            v-model.lazy="query"
+            type="search"
+            placeholder="Filter log entries"
+            icon="i-lucide-filter"
+            autofocus
+            size="sm"
+            class="w-full"
+          />
+        </UFormField>
+
+        <form
+          v-if="searchForm"
+          id="log-file-search"
+          class="grid items-end gap-3 border-t border-default pt-3 sm:grid-cols-[minmax(0,1fr)_6rem_auto]"
+          @submit.prevent="void searchLog()"
+        >
+          <UFormField label="Search file" name="search">
             <UInput
               v-model="searchQuery"
               type="search"
@@ -173,68 +200,51 @@
               :disabled="isLoading"
             />
           </UFormField>
-        </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <UButton
+              color="primary"
+              variant="solid"
+              size="sm"
+              icon="i-lucide-search"
+              type="submit"
+              :disabled="isLoading || '' === searchQuery.trim()"
+              :loading="isLoading"
+            >
+              Search
+            </UButton>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-x"
+              type="button"
+              :disabled="isLoading"
+              @click="clearSearch"
+            >
+              Reset
+            </UButton>
+          </div>
+        </form>
 
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <UButton
-            color="primary"
-            size="sm"
-            icon="i-lucide-search"
-            type="submit"
-            :disabled="isLoading || '' === searchQuery.trim()"
-            :loading="isLoading"
-          >
-            Search
-          </UButton>
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-x"
-            type="button"
-            :disabled="isLoading"
-            @click="clearSearch"
-          >
-            Reset
-          </UButton>
-        </div>
-      </form>
-    </UCard>
+        <p v-if="activeSearch" class="wrap-anywhere text-xs text-toned">
+          {{ data.length }} matches for “{{ activeSearch }}”
+        </p>
+      </div>
 
-    <UAlert
-      v-if="error"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-triangle-alert"
-      title="API Error"
-      close
-      @update:open="(open) => (!open ? router.push('/logs') : undefined)"
-    >
-      <template #description>
-        <p class="text-sm text-default">{{ error }}</p>
-      </template>
-    </UAlert>
-
-    <template v-else-if="!error">
-      <p v-if="activeSearch" class="text-sm text-toned">
-        {{ data.length }} matches for “{{ activeSearch }}” in this file.
-      </p>
       <div
         ref="logContainer"
-        class="min-w-0 overflow-y-auto overflow-x-hidden border border-default bg-elevated/30 shadow-sm text-default"
+        class="min-w-0 overflow-y-auto overflow-x-hidden border-t border-default text-default"
         :style="{ minHeight: '70vh', maxHeight: '70vh' }"
+        role="region"
+        tabindex="0"
+        :aria-label="`Log entries in ${filename}`"
         @scroll.passive="handleScroll"
       >
         <div
-          v-if="reachedEnd && !hasActiveFilter && !activeSearch"
-          class="flex justify-center border-b border-default/40 px-4 py-3"
+          v-if="reachedEnd && 0 < data.length && !hasActiveFilter && !activeSearch"
+          class="border-b border-default/40 px-3 py-2 text-center text-xs text-muted"
         >
-          <div
-            class="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-[11px] font-medium text-warning"
-          >
-            <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
-            No older lines remain in this file.
-          </div>
+          Beginning of file
         </div>
 
         <div
@@ -254,10 +264,8 @@
         </div>
 
         <template v-if="0 < rows.length">
-          <article v-for="(entry, index) in rows" :key="entry.key" :class="rowClass(entry, index)">
-            <div
-              class="flex w-full min-w-0 flex-col gap-1 px-3 py-[0.65rem] leading-[1.6] md:flex-row md:items-start md:gap-2"
-            >
+          <article v-for="entry in rows" :key="entry.key" :class="rowClass(entry)">
+            <div class="ws-log-line">
               <StructuredLogLine
                 :log="entry.log"
                 :show-details="true"
@@ -272,40 +280,41 @@
           </article>
         </template>
 
-        <div
+        <UAlert
+          v-else-if="isLoading || !hasResults"
+          color="neutral"
+          variant="subtle"
+          icon="i-lucide-loader-circle"
+          title="Loading logs"
+          :ui="{ icon: 'animate-spin' }"
+        />
+        <UEmpty
           v-else
-          class="flex min-h-[55vh] flex-col items-center justify-center gap-3 px-6 py-8 text-center"
-        >
-          <UIcon
-            :name="hasActiveFilter ? 'i-lucide-filter-x' : 'i-lucide-circle-off'"
-            class="size-6 text-toned"
-          />
-
-          <div class="space-y-1">
-            <p class="text-sm font-medium text-default">
-              {{ emptyTitle }}
-            </p>
-
-            <p class="text-sm text-toned">
-              {{ emptyDescription }}
-            </p>
-          </div>
-        </div>
+          size="sm"
+          variant="naked"
+          :icon="hasActiveFilter || activeSearch ? 'i-lucide-search' : 'i-lucide-scroll-text'"
+          :title="emptyTitle"
+          :description="emptyDescription"
+        />
       </div>
-    </template>
+    </section>
 
     <UModal v-model:open="eventViewOpen" :title="eventViewTitle" :ui="eventViewModalUi">
       <template #body>
         <EventView
           v-if="selectedEventId"
           :id="selectedEventId"
+          :actions-target="`#${eventActionsId}`"
           @open-event="(id) => (selectedEventId = id)"
         />
+      </template>
+      <template #footer>
+        <div :id="eventActionsId" class="w-full" />
       </template>
     </UModal>
 
     <LogDetailsModal
-      v-model:open="detailsOpen"
+      v-model="detailsOpen"
       :log="selectedLog"
       @open-event="
         (id) => {
@@ -318,8 +327,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  onUnmounted,
+  ref,
+  useId,
+  watch,
+} from 'vue';
 import { useHead, useRoute, useRouter } from '#app';
+import {
+  NuxtLink,
+  UAlert,
+  UButton,
+  UDropdownMenu,
+  UEmpty,
+  UFormField,
+  UInput,
+  UModal,
+  USelect,
+} from '#components';
 import { useStorage } from '@vueuse/core';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import moment from 'moment';
@@ -337,7 +366,7 @@ import type { LogLevel } from '~/utils/logs';
 const FILTER_CONTEXT_REGEX = /context:(\d+)/;
 const LOG_LEVELS: Array<LogLevel> = ['debug', 'info', 'notice', 'warning', 'error'];
 const LOG_ROW_CLASS =
-  'flex min-w-0 border-b border-default/40 bg-transparent transition-colors duration-150 last:border-b-0 hover:bg-elevated/70';
+  'flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30';
 
 type LevelFilterItem = { label: string; value: LogLevel };
 type LogRow = {
@@ -367,16 +396,13 @@ const query = ref<string>('');
 const searchQuery = ref('');
 const searchLimit = ref(100);
 const searchForm = ref(false);
-const panelCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
 const activeSearch = ref('');
 const data = ref<Array<ServerJsonLogEntry>>([]);
 const error = ref<string>('');
 const wrapLines = useStorage('logs_wrap_lines', false);
 const isDownloading = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
+const hasResults = ref(false);
 const toggleFilter = ref<boolean>(false);
 const autoScroll = ref<boolean>(true);
 const reachedEnd = ref<boolean>(false);
@@ -394,6 +420,7 @@ let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const isTodayLog = computed<boolean>(() => filename.includes(moment().format('YYYYMMDD')));
 
+const eventActionsId = useId();
 const eventViewModalUi = { content: 'max-w-5xl', body: 'p-4 sm:p-5' };
 const eventViewOpen = computed({
   get: () => null !== selectedEventId.value,
@@ -521,7 +548,7 @@ const rows = computed<Array<LogRow>>(() => {
   return result;
 });
 
-const rowClass = (entry: LogRow, index: number): Array<string> => {
+const rowClass = (entry: LogRow): Array<string> => {
   const classes = [LOG_ROW_CLASS];
   if (entry.isMatch) {
     classes.push('bg-warning/10');
@@ -530,9 +557,6 @@ const rowClass = (entry: LogRow, index: number): Array<string> => {
   if (entry.isContext) {
     classes.push('bg-muted/30');
     return classes;
-  }
-  if (index % 2 === 1) {
-    classes.push('bg-elevated/40');
   }
   return classes;
 };
@@ -580,9 +604,10 @@ const loadContent = async (force = false): Promise<void> => {
     const json = await parse_api_response<LogResponse>(response);
 
     if (200 !== response.status) {
-      if ('error' in json) {
-        error.value = `${json.error.code}: ${json.error.message}`;
-      }
+      error.value =
+        'error' in json
+          ? `${json.error.code}: ${json.error.message}`
+          : `${response.status}: ${response.statusText}`;
       return;
     }
     if ('logs-filename' !== route.name) {
@@ -596,6 +621,7 @@ const loadContent = async (force = false): Promise<void> => {
     if (0 < json.lines.length) {
       applyLogBatch(json.lines as Array<unknown>, true);
     }
+    hasResults.value = true;
 
     offset.value = json.next ?? offset.value;
     if (null === json.next) {
@@ -641,6 +667,7 @@ const searchLog = async (): Promise<void> => {
     activeSearch.value = term;
     data.value = [];
     applyLogBatch(json.lines);
+    hasResults.value = true;
     expandedLogRows.value = new Set();
     reachedEnd.value = true;
     autoScroll.value = true;
@@ -691,24 +718,23 @@ const scrollLogContainerToBottom = (behavior: ScrollBehavior = 'auto'): void => 
 };
 
 const emptyTitle = computed(() => {
+  if (activeSearch.value && 0 === data.value.length) {
+    return 'No matching log entries';
+  }
   if (hasActiveFilter.value) {
     return 'No logs match these filters';
   }
-  if (!isLoading.value) {
-    if (activeSearch.value) {
-      return 'No matching log entries';
-    }
-    return 'No log lines available';
-  }
-  return 'Loading logs...';
+  return 'No log lines available';
 });
 
 const emptyDescription = computed(() => {
-  if (activeSearch.value) {
+  if (activeSearch.value && 0 === data.value.length) {
     return 'Adjust your search or clear it to return to the log view.';
   }
   if (hasActiveFilter.value) {
-    return 'Adjust filters or load older lines into the current filter.';
+    return canLoadFilteredHistory.value
+      ? 'Adjust filters or load older lines into the current filter.'
+      : 'Adjust the text or level filters to show log entries.';
   }
   return stream.value
     ? 'Waiting for new stream output.'
@@ -863,7 +889,7 @@ const downloadFile = async (): Promise<void> => {
 
 const deleteFile = async (): Promise<void> => {
   const { status: confirmStatus } = await dialog.confirmDialog({
-    message: `Are you sure you want to delete the log file '${filename}'? This action cannot be undone.`,
+    message: `Delete log file '${filename}'? This can't be undone.`,
     confirmText: 'Delete',
     confirmColor: 'error',
   });
@@ -876,24 +902,24 @@ const deleteFile = async (): Promise<void> => {
     const response = await request(`/log/${filename}`, { method: 'DELETE' });
     const json = await parse_api_response<GenericResponse>(response);
     if (response.ok) {
-      notification('success', 'Information', `Logfile '${filename}' has been deleted.`);
+      notification('success', 'Log file deleted', filename);
       await router.push('/logs');
       return;
     }
     if ('error' in json) {
       notification(
         'error',
-        'Error',
-        `Request to delete logfile failed. (${json.error.code}: ${json.error.message}).`,
+        'Log file could not be deleted',
+        `${json.error.code}: ${json.error.message}`,
       );
       return;
     }
-    notification('error', 'Error', 'Request to delete logfile failed.');
+    notification('error', 'Log file could not be deleted', 'Refresh the file and try again.');
   } catch (err) {
     notification(
       'error',
-      'Error',
-      `Failed to request to delete a logfile. ${err instanceof Error ? err.message : String(err)}.`,
+      'Log file could not be deleted',
+      err instanceof Error ? err.message : String(err),
     );
   }
 };

@@ -4,30 +4,28 @@
       v-if="isLoading"
       color="info"
       variant="soft"
-      title="Loading"
+      title="Loading guide"
       icon="i-lucide-loader-circle"
-      description="Loading data. Please wait..."
       :ui="{ icon: 'animate-spin' }"
     />
 
     <UAlert
       v-else-if="error"
-      color="warning"
+      color="error"
       variant="soft"
-      title="Error"
+      title="Unable to load guide"
       icon="i-lucide-triangle-alert"
       :description="error"
     />
 
-    <UCard v-else class="shadow-sm" :ui="{ body: 'p-0' }">
-      <div ref="contentRoot" class="ws-markdown" v-html="content" />
-    </UCard>
+    <article v-else ref="contentRoot" class="ws-markdown" v-html="content" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { navigateTo } from '#app';
+import { UAlert } from '#components';
 import { marked } from 'marked';
 import type { MarkedExtension, Tokens } from 'marked';
 import { baseUrl } from 'marked-base-url';
@@ -211,11 +209,21 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-.markdown-alert {
-  padding: 0 1em;
-  margin-bottom: 16px;
-  color: inherit;
-  border-left: 0.25em solid #444c56;
+.ws-markdown .markdown-alert {
+  padding: 0.75rem 1rem;
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border);
+  border-left: 0.25rem solid var(--ui-border-accented);
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg-elevated);
+}
+
+.ws-markdown .markdown-alert > :first-child {
+  margin-top: 0;
+}
+
+.ws-markdown .markdown-alert > :last-child {
+  margin-bottom: 0;
 }
 
 .markdown-alert-title {
@@ -236,44 +244,44 @@ onBeforeUnmount(() => {
   stroke: currentColor;
 }
 
-.markdown-alert-note {
-  border-left-color: #539bf5;
+.ws-markdown .markdown-alert-note {
+  border-left-color: var(--ui-info);
 }
 
-.markdown-alert-tip {
-  border-left-color: #57ab5a;
+.ws-markdown .markdown-alert-tip {
+  border-left-color: var(--ui-success);
 }
 
-.markdown-alert-important {
-  border-left-color: #986ee2;
+.ws-markdown .markdown-alert-important {
+  border-left-color: var(--ui-primary);
 }
 
-.markdown-alert-warning {
-  border-left-color: #c69026;
+.ws-markdown .markdown-alert-warning {
+  border-left-color: var(--ui-warning);
 }
 
-.markdown-alert-caution {
-  border-left-color: #e5534b;
+.ws-markdown .markdown-alert-caution {
+  border-left-color: var(--ui-error);
 }
 
 .markdown-alert-note > .markdown-alert-title {
-  color: #539bf5;
+  color: var(--ui-info);
 }
 
 .markdown-alert-tip > .markdown-alert-title {
-  color: #57ab5a;
+  color: var(--ui-success);
 }
 
 .markdown-alert-important > .markdown-alert-title {
-  color: #986ee2;
+  color: var(--ui-primary);
 }
 
 .markdown-alert-warning > .markdown-alert-title {
-  color: #c69026;
+  color: var(--ui-warning);
 }
 
 .markdown-alert-caution > .markdown-alert-title {
-  color: #e5534b;
+  color: var(--ui-error);
 }
 
 .ws-guide-icon {
@@ -290,8 +298,9 @@ onBeforeUnmount(() => {
 }
 
 .ws-markdown {
-  padding: 1.25rem;
-  color: inherit;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ui-text);
   line-height: 1.75;
 }
 
@@ -310,8 +319,10 @@ onBeforeUnmount(() => {
 .ws-markdown h5,
 .ws-markdown h6 {
   margin: 1.5rem 0 0.75rem;
-  font-weight: 700;
+  color: var(--ui-text-highlighted);
+  font-weight: 600;
   line-height: 1.3;
+  scroll-margin-top: calc(var(--ui-header-height) + 1.5rem);
 }
 
 .ws-markdown h1 {
@@ -360,7 +371,7 @@ onBeforeUnmount(() => {
 }
 
 .ws-markdown a {
-  color: var(--ui-color-primary-500);
+  color: var(--ui-primary);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
@@ -368,17 +379,17 @@ onBeforeUnmount(() => {
 .ws-markdown code {
   padding: 0.1rem 0.35rem;
   border-radius: 0.375rem;
-  background: color-mix(in srgb, var(--ui-border) 30%, transparent);
+  background: var(--ui-bg-accented);
   font-size: 0.875em;
 }
 
 .ws-markdown pre {
   overflow-x: auto;
   border-radius: 0.375rem;
-  border: 1px solid color-mix(in srgb, var(--ui-border) 45%, transparent);
-  background: color-mix(in srgb, var(--ui-bg) 22%, black);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg-elevated);
   padding: 1rem;
-  color: color-mix(in srgb, white 88%, var(--ui-text-highlighted) 12%);
+  color: var(--ui-text);
 }
 
 .ws-markdown pre code {

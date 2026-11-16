@@ -1,67 +1,60 @@
 <template>
-  <main class="w-full min-w-0 max-w-full space-y-6">
+  <main :aria-busy="isLoading" class="w-full min-w-0 max-w-full space-y-6">
     <PageHeader v-bind="pageShell">
       <template #actions>
-        <UInput
-          v-if="showFilter || query"
-          id="filter"
-          v-model="query"
-          type="search"
-          placeholder="Filter routes"
-          icon="i-lucide-filter"
+        <UButton
+          :to="specUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          color="neutral"
+          variant="outline"
           size="sm"
-          class="w-full sm:w-72"
-        />
+          icon="i-lucide-file-code-2"
+        >
+          JSON specification
+        </UButton>
+      </template>
+    </PageHeader>
 
+    <div class="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[12rem_16rem_minmax(0,1fr)]">
+      <UFormField label="Specification" name="specification">
         <USelect
           v-model="selectedBackend"
           :items="backendItems"
           value-key="value"
           label-key="label"
-          color="neutral"
-          variant="outline"
           size="sm"
-          class="w-full sm:w-36"
+          class="w-full"
           :disabled="isLoading"
         />
-
+      </UFormField>
+      <UFormField label="Test backend" name="test-backend">
         <USelect
           v-model="tryBackendName"
           :items="tryBackendItems"
           value-key="value"
           label-key="label"
-          color="neutral"
-          variant="outline"
           size="sm"
           icon="i-lucide-server"
-          class="w-full sm:w-44"
-          :disabled="isLoading || tryBackendItems.length < 1"
-          :placeholder="
-            tryBackendItems.length < 1 ? 'No ' + selectedBackend + ' backend' : 'Test backend'
-          "
+          class="w-full"
+          :disabled="isLoading || 1 > tryBackendItems.length"
+          :placeholder="1 > tryBackendItems.length ? 'No matching backend' : 'Select backend'"
         />
-
-        <UButton
-          color="neutral"
-          :variant="showFilter ? 'soft' : 'outline'"
+      </UFormField>
+      <UFormField
+        label="Search endpoints"
+        name="endpoint-search"
+        class="sm:col-span-2 xl:col-span-1"
+      >
+        <UInput
+          v-model="query"
+          type="search"
+          placeholder="Path, method, tag or parameter"
+          icon="i-lucide-search"
           size="sm"
-          icon="i-lucide-filter"
-          @click="toggleFilter"
-        >
-          <span class="hidden sm:inline">Filter</span>
-        </UButton>
-
-        <a :href="specUrl" target="_blank" rel="noopener noreferrer">
-          <UButton color="neutral" variant="outline" size="sm" icon="i-lucide-file-code-2">
-            <span class="hidden sm:inline">JSON</span>
-          </UButton>
-        </a>
-      </template>
-    </PageHeader>
-
-    <div class="space-y-1">
-      <h1 class="text-xl font-semibold text-highlighted sm:text-2xl">{{ specTitle }}</h1>
-      <p class="text-sm text-toned">{{ specMeta }}</p>
+          class="w-full"
+        />
+      </UFormField>
     </div>
 
     <UAlert
@@ -69,8 +62,7 @@
       color="info"
       variant="soft"
       icon="i-lucide-loader-circle"
-      title="Loading"
-      description="Loading routes. Please wait..."
+      title="Loading routes"
       :ui="{ icon: 'animate-spin' }"
     />
 
@@ -84,38 +76,36 @@
     />
 
     <template v-else>
-      <UAlert
+      <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        <div class="min-w-0">
+          <h2 class="wrap-anywhere text-sm font-semibold text-highlighted">{{ specTitle }}</h2>
+          <p class="text-xs text-toned">{{ specMeta }}</p>
+        </div>
+        <p class="text-xs tabular-nums text-toned">
+          {{ filteredRoutes.length }}{{ query ? ` of ${routeEntries.length}` : '' }}
+          {{ 1 === routeEntries.length ? 'endpoint' : 'endpoints' }}
+        </p>
+      </div>
+      <UEmpty
         v-if="filteredRoutes.length < 1"
-        color="warning"
-        variant="soft"
-        icon="i-lucide-triangle-alert"
-        :title="query ? 'No results' : 'No routes found'"
-      >
-        <template #description>
-          <div class="space-y-2 text-sm text-default">
-            <p v-if="query">
-              No routes match <strong>{{ query }}</strong
-              >.
-            </p>
-            <p v-else>No routes are available for the selected backend.</p>
-          </div>
-        </template>
-      </UAlert>
+        :icon="query ? 'i-lucide-search' : 'i-lucide-route'"
+        :title="query ? 'No matching routes' : 'No routes found'"
+      />
 
-      <div v-else class="grid items-start gap-4 xl:grid-cols-2">
-        <UCard
+      <div v-else class="ws-card divide-y divide-default">
+        <Lazy
           v-for="route in filteredRoutes"
-          :key="route.key"
-          class="shadow-sm"
-          :class="{ 'ring-1 ring-warning/40': route.deprecated }"
-          :ui="cardUi"
+          :key="`${selectedBackend}:${route.key}`"
+          :unrender="true"
+          :min-height="112"
         >
-          <template #header>
-            <div class="flex w-full items-start gap-3">
+          <article class="min-w-0 p-4 sm:p-5">
+            <div class="flex w-full flex-wrap items-start gap-3 sm:flex-nowrap">
               <button
                 type="button"
                 class="flex min-w-0 flex-1 items-start gap-3 text-left"
                 :aria-expanded="isExpanded(route.key)"
+                :aria-controls="`openapi-${encodeURIComponent(route.key)}`"
                 @click="toggleExpanded(route.key)"
               >
                 <UIcon
@@ -124,7 +114,7 @@
                 />
 
                 <div class="min-w-0 flex-1 space-y-2">
-                  <div class="flex flex-nowrap items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
                     <UBadge
                       :color="methodColor(route.method)"
                       variant="soft"
@@ -134,12 +124,12 @@
                       {{ route.method }}
                     </UBadge>
 
-                    <div
-                      class="min-w-0 truncate font-mono text-sm font-semibold text-highlighted"
+                    <span
+                      class="min-w-0 wrap-anywhere font-mono text-sm font-semibold text-highlighted"
                       :class="{ 'text-toned line-through decoration-warning/50': route.deprecated }"
                     >
                       {{ route.path }}
-                    </div>
+                    </span>
 
                     <UBadge
                       v-if="route.deprecated"
@@ -153,191 +143,187 @@
                     </UBadge>
                   </div>
 
-                  <p class="text-sm leading-6 text-default">{{ route.summary }}</p>
+                  <p class="text-sm leading-6 text-toned">{{ route.summary }}</p>
 
                   <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
-                    <UBadge
-                      v-for="tag in route.tags"
-                      :key="`${route.key}-${tag}`"
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                    >
+                    <span v-for="tag in route.tags" :key="`${route.key}-${tag}`">
                       {{ tag }}
-                    </UBadge>
-
-                    <UBadge
-                      v-if="route.operationId"
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                      icon="i-lucide-braces"
-                    >
-                      {{ route.operationId }}
-                    </UBadge>
+                    </span>
                   </div>
                 </div>
               </button>
 
               <UButton
-                size="xs"
-                color="primary"
+                size="sm"
+                color="neutral"
                 variant="outline"
                 icon="i-lucide-send"
-                class="mt-1 shrink-0"
+                class="shrink-0"
                 @click="openTryIt(route)"
               >
-                <span class="hidden sm:inline">Try it</span>
+                <span>Try it</span>
               </UButton>
             </div>
-          </template>
+            <div
+              :id="`openapi-${encodeURIComponent(route.key)}`"
+              v-if="isExpanded(route.key)"
+              class="mt-4 space-y-6 border-t border-default pt-4 sm:ml-7"
+            >
+              <p v-if="route.operationId" class="wrap-anywhere font-mono text-xs text-toned">
+                {{ route.operationId }}
+              </p>
+              <section v-if="route.parameters.length > 0" class="space-y-3">
+                <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
+                  <UIcon name="i-lucide-sliders-horizontal" class="size-4 text-toned" />
+                  <span>Parameters</span>
+                </div>
 
-          <div v-if="isExpanded(route.key)" class="space-y-3">
-            <section v-if="route.parameters.length > 0" class="space-y-3">
-              <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-                <UIcon name="i-lucide-sliders-horizontal" class="size-4 text-toned" />
-                <span>Parameters</span>
-              </div>
+                <div class="divide-y divide-default">
+                  <div
+                    v-for="parameter in route.parameters"
+                    :key="`${route.key}-param-${parameter.key}`"
+                    class="min-w-0 py-3"
+                  >
+                    <div class="flex flex-wrap items-center gap-2">
+                      <div class="font-mono text-sm font-semibold text-highlighted">
+                        {{ parameter.name }}
+                      </div>
 
-              <div class="space-y-3">
-                <div
-                  v-for="parameter in route.parameters"
-                  :key="`${route.key}-param-${parameter.key}`"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-3"
-                >
-                  <div class="flex flex-wrap items-center gap-2">
-                    <div class="font-mono text-sm font-semibold text-highlighted">
-                      {{ parameter.name }}
+                      <UBadge color="neutral" variant="soft" size="sm">
+                        {{ parameter.location }}
+                      </UBadge>
+
+                      <UBadge v-if="parameter.required" color="warning" variant="soft" size="sm">
+                        Required
+                      </UBadge>
+
+                      <UBadge
+                        v-if="parameter.schemaSummary"
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
+                      >
+                        {{ parameter.schemaSummary }}
+                      </UBadge>
                     </div>
 
+                    <p v-if="parameter.description" class="mt-2 text-sm leading-6 text-default">
+                      {{ parameter.description }}
+                    </p>
+
+                    <pre
+                      v-if="shouldShowShape(parameter.schemaSummary, parameter.shape)"
+                      class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
+                    ><code>{{ parameter.shape }}</code></pre>
+                  </div>
+                </div>
+              </section>
+
+              <section v-if="route.requestBody" class="space-y-3">
+                <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
+                  <UIcon name="i-lucide-arrow-up-from-line" class="size-4 text-toned" />
+                  <span>Request body</span>
+                </div>
+
+                <div class="min-w-0 space-y-3">
+                  <div class="flex flex-wrap items-center gap-2">
                     <UBadge color="neutral" variant="soft" size="sm">
-                      {{ parameter.location }}
+                      {{ route.requestBody.mediaType }}
                     </UBadge>
 
-                    <UBadge v-if="parameter.required" color="warning" variant="soft" size="sm">
+                    <UBadge
+                      v-if="route.requestBody.required"
+                      color="warning"
+                      variant="soft"
+                      size="sm"
+                    >
                       Required
                     </UBadge>
 
                     <UBadge
-                      v-if="parameter.schemaSummary"
+                      v-if="route.requestBody.schemaSummary"
                       color="neutral"
                       variant="outline"
                       size="sm"
                     >
-                      {{ parameter.schemaSummary }}
+                      {{ route.requestBody.schemaSummary }}
                     </UBadge>
                   </div>
 
-                  <p v-if="parameter.description" class="mt-2 text-sm leading-6 text-default">
-                    {{ parameter.description }}
+                  <p v-if="route.requestBody.description" class="text-sm leading-6 text-default">
+                    {{ route.requestBody.description }}
                   </p>
 
                   <pre
-                    v-if="shouldShowShape(parameter.schemaSummary, parameter.shape)"
-                    class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
-                  ><code>{{ parameter.shape }}</code></pre>
-                </div>
-              </div>
-            </section>
+                    v-if="shouldShowShape(route.requestBody.schemaSummary, route.requestBody.shape)"
+                    class="overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
+                  ><code>{{ route.requestBody.shape }}</code></pre>
 
-            <section v-if="route.requestBody" class="space-y-3">
-              <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-                <UIcon name="i-lucide-arrow-up-from-line" class="size-4 text-toned" />
-                <span>Request Body</span>
-              </div>
-
-              <div class="rounded-md border border-default bg-elevated/40 px-3 py-3">
-                <div class="flex flex-wrap items-center gap-2">
-                  <UBadge color="neutral" variant="soft" size="sm">
-                    {{ route.requestBody.mediaType }}
-                  </UBadge>
-
-                  <UBadge
-                    v-if="route.requestBody.required"
-                    color="warning"
-                    variant="soft"
-                    size="sm"
-                  >
-                    Required
-                  </UBadge>
-
-                  <UBadge
-                    v-if="route.requestBody.schemaSummary"
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                  >
-                    {{ route.requestBody.schemaSummary }}
-                  </UBadge>
-                </div>
-
-                <p v-if="route.requestBody.description" class="text-sm leading-6 text-default">
-                  {{ route.requestBody.description }}
-                </p>
-
-                <pre
-                  v-if="shouldShowShape(route.requestBody.schemaSummary, route.requestBody.shape)"
-                  class="overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
-                ><code>{{ route.requestBody.shape }}</code></pre>
-
-                <div v-else-if="!route.requestBody.schemaSummary" class="text-sm text-toned">
-                  No request schema documented.
-                </div>
-              </div>
-            </section>
-
-            <section class="space-y-3">
-              <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-                <UIcon name="i-lucide-arrow-down-to-line" class="size-4 text-toned" />
-                <span>Responses</span>
-              </div>
-
-              <div v-if="route.responses.length > 0" class="space-y-3">
-                <div
-                  v-for="response in route.responses"
-                  :key="`${route.key}-response-${response.status}`"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-3"
-                >
-                  <div class="flex flex-wrap items-center gap-2">
-                    <UBadge :color="responseColor(response.status)" variant="soft" size="sm">
-                      {{ response.status }}
-                    </UBadge>
-
-                    <span class="text-sm font-medium text-highlighted">{{ response.label }}</span>
-
-                    <UBadge v-if="response.mediaType" color="neutral" variant="outline" size="sm">
-                      {{ response.mediaType }}
-                    </UBadge>
-
-                    <UBadge
-                      v-if="response.schemaSummary"
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                    >
-                      {{ response.schemaSummary }}
-                    </UBadge>
-                  </div>
-
-                  <p v-if="response.showDescription" class="mt-2 text-sm leading-6 text-default">
-                    {{ response.description }}
-                  </p>
-
-                  <pre
-                    v-if="shouldShowShape(response.schemaSummary, response.shape)"
-                    class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
-                  ><code>{{ response.shape }}</code></pre>
-
-                  <div v-else-if="!response.schemaSummary" class="mt-2 text-sm text-toned">
-                    No response body documented.
+                  <div v-else-if="!route.requestBody.schemaSummary" class="text-sm text-toned">
+                    No request schema documented.
                   </div>
                 </div>
-              </div>
+              </section>
 
-              <div v-else class="text-sm text-toned">No responses documented.</div>
-            </section>
-          </div>
-        </UCard>
+              <section class="space-y-3">
+                <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
+                  <UIcon name="i-lucide-arrow-down-to-line" class="size-4 text-toned" />
+                  <span>Responses</span>
+                </div>
+
+                <div v-if="route.responses.length > 0" class="divide-y divide-default">
+                  <div
+                    v-for="response in route.responses"
+                    :key="`${route.key}-response-${response.status}`"
+                    class="min-w-0 py-3"
+                  >
+                    <div class="flex flex-wrap items-center gap-2">
+                      <UBadge :color="responseColor(response.status)" variant="soft" size="sm">
+                        {{ response.status }}
+                      </UBadge>
+
+                      <span class="text-sm font-medium text-highlighted">{{ response.label }}</span>
+
+                      <UBadge v-if="response.mediaType" color="neutral" variant="outline" size="sm">
+                        {{ response.mediaType }}
+                      </UBadge>
+
+                      <UBadge
+                        v-if="response.schemaSummary"
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
+                      >
+                        {{ response.schemaSummary }}
+                      </UBadge>
+                    </div>
+
+                    <p v-if="response.showDescription" class="mt-2 text-sm leading-6 text-default">
+                      {{ response.description }}
+                    </p>
+
+                    <pre
+                      v-if="shouldShowShape(response.schemaSummary, response.shape)"
+                      class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
+                    ><code>{{ response.shape }}</code></pre>
+
+                    <div v-else-if="!response.schemaSummary" class="mt-2 text-sm text-toned">
+                      No response body documented.
+                    </div>
+                  </div>
+                </div>
+
+                <UEmpty
+                  v-else
+                  size="sm"
+                  variant="naked"
+                  icon="i-lucide-arrow-down-to-line"
+                  title="No responses documented"
+                />
+              </section>
+            </div>
+          </article>
+        </Lazy>
       </div>
     </template>
 
@@ -348,9 +334,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useHead } from '#app';
+import { UAlert, UBadge, UButton, UEmpty, UFormField, UIcon, UInput, USelect } from '#components';
+import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import TryItModal from '~/components/TryItModal.vue';
-import { awaitElement, notification, parse_api_response, request } from '~/utils';
+import { notification, parse_api_response, request } from '~/utils';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import type {
   Backend,
@@ -430,14 +418,8 @@ const MEDIA_TYPE_PREFERENCE: Array<string> = [
   'text/html',
 ];
 
-const cardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
 const selectedBackend = ref<BackendKey>('plex');
 const query = ref<string>('');
-const showFilter = ref<boolean>(false);
 const spec = ref<OpenAPIDocument | null>(null);
 const error = ref<string>('');
 const isLoading = ref<boolean>(true);
@@ -1024,17 +1006,6 @@ const filteredRoutes = computed<Array<RouteEntry>>(() => {
   });
 });
 
-const toggleFilter = (): void => {
-  showFilter.value = !showFilter.value;
-
-  if (!showFilter.value) {
-    query.value = '';
-    return;
-  }
-
-  awaitElement('#filter', (_, elm) => (elm as HTMLInputElement).focus());
-};
-
 const isExpanded = (key: string): boolean => {
   return true === expandedRoutes.value[key];
 };
@@ -1057,14 +1028,14 @@ const loadConfiguredBackends = async (): Promise<void> => {
     const json = await parse_api_response<Array<Backend>>(resp);
 
     if ('error' in json) {
-      notification('error', 'Error', `Failed to load backends. ${json.error.message}`);
+      notification('error', 'Unable to load backends', json.error.message);
       return;
     }
 
     configuredBackends.value = json;
   } catch (caughtError) {
     const message = caughtError instanceof Error ? caughtError.message : 'Unexpected error';
-    notification('error', 'Error', `Failed to load backends. ${message}`);
+    notification('error', 'Unable to load backends', message);
   }
 };
 

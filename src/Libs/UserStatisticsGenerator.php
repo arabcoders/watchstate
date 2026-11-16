@@ -11,6 +11,7 @@ use RuntimeException;
 final class UserStatisticsGenerator
 {
     public const int VERSION = 1;
+    public const int RECENT_ITEMS_COUNT = 8;
     public const string CACHE_KEY = 'user_statistics_v1';
 
     /**
@@ -105,7 +106,7 @@ final class UserStatisticsGenerator
                     $recent,
                     static fn(array $a, array $b): int => [$b['played_at'], $b['history_id']] <=> [$a['played_at'], $a['history_id']],
                 );
-                $recent = array_slice($recent, 0, 20);
+                $recent = array_slice($recent, 0, self::RECENT_ITEMS_COUNT);
             }
 
             if ($entity->isMovie()) {

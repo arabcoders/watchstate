@@ -1,5 +1,5 @@
 <template>
-  <div class="w-[320px] max-w-[90vw] p-3">
+  <div class="w-100 max-w-[90vw] p-4">
     <div v-if="isLoading" class="flex items-center gap-2 text-sm font-medium text-default">
       <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-info" />
       <span>Loading records...</span>
@@ -13,12 +13,12 @@
       :description="errorMessage"
     />
 
-    <UAlert
+    <UEmpty
       v-else-if="0 === records.length"
-      color="info"
-      variant="soft"
+      size="sm"
+      variant="naked"
       icon="i-lucide-info"
-      description="No other records reference this file."
+      title="No other records reference this file"
     />
 
     <div v-else class="space-y-3">
@@ -27,37 +27,34 @@
         <span>Duplicate file references</span>
       </div>
 
-      <div class="space-y-2">
-        <div
-          v-for="(record, index) in records"
-          :key="record.id"
-          class="space-y-2 rounded-md border border-default bg-elevated/40 p-3"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <NuxtLink
-              :to="`/backend/${record.via}`"
-              class="inline-flex items-center gap-1 rounded-md border border-info/30 bg-info/10 px-2.5 py-1 text-xs font-medium text-info"
-            >
-              <UIcon name="i-lucide-server" class="size-3.5" />
-              <span>{{ record.via }}</span>
-            </NuxtLink>
-
-            <div v-if="record.updated" class="inline-flex items-center gap-1 text-xs text-toned">
-              <UIcon name="i-lucide-clock-3" class="size-3.5" />
-              <span>{{ moment.unix(record.updated).fromNow() }}</span>
-            </div>
-          </div>
-
+      <ul class="divide-y divide-default">
+        <li v-for="record in records" :key="record.id" class="space-y-2 py-3 first:pt-0 last:pb-0">
           <NuxtLink
             :to="`/history/${record.id}`"
-            class="block text-sm font-medium text-default hover:text-primary"
+            class="block wrap-break-word text-sm font-medium text-default hover:text-primary"
           >
             {{ record.full_title || makeName(record as unknown as JsonObject) }}
           </NuxtLink>
 
-          <USeparator v-if="index < records.length - 1" />
-        </div>
-      </div>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-toned">
+            <NuxtLink
+              :to="`/backend/${record.via}`"
+              class="inline-flex min-w-0 items-center gap-1.5 hover:text-highlighted"
+            >
+              <UIcon name="i-lucide-server" class="size-3.5 shrink-0" />
+              <span class="wrap-break-word">{{ record.via }}</span>
+            </NuxtLink>
+
+            <div
+              v-if="record.updated"
+              class="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+            >
+              <UIcon name="i-lucide-clock-3" class="size-3.5" />
+              <span>{{ moment.unix(record.updated).fromNow() }}</span>
+            </div>
+          </div>
+        </li>
+      </ul>
     </div>
   </div>
 </template>
@@ -65,7 +62,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import moment from 'moment';
-import { NuxtLink } from '#components';
+import { NuxtLink, UAlert, UEmpty, UIcon } from '#components';
 import { makeName, parse_api_response, request } from '~/utils';
 import { useSessionCache } from '~/utils/cache';
 import type { HistoryItem, JsonObject } from '~/types';
