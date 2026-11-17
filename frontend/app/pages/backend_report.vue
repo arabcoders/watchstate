@@ -185,71 +185,36 @@
           title="No linked local records"
         />
 
-        <div
+        <UTable
           v-else-if="isSectionOpen(`backend-${backend}`)"
-          class="ws-card overflow-x-auto shadow-sm"
+          :data="backendSummary.libraries"
+          :columns="libraryColumns"
+          :get-row-id="(row) => row.id"
+          :caption="`${backend} library statistics`"
+          :ui="{ base: 'w-full min-w-170 table-fixed' }"
         >
-          <table class="w-full min-w-170 table-fixed text-left text-sm rounded-none">
-            <colgroup>
-              <col class="w-[28%]" />
-              <col class="w-[12%]" />
-              <col class="w-[15%]" />
-              <col class="w-[15%]" />
-              <col class="w-[15%]" />
-              <col class="w-[15%]" />
-            </colgroup>
-            <thead class="border-b border-default text-xs uppercase tracking-wide text-toned">
-              <tr>
-                <th class="px-3 py-2 font-semibold">Library</th>
-                <th class="px-3 py-2 font-semibold">Type</th>
-                <th class="px-3 py-2 text-right font-semibold">Watched</th>
-                <th class="px-3 py-2 text-right font-semibold">Unwatched</th>
-                <th class="px-3 py-2 text-right font-semibold">In progress</th>
-                <th class="px-3 py-2 text-right font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-default">
-              <tr
-                v-for="librarySummary in backendSummary.libraries"
-                :key="librarySummary.id"
-                class="transition-colors duration-150 hover:bg-elevated/70"
-              >
-                <td class="px-3 py-2 font-medium text-highlighted">
-                  <UTooltip
-                    v-if="'unknown' !== librarySummary.id"
-                    :text="`Library ID: ${librarySummary.id}`"
-                  >
-                    <span class="cursor-help">{{ librarySummary.title ?? librarySummary.id }}</span>
-                  </UTooltip>
-                  <span v-else>Unknown (No library id)</span>
-                </td>
-                <td class="px-3 py-2 text-toned">{{ libraryTypeLabel(librarySummary.type) }}</td>
-                <td class="px-3 py-2 text-right text-success">
-                  {{ formatNumber(librarySummary.watched) }}
-                </td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(librarySummary.unwatched) }}</td>
-                <td class="px-3 py-2 text-right text-info">
-                  {{ formatNumber(librarySummary.in_progress) }}
-                </td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(librarySummary.total) }}</td>
-              </tr>
-            </tbody>
-            <tfoot class="border-t border-default bg-elevated/40 font-semibold text-highlighted">
-              <tr>
-                <td class="px-3 py-2">Total</td>
-                <td class="px-3 py-2"></td>
-                <td class="px-3 py-2 text-right text-success">
-                  {{ formatNumber(backendSummary.watched) }}
-                </td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(backendSummary.unwatched) }}</td>
-                <td class="px-3 py-2 text-right text-info">
-                  {{ formatNumber(backendSummary.in_progress) }}
-                </td>
-                <td class="px-3 py-2 text-right">{{ formatNumber(backendSummary.total) }}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+          <template #library-cell="{ row }">
+            <UTooltip v-if="'unknown' !== row.original.id" :text="`Library ID: ${row.original.id}`">
+              <span class="cursor-help">{{ row.original.title ?? row.original.id }}</span>
+            </UTooltip>
+            <span v-else>Unknown (No library id)</span>
+          </template>
+          <template #type-cell="{ row }">{{ libraryTypeLabel(row.original.type) }}</template>
+          <template #watched-cell="{ row }">{{ formatNumber(row.original.watched) }}</template>
+          <template #unwatched-cell="{ row }">{{ formatNumber(row.original.unwatched) }}</template>
+          <template #in_progress-cell="{ row }">{{
+            formatNumber(row.original.in_progress)
+          }}</template>
+          <template #total-cell="{ row }">{{ formatNumber(row.original.total) }}</template>
+          <template #watched-footer>
+            <span class="text-success">{{ formatNumber(backendSummary.watched) }}</span>
+          </template>
+          <template #unwatched-footer>{{ formatNumber(backendSummary.unwatched) }}</template>
+          <template #in_progress-footer>
+            <span class="text-info">{{ formatNumber(backendSummary.in_progress) }}</span>
+          </template>
+          <template #total-footer>{{ formatNumber(backendSummary.total) }}</template>
+        </UTable>
       </section>
 
       <section v-if="0 < originEntries.length" class="space-y-3">
@@ -291,13 +256,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useHead } from '#app';
-import { UAlert, UButton, UDropdownMenu, UEmpty, UIcon, UTooltip } from '#components';
+import { UAlert, UButton, UDropdownMenu, UEmpty, UIcon, UTable, UTooltip } from '#components';
+import type { TableColumn } from '@nuxt/ui';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
 import PageHeader from '~/components/PageHeader.vue';
 import StatCard from '~/components/StatCard.vue';
 import type {
   BackendReportBackendSummary,
+  BackendReportLibrarySummary,
   BackendReportResponse,
   BackendReportRunResponse,
 } from '~/types';
@@ -325,6 +292,40 @@ const backendEntries = computed<Array<[string, BackendReportBackendSummary]>>(()
 );
 const originEntries = computed(() => Object.entries(summary.value?.origins ?? {}));
 const formatNumber = (value: number): string => new Intl.NumberFormat().format(value);
+const libraryColumns: Array<TableColumn<BackendReportLibrarySummary>> = [
+  {
+    id: 'library',
+    accessorKey: 'title',
+    header: 'Library',
+    footer: 'Total',
+    meta: { class: { th: 'w-[28%]', td: 'font-medium text-highlighted' } },
+  },
+  {
+    accessorKey: 'type',
+    header: 'Type',
+    meta: { class: { th: 'w-[12%]', td: 'text-toned' } },
+  },
+  {
+    accessorKey: 'watched',
+    header: 'Watched',
+    meta: { class: { th: 'w-[15%] text-right', td: 'text-right tabular-nums text-success' } },
+  },
+  {
+    accessorKey: 'unwatched',
+    header: 'Unwatched',
+    meta: { class: { th: 'w-[15%] text-right', td: 'text-right tabular-nums' } },
+  },
+  {
+    accessorKey: 'in_progress',
+    header: 'In progress',
+    meta: { class: { th: 'w-[15%] text-right', td: 'text-right tabular-nums text-info' } },
+  },
+  {
+    accessorKey: 'total',
+    header: 'Total',
+    meta: { class: { th: 'w-[15%] text-right', td: 'text-right tabular-nums' } },
+  },
+];
 const libraryTypeLabel = (type: 'movie' | 'show' | 'mixed'): string => {
   if ('movie' === type) {
     return 'Movies';

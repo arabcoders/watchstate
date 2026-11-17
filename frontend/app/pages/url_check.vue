@@ -21,8 +21,7 @@
         color="warning"
         variant="soft"
         icon="i-lucide-triangle-alert"
-        title="Template values found"
-        description="Replace placeholders such as [API_KEY] before sending."
+        description="Template values found. Replace placeholders such as [API_KEY] before sending."
       />
 
       <div class="grid items-end gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]">
@@ -149,7 +148,7 @@
           </div>
         </div>
 
-        <UEmpty v-else size="sm" variant="naked" icon="i-lucide-list" title="No custom headers" />
+        <UEmpty v-else size="sm" variant="outline" icon="i-lucide-list" title="No custom headers" />
       </section>
 
       <div class="flex flex-wrap justify-end gap-2">
@@ -198,12 +197,14 @@
         <div class="min-w-0 space-y-2">
           <div class="flex items-center gap-3">
             <h2 id="response-heading" class="text-lg font-semibold text-highlighted">Response</h2>
-            <span
-              :class="statusToneClass(response.response.status)"
-              class="font-mono text-sm font-semibold"
+            <UBadge
+              :color="getHttpStatusColor(response.response.status)"
+              variant="soft"
+              size="sm"
+              class="font-mono"
             >
               <span class="sr-only">Status </span>{{ response.response.status }}
-            </span>
+            </UBadge>
           </div>
           <p class="wrap-anywhere font-mono text-xs text-toned">
             {{ response.request.method }} {{ response.request.url }}
@@ -330,7 +331,7 @@
 
         <template #body>
           <pre
-            class="ws-terminal-panel ws-terminal-panel-lg rounded-md bg-elevated text-sm text-default"
+            class="ws-terminal-panel ws-terminal-panel-lg rounded-md bg-elevated/40 text-sm text-default"
           ><code>{{ response.response.body ? tryParse(response.response.body) : 'Empty body' }}</code></pre>
         </template>
       </UTabs>
@@ -343,6 +344,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { useHead } from '#app';
 import {
   UAlert,
+  UBadge,
   UButton,
   UEmpty,
   UFormField,
@@ -355,7 +357,7 @@ import {
 import type { TableColumn } from '@nuxt/ui';
 import PageHeader from '~/components/PageHeader.vue';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
-import { copyText, notification, parse_api_response, request } from '~/utils';
+import { copyText, getHttpStatusColor, notification, parse_api_response, request } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
 import type { URLCheckHeader, URLCheckRequest, URLCheckResponse } from '~/types';
 
@@ -467,9 +469,7 @@ const resultTabs = [
 ];
 
 const tableUi = {
-  root: 'max-h-[28rem] overflow-auto rounded-md border border-default bg-elevated/20',
-  th: 'px-3 py-2 text-sm text-left font-medium text-toned',
-  td: 'px-3 py-2 text-sm text-default align-top whitespace-normal break-all',
+  root: 'max-h-[28rem]',
 };
 
 const headerColumns: Array<TableColumn<URLCheckHeader>> = [
@@ -745,24 +745,6 @@ const generateCurl = (): void => {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
     notification('error', 'cURL command unavailable', message);
-  }
-};
-
-const statusToneClass = (status: number | null): string | undefined => {
-  if (null === status) {
-    return undefined;
-  }
-
-  if (200 <= status && 300 > status) {
-    return 'text-success';
-  }
-
-  if (300 <= status && 400 > status) {
-    return 'text-warning';
-  }
-
-  if (400 <= status) {
-    return 'text-error';
   }
 };
 

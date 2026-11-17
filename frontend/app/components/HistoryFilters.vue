@@ -102,7 +102,9 @@
                 title="Remove filter"
                 :disabled="loading"
                 @click="advanced.splice(index, 1)"
-              />
+              >
+                Remove
+              </UButton>
             </div>
             <p v-if="helpText(entry.field)" class="text-sm text-toned">
               {{ helpText(entry.field) }}

@@ -1,5 +1,5 @@
 <template>
-  <main class="ws-auth-surface flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6">
+  <main class="flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6">
     <div class="w-full max-w-md space-y-6">
       <header class="space-y-3 text-center">
         <div
@@ -466,20 +466,3 @@ const do_signup = async (): Promise<boolean> => {
   }
 };
 </script>
-
-<style scoped>
-.ws-auth-surface {
-  background:
-    radial-gradient(
-      circle at top left,
-      color-mix(in oklab, var(--ui-primary) 12%, transparent),
-      transparent 28%
-    ),
-    radial-gradient(
-      circle at top right,
-      color-mix(in oklab, var(--ui-secondary) 9%, transparent),
-      transparent 22%
-    ),
-    linear-gradient(180deg, var(--ui-bg), var(--ui-bg-elevated));
-}
-</style>

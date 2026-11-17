@@ -215,7 +215,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--ui-border);
   border-left: 0.25rem solid var(--ui-border-accented);
   border-radius: var(--ui-radius);
-  background: var(--ui-bg-elevated);
+  background: color-mix(in srgb, var(--ui-bg-elevated) 40%, transparent);
 }
 
 .ws-markdown .markdown-alert > :first-child {
@@ -379,7 +379,7 @@ onBeforeUnmount(() => {
 .ws-markdown code {
   padding: 0.1rem 0.35rem;
   border-radius: 0.375rem;
-  background: var(--ui-bg-accented);
+  background: color-mix(in srgb, var(--ui-bg-accented) 40%, transparent);
   font-size: 0.875em;
 }
 
@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
   overflow-x: auto;
   border-radius: 0.375rem;
   border: 1px solid var(--ui-border);
-  background: var(--ui-bg-elevated);
+  background: color-mix(in srgb, var(--ui-bg-elevated) 40%, transparent);
   padding: 1rem;
   color: var(--ui-text);
 }
@@ -414,7 +414,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border-radius: 0.375rem;
   border: 1px solid var(--ui-border);
-  background: var(--ui-bg);
+  background: color-mix(in srgb, var(--ui-bg-elevated) 20%, transparent);
 }
 
 .ws-markdown-table {
@@ -448,7 +448,7 @@ onBeforeUnmount(() => {
 
 .ws-markdown th {
   font-weight: 600;
-  background: var(--ui-bg-elevated);
+  background: color-mix(in srgb, var(--ui-bg-elevated) 40%, transparent);
 }
 
 .ws-markdown tbody tr:nth-child(even) {

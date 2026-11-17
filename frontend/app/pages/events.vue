@@ -532,6 +532,8 @@ import type { EventsItem } from '~/types';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import {
   TOOLTIP_DATE_FORMAT,
+  getEventStatusColor,
+  getEventStatusIcon,
   makeEventName,
   notification,
   parse_api_response,
@@ -742,39 +744,8 @@ const filteredRows = computed<Array<EventsItem>>(() => {
   });
 });
 
-const getEventStatusColor = (status: number) => {
-  switch (status) {
-    case 1:
-      return 'warning';
-    case 2:
-      return 'success';
-    case 3:
-    case 4:
-      return 'error';
-    default:
-      return 'neutral';
-  }
-};
-
 const getStatusName = (item: EventsItem): string => {
   return item.status_name || statusLookup.value[item.status] || String(item.status);
-};
-
-const getEventStatusIcon = (status: number): string => {
-  switch (status) {
-    case 0:
-      return 'i-lucide-clock-3';
-    case 1:
-      return 'i-lucide-loader-circle';
-    case 2:
-      return 'i-lucide-circle-check';
-    case 3:
-      return 'i-lucide-circle-x';
-    case 4:
-      return 'i-lucide-ban';
-    default:
-      return 'i-lucide-circle-help';
-  }
 };
 
 const buildServerQuery = (pageNumber: number, requestedPerPage: number): URLSearchParams => {

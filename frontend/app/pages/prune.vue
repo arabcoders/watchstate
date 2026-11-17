@@ -51,7 +51,7 @@
           :id="pruner.name"
           :key="pruner.name"
           :aria-labelledby="`pruner-${pruner.name}`"
-          class="grid scroll-mt-24 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_auto]"
+          class="grid scroll-mt-24 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto]"
         >
           <div class="min-w-0 space-y-2">
             <h2
@@ -67,29 +67,28 @@
             </p>
           </div>
 
-          <dl class="min-w-0 space-y-2 text-sm">
-            <div class="space-y-1">
-              <dt class="text-xs text-muted">Schedule</dt>
-              <dd>
-                <template v-if="null !== pruner.cron">
-                  <NuxtLink
-                    :to="cronHelpUrl + pruner.cron.replaceAll(' ', '_')"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-start gap-1 text-primary hover:underline underline-offset-2"
-                    :aria-label="`Explain cron schedule for ${pruner.display_name} (opens in a new tab)`"
-                  >
-                    {{ describeSchedule(pruner.cron) }}
-                    <UIcon name="i-lucide-arrow-up-right" class="mt-0.5 size-3.5 shrink-0" />
-                  </NuxtLink>
-                </template>
-                <span v-else class="text-toned">Every run</span>
-              </dd>
-            </div>
-            <div class="flex min-w-0 items-baseline gap-2">
-              <dt class="shrink-0 text-xs text-muted">Timer</dt>
-              <dd class="wrap-anywhere font-mono text-xs">{{ pruner.cron ?? 'Always' }}</dd>
-            </div>
+          <dl class="min-w-0 space-y-1 text-sm">
+            <dt class="text-xs text-muted">Schedule</dt>
+            <dd>
+              <template v-if="null !== pruner.cron">
+                <NuxtLink
+                  :to="cronHelpUrl + pruner.cron.replaceAll(' ', '_')"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-start gap-1 text-primary hover:underline underline-offset-2"
+                  :aria-label="`Explain cron schedule for ${pruner.display_name} (opens in a new tab)`"
+                >
+                  {{ describeSchedule(pruner.cron) }}
+                  <UIcon name="i-lucide-arrow-up-right" class="mt-0.5 size-3.5 shrink-0" />
+                </NuxtLink>
+              </template>
+              <span v-else class="text-toned">Every run</span>
+            </dd>
+          </dl>
+
+          <dl class="min-w-0 space-y-1 text-sm">
+            <dt class="text-xs text-muted">Timer</dt>
+            <dd class="wrap-anywhere font-mono text-xs">{{ pruner.cron ?? 'Always' }}</dd>
           </dl>
 
           <dl class="min-w-0 space-y-1 text-sm">
@@ -142,8 +141,9 @@
         />
       </button>
       <div v-show="show_page_tips" id="prune-page-tips" class="mt-3 space-y-2 text-toned">
-        <p>Disabled pruners can still be run manually.</p>
-        <p>Pruners marked Always run with every scheduled pruning task.</p>
+        <ul class="list-disc space-y-2 pl-5 text-sm text-default">
+          <li>Disabled pruners can still be run manually.</li>
+        </ul>
       </div>
     </section>
 

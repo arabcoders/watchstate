@@ -32,7 +32,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div
           role="group"
-          class="inline-flex items-center gap-1 rounded-lg bg-muted p-1"
+          class="inline-flex items-center gap-1 rounded-lg bg-elevated/20 p-1"
           aria-label="History view"
         >
           <UButton

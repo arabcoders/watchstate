@@ -12,9 +12,66 @@ export default defineAppConfig({
         label: 'block font-medium text-default',
       },
     },
+    empty: {
+      variants: {
+        variant: {
+          outline: {
+            root: 'border border-dashed border-default bg-muted/10 ring-0',
+          },
+        },
+      },
+    },
+    input: {
+      variants: {
+        variant: {
+          outline: 'bg-elevated/40 hover:bg-elevated/55 disabled:bg-elevated/20',
+        },
+      },
+    },
+    textarea: {
+      variants: {
+        variant: {
+          outline: 'bg-elevated/40 hover:bg-elevated/55 disabled:bg-elevated/20',
+        },
+      },
+    },
+    tabs: {
+      variants: {
+        variant: {
+          pill: {
+            list: 'bg-elevated/20',
+          },
+        },
+      },
+    },
+    table: {
+      slots: {
+        root: 'ws-table-surface',
+        thead: 'bg-elevated/20',
+        tbody: '[&>tr]:hover:bg-elevated/30',
+        th: 'px-3 py-2 text-sm text-left font-medium text-toned',
+        td: 'px-3 py-2 text-sm text-default align-top whitespace-normal wrap-anywhere',
+        tfoot: 'bg-elevated/40 [&_th]:font-semibold [&_th]:text-highlighted',
+      },
+    },
     tooltip: {
       slots: {
         content: 'pointer-events-auto',
+      },
+    },
+    toast: {
+      slots: {
+        root: 'ws-shell-surface bg-transparent',
+      },
+    },
+    modal: {
+      slots: {
+        content: 'ws-shell-surface bg-transparent',
+      },
+    },
+    slideover: {
+      slots: {
+        content: 'ws-shell-surface bg-transparent',
       },
     },
     card: {
@@ -24,13 +81,13 @@ export default defineAppConfig({
       variants: {
         variant: {
           outline: {
-            root: 'border border-default/70 bg-default divide-y divide-default',
+            root: 'border border-default/70 bg-elevated/20 divide-y divide-default',
           },
           soft: {
-            root: 'bg-muted divide-y divide-default',
+            root: 'bg-elevated/20 divide-y divide-default',
           },
           subtle: {
-            root: 'border border-default/70 bg-default divide-y divide-default',
+            root: 'border border-default/70 bg-elevated/20 divide-y divide-default',
           },
         },
       },

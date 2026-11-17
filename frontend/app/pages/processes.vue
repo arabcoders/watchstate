@@ -111,7 +111,7 @@
 
             <div class="col-start-2 row-start-1 xl:col-start-3">
               <UButton
-                color="error"
+                color="neutral"
                 variant="outline"
                 size="sm"
                 icon="i-lucide-x-circle"

@@ -1,19 +1,39 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { NuxtLink } from '#components';
+import { computed, ref } from 'vue';
+import { UButton, UPopover } from '#components';
+import DuplicateRecordList from '~/components/DuplicateRecordList.vue';
+import type { HistoryRecordLinkProps } from '~/types';
 
-const props = defineProps<{ stateId: number; currentStateId: number }>();
+const props = defineProps<HistoryRecordLinkProps>();
 
-const linkClass = computed<string>(() =>
-  props.stateId === props.currentStateId
-    ? 'inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary'
-    : 'inline-flex items-center gap-1.5 rounded-md border border-default bg-elevated/40 px-2.5 py-1 text-xs font-medium text-default hover:text-primary',
-);
+const isCurrent = computed(() => props.currentStateId === props.stateId);
+const isOpen = ref(false);
 </script>
 
 <template>
-  <NuxtLink :to="`/history/${stateId}`" :class="linkClass">
-    <UIcon name="i-lucide-file-clock" class="size-3.5" />
-    #{{ stateId }}
-  </NuxtLink>
+  <UPopover
+    v-model:open="isOpen"
+    :content="{ side: 'bottom', align: 'start' }"
+    :portal="false"
+    :ui="{ content: 'z-50' }"
+  >
+    <UButton
+      type="button"
+      :color="isCurrent ? 'primary' : 'neutral'"
+      :variant="isCurrent ? 'soft' : 'outline'"
+      size="xs"
+      icon="i-lucide-file-clock"
+      :label="`#${stateId}`"
+      :aria-label="`Preview history record #${stateId}`"
+      :ui="{ leadingIcon: 'size-3.5' }"
+    />
+    <template #content>
+      <DuplicateRecordList
+        v-if="isOpen"
+        :key="`${user}:${stateId}`"
+        :ids="[stateId]"
+        :user="user"
+      />
+    </template>
+  </UPopover>
 </template>

@@ -9,6 +9,7 @@
       >
         <UDashboardSidebar
           v-model:open="showSidebar"
+          id="primary"
           side="left"
           collapsible
           resizable
@@ -42,6 +43,7 @@
               <UNavigationMenu
                 v-model="openNavigationGroups"
                 orientation="vertical"
+                variant="link"
                 :collapsed="collapsed"
                 :items="sidebarItems"
                 :tooltip="true"
@@ -387,7 +389,7 @@ const { pageBackgroundOverride, requestPageBackgroundReload } = usePageBackgroun
 const dialog = useDialog();
 
 const bgEnable = useStorage<boolean>('bg_enable', true);
-const bgOpacity = useStorage<number>('bg_opacity', 0.95);
+const bgOpacity = useStorage<number>('bg_opacity_v2', 0.85);
 const apiUser = useStorage<string>('api_user', 'main');
 const isMobile = useMediaQuery({ query: '(max-width: 1023px)' });
 
@@ -398,7 +400,6 @@ const inContainer = ref(false);
 const showScheduler = ref(false);
 const showRouteSearch = ref(false);
 const showSidebar = ref(false);
-const openNavigationGroups = ref<Array<string>>([]);
 const hasOpenedDialog = ref(false);
 const hasOpenedIdentitySelection = ref(false);
 const hasOpenedSettings = ref(false);
@@ -724,15 +725,16 @@ const sidebarItems = computed<Array<NavigationMenuItem>>(() =>
   }),
 );
 
+const openNavigationGroups = useStorage<Array<string>>(
+  'watchstate-shell-navigation-groups',
+  sidebarItems.value.flatMap((item) =>
+    item.active && item.children?.length && item.value ? [item.value] : [],
+  ),
+);
+
 watch(
   () => route.path,
   () => {
-    const section = sidebarDefinitions.value.find((section) =>
-      section.items.flat().some((entry) => isNavigationEntryActive(entry)),
-    );
-    if (section && false === openNavigationGroups.value.includes(section.id)) {
-      openNavigationGroups.value = [...openNavigationGroups.value, section.id];
-    }
     showSidebar.value = false;
   },
   { immediate: true },
@@ -859,14 +861,17 @@ const accountActions = computed(() => [
         showSettings.value = true;
       },
     },
-    {
-      label: true === showScheduler.value ? 'Hide scheduler status' : 'Show scheduler status',
-      icon: 'i-lucide-cpu',
-      disabled: false === inContainer.value,
-      onSelect: () => {
-        showScheduler.value = !showScheduler.value;
-      },
-    },
+    ...(inContainer.value && isMobile.value
+      ? [
+          {
+            label: true === showScheduler.value ? 'Hide scheduler status' : 'Show scheduler status',
+            icon: 'i-lucide-cpu',
+            onSelect: () => {
+              showScheduler.value = !showScheduler.value;
+            },
+          },
+        ]
+      : []),
   ],
   [
     {
@@ -880,14 +885,14 @@ const accountActions = computed(() => [
 ]);
 
 const dashboardSidebarUi = {
-  root: 'border-r border-default bg-muted',
+  root: 'ws-shell-surface border-r border-default bg-transparent',
   header: 'px-3 py-5',
   body: 'gap-3 px-2.5 py-3',
   footer: 'border-t border-default px-2.5 py-3',
 };
 
 const dashboardNavbarUi = {
-  root: 'border-b border-default bg-default px-4 py-3 sm:px-6 lg:px-10',
+  root: 'border-b border-default bg-transparent px-4 py-3 backdrop-blur-md sm:px-6 lg:px-10',
   title: 'hidden text-sm font-medium text-muted md:flex',
   right: 'flex min-w-0 shrink items-center gap-0.5 sm:gap-1.5',
 };
@@ -901,12 +906,13 @@ const navigationUi = (collapsed: boolean) => ({
   root: 'w-full',
   list: 'gap-1.5',
   link: collapsed
-    ? 'justify-center rounded-md px-2 py-2'
+    ? 'justify-center rounded-md px-2 py-2 text-default'
     : 'rounded-md px-2.5 py-2 text-sm font-medium text-default transition-colors',
   linkLeadingIcon: collapsed ? 'size-5' : 'size-4',
   linkLabel: collapsed ? 'hidden' : 'truncate',
   childList: 'ms-4 border-s border-default ps-2',
-  childLink: 'py-2',
+  childLink: 'py-2 text-default before:bg-transparent',
+  childLinkIcon: 'group-data-[active]:text-primary',
 });
 
 const getVersion = async (): Promise<void> => {

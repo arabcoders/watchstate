@@ -36,6 +36,8 @@
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
+            :aria-expanded="isSectionOpen('path')"
+            :aria-controls="`${sectionId}-path`"
             @click="toggleSection('path')"
           >
             <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -56,7 +58,11 @@
             </div>
           </button>
 
-          <div v-if="isSectionOpen('path')" class="grid gap-3 sm:grid-cols-2">
+          <div
+            v-if="isSectionOpen('path')"
+            :id="`${sectionId}-path`"
+            class="grid gap-3 sm:grid-cols-2"
+          >
             <UFormField
               v-for="param in pathParams"
               :key="param.key"
@@ -78,6 +84,8 @@
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
+            :aria-expanded="isSectionOpen('query')"
+            :aria-controls="`${sectionId}-query`"
             @click="toggleSection('query')"
           >
             <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -98,7 +106,11 @@
             </div>
           </button>
 
-          <div v-if="isSectionOpen('query')" class="grid gap-3 sm:grid-cols-2">
+          <div
+            v-if="isSectionOpen('query')"
+            :id="`${sectionId}-query`"
+            class="grid gap-3 sm:grid-cols-2"
+          >
             <UFormField
               v-for="param in queryParams"
               :key="param.key"
@@ -120,6 +132,8 @@
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
+            :aria-expanded="isSectionOpen('headers')"
+            :aria-controls="`${sectionId}-headers`"
             @click="toggleSection('headers')"
           >
             <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -140,7 +154,7 @@
             </div>
           </button>
 
-          <div v-if="isSectionOpen('headers')" class="space-y-2">
+          <div v-if="isSectionOpen('headers')" :id="`${sectionId}-headers`" class="space-y-2">
             <div class="flex justify-end">
               <UButton
                 type="button"
@@ -199,6 +213,8 @@
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
+            :aria-expanded="isSectionOpen('body')"
+            :aria-controls="`${sectionId}-body`"
             @click="toggleSection('body')"
           >
             <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -219,7 +235,7 @@
             </div>
           </button>
 
-          <div v-if="isSectionOpen('body')" class="space-y-2">
+          <div v-if="isSectionOpen('body')" :id="`${sectionId}-body`" class="space-y-2">
             <div class="flex items-center justify-end gap-2">
               <UBadge v-if="route.requestBody.required" color="warning" variant="soft" size="sm">
                 Required
@@ -239,11 +255,14 @@
             <p v-if="route.requestBody.description" class="text-xs text-toned">
               {{ route.requestBody.description }}
             </p>
-            <textarea
+            <UTextarea
               v-model="bodyText"
-              rows="8"
+              :rows="8"
               :placeholder="bodyPlaceholder"
-              class="ws-wrap-anywhere min-h-40 w-full rounded-md border border-default bg-elevated/30 px-3 py-2 font-mono text-sm text-default outline-none transition focus:border-primary"
+              aria-label="Request body"
+              class="w-full"
+              :ui="{ base: 'ws-wrap-anywhere min-h-40 font-mono text-sm' }"
+              :disabled="isLoading"
               @blur="formatBody"
             />
           </div>
@@ -315,7 +334,7 @@
             </template>
             <template #body>
               <pre
-                class="ws-terminal-panel ws-terminal-panel-lg max-h-72 overflow-auto rounded-md bg-elevated text-xs text-default"
+                class="ws-terminal-panel ws-terminal-panel-lg max-h-72 overflow-auto rounded-md bg-elevated/40 text-xs text-default"
               ><code>{{ formatBodyText(response.response.body) }}</code></pre>
             </template>
           </UTabs>
@@ -344,7 +363,7 @@
           Copy cURL
         </UButton>
         <UButton
-          color="primary"
+          :color="isDestructive ? 'error' : 'primary'"
           variant="solid"
           :icon="isDestructive ? 'i-lucide-triangle-alert' : 'i-lucide-send'"
           :loading="isLoading"
@@ -359,7 +378,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import {
   UAlert,
   UBadge,
@@ -371,11 +390,12 @@ import {
   UModal,
   UTable,
   UTabs,
+  UTextarea,
   UTooltip,
 } from '#components';
 import type { TableColumn } from '@nuxt/ui';
 import ParamInput from '~/components/ParamInput.vue';
-import { copyText, notification, parse_api_response, request } from '~/utils';
+import { copyText, getHttpStatusColor, notification, parse_api_response, request } from '~/utils';
 import { useDialog } from '~/composables/useDialog';
 import type { Backend, GenericError, OpenAPIRouteEntry, ProxyExchange } from '~/types';
 
@@ -402,6 +422,7 @@ const emit = defineEmits<{
 }>();
 
 const dialog = useDialog();
+const sectionId = useId();
 
 const modalUi = {
   content: 'max-w-4xl',
@@ -410,9 +431,7 @@ const modalUi = {
 };
 
 const tableUi = {
-  root: 'max-h-64 overflow-auto rounded-md border border-default bg-elevated/20',
-  th: 'px-2 py-1.5 text-xs text-left font-medium text-toned',
-  td: 'px-2 py-1.5 text-xs text-default align-top whitespace-normal break-all',
+  root: 'max-h-64',
 };
 
 const headerColumns: Array<TableColumn<HeaderItem>> = [
@@ -559,26 +578,10 @@ const formatBodyText = (value: string): string => {
   }
 };
 
-const responseStatusColor = computed<'success' | 'warning' | 'error' | 'neutral'>(() => {
-  const code = response.value?.response.status ?? 0;
-
-  if (code >= 200 && code < 300) {
-    return 'success';
-  }
-
-  if (code >= 300 && code < 500) {
-    return 'warning';
-  }
-
-  if (code >= 500) {
-    return 'error';
-  }
-
-  return 'neutral';
-});
+const responseStatusColor = computed(() => getHttpStatusColor(response.value?.response.status));
 
 const headerToneClass = (key: string): string =>
-  key.toLowerCase().startsWith('ws-') ? 'font-medium text-red-500' : 'text-default';
+  key.toLowerCase().startsWith('ws-') ? 'font-medium text-error' : 'text-default';
 
 const addHeaderRow = (key?: string, value?: string): void => {
   headerRows.value.push({ key: key ?? '', value: value ?? '' });

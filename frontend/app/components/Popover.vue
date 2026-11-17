@@ -12,7 +12,7 @@
     :arrow="props.showArrow"
     :dismissible="activeTrigger !== 'hover'"
     :content="popoverContent"
-    :ui="popoverUi"
+    :ui="{ content: props.popoverClass }"
   >
     <template #default>
       <slot name="trigger" :toggle="toggle" :show="show" :hide="hide" />
@@ -29,6 +29,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useBreakpoints } from '@vueuse/core';
+import { UPopover } from '#components';
 
 export interface PopoverProps {
   /** Placement of the popover relative to trigger */
@@ -106,10 +107,7 @@ const popoverContent = computed(() => ({
   align: placementInfo.value.align,
   sideOffset: props.offset,
   collisionPadding: 8,
-}));
-
-const popoverUi = computed(() => ({
-  content: [`z-[${props.zIndex}]`, props.popoverClass].filter(Boolean).join(' '),
+  style: { zIndex: props.zIndex },
 }));
 
 const contentClass = computed(() => props.contentClass);

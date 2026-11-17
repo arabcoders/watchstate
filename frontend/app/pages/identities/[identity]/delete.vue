@@ -187,6 +187,7 @@ const deleteIdentity = async (): Promise<void> => {
   const { status: confirmStatus } = await useDialog().confirmDialog({
     title: 'Delete permanently?',
     message: `This action is irreversible. Delete identity '${id}' data?`,
+    confirmText: 'Delete identity',
     confirmColor: 'error',
   });
 

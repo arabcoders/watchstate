@@ -49,6 +49,20 @@ export interface StatisticsPosterProps {
   preview?: boolean;
 }
 
+export interface BackendItemLinkProps {
+  backend: string;
+  color: 'neutral' | 'warning' | 'error';
+  icon?: string;
+  url?: string | null;
+  wide?: boolean;
+}
+
+export interface HistoryRecordLinkProps {
+  stateId: number;
+  currentStateId: number;
+  user: string;
+}
+
 export interface RecentHistoryCardsProps {
   items: Array<RecentHistoryCard>;
   user: string;
@@ -959,6 +973,13 @@ export interface MediaHealthItem {
   reasons: Array<string>;
   signals: MediaHealthSignals;
 }
+
+export type MediaHealthItemWithUI = MediaHealthItem & {
+  expand_duplicate_path?: boolean;
+  expand_file_checks?: boolean;
+  expand_paths?: boolean;
+  show_details?: boolean;
+};
 
 export interface MediaHealthResponse {
   report: MediaHealthReport | null;

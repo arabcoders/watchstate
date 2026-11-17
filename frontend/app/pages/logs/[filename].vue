@@ -6,6 +6,23 @@
       description=""
       content-class="min-w-0 space-y-2 wrap-anywhere"
     >
+      <template #icon>
+        <UIcon
+          :name="pageShell.icon"
+          :class="[
+            'size-5 transition-colors',
+            isLoading
+              ? 'text-info'
+              : stream
+                ? 'text-success motion-safe:animate-pulse'
+                : 'text-toned',
+          ]"
+          role="img"
+          :aria-hidden="false"
+          :title="isLoading ? 'Loading log entries' : stream ? 'Live log stream' : 'Log file'"
+          :aria-label="isLoading ? 'Loading log entries' : stream ? 'Live log stream' : 'Log file'"
+        />
+      </template>
       <template #kicker>
         <span>{{ pageShell.sectionLabel }}</span>
         <span>/</span>
@@ -69,19 +86,22 @@
       class="min-w-0 overflow-hidden rounded-xl border border-default"
     >
       <div class="space-y-3 bg-elevated/30 px-3 py-3 sm:px-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex flex-wrap items-baseline gap-2">
-            <h2 id="log-entries-heading" class="text-sm font-semibold text-highlighted">Entries</h2>
-            <span v-if="hasResults" class="text-xs tabular-nums text-toned">
-              {{ rows.length }}{{ hasActiveFilter ? ` of ${data.length}` : '' }}
-            </span>
-          </div>
-          <div class="flex items-center gap-3 text-xs text-toned">
-            <span v-if="stream" class="inline-flex items-center gap-1.5 text-success">
-              <span class="size-1.5 rounded-full bg-success" aria-hidden="true" />
-              Live
-            </span>
-          </div>
+        <div class="flex flex-wrap items-baseline gap-2">
+          <h2 id="log-entries-heading" class="text-sm font-semibold text-highlighted">Entries</h2>
+          <span
+            v-if="hasResults && rows.length < data.length"
+            class="text-xs tabular-nums text-toned"
+          >
+            {{ rows.length }} of {{ data.length }}
+          </span>
+          <span
+            v-if="isLoading && hasResults"
+            role="status"
+            class="inline-flex items-center gap-1.5 text-xs text-toned"
+          >
+            <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+            Loading entries
+          </span>
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -233,7 +253,7 @@
 
       <div
         ref="logContainer"
-        class="min-w-0 overflow-y-auto overflow-x-hidden border-t border-default text-default"
+        class="min-w-0 overflow-y-auto overflow-x-hidden border-t border-default text-default [overflow-anchor:none]"
         :style="{ minHeight: '70vh', maxHeight: '70vh' }"
         role="region"
         tabindex="0"
@@ -241,30 +261,19 @@
         @scroll.passive="handleScroll"
       >
         <div
-          v-if="reachedEnd && 0 < data.length && !hasActiveFilter && !activeSearch"
+          v-if="reachedEnd && 0 < data.length && !activeSearch"
           class="border-b border-default/40 px-3 py-2 text-center text-xs text-muted"
         >
           Beginning of file
         </div>
 
-        <div
-          v-if="canLoadFilteredHistory"
-          class="flex justify-center border-b border-default/40 px-4 py-3"
-        >
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="xs"
-            icon="i-lucide-history"
-            :loading="isLoading"
-            @click="() => loadContent(true)"
-          >
-            Load older lines into filter
-          </UButton>
-        </div>
-
         <template v-if="0 < rows.length">
-          <article v-for="entry in rows" :key="entry.key" :class="rowClass(entry)">
+          <article
+            v-for="entry in rows"
+            :key="entry.key"
+            :data-log-id="entry.key"
+            :class="rowClass(entry)"
+          >
             <div class="ws-log-line">
               <StructuredLogLine
                 :log="entry.log"
@@ -281,7 +290,7 @@
         </template>
 
         <UAlert
-          v-else-if="isLoading || !hasResults"
+          v-else-if="!hasResults"
           color="neutral"
           variant="subtle"
           icon="i-lucide-loader-circle"
@@ -327,16 +336,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  onUnmounted,
-  ref,
-  useId,
-  watch,
-} from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import { useHead, useRoute, useRouter } from '#app';
 import {
   NuxtLink,
@@ -345,6 +345,7 @@ import {
   UDropdownMenu,
   UEmpty,
   UFormField,
+  UIcon,
   UInput,
   UModal,
   USelect,
@@ -417,6 +418,7 @@ const expandedLogRows = ref<Set<string>>(new Set());
 const selectedLevels = useStorage<Array<LogLevel>>('logs_level_filter', [...LOG_LEVELS]);
 
 let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+let disposed = false;
 
 const isTodayLog = computed<boolean>(() => filename.includes(moment().format('YYYYMMDD')));
 
@@ -446,9 +448,6 @@ const filterContext = computed(() => {
 const searchTerm = computed(() => normalizedQuery.value.replace(FILTER_CONTEXT_REGEX, '').trim());
 const hasTextFilter = computed(() => Boolean(searchTerm.value));
 const hasActiveFilter = computed(() => hasTextFilter.value || hasLevelFilter.value);
-const canLoadFilteredHistory = computed(
-  () => hasActiveFilter.value && !reachedEnd.value && data.value.length > 0,
-);
 
 const levelCounts = computed<Record<LogLevel, number>>(() => {
   const counts: Record<LogLevel, number> = { debug: 0, info: 0, notice: 0, warning: 0, error: 0 };
@@ -493,7 +492,7 @@ const searchableLog = (log: ServerJsonLogEntry): string =>
 const rows = computed<Array<LogRow>>(() => {
   if (!hasActiveFilter.value) {
     return data.value.map((log, index) => ({
-      key: `${log.id}:${index}`,
+      key: log.id,
       number: index + 1,
       index,
       log,
@@ -535,7 +534,7 @@ const rows = computed<Array<LogRow>>(() => {
         return;
       }
       result.push({
-        key: `${log.id}:${index}`,
+        key: log.id,
         number: index + 1,
         index,
         log,
@@ -581,20 +580,24 @@ const toggleExpandedLogRow = (key: string): void => {
 };
 
 const applyLogBatch = (items: Array<unknown>, prepend = false): void => {
+  const knownIds = new Set(data.value.map((entry) => entry.id));
   const entries = items
     .map((item) => normalizeStructuredEntry(item))
-    .filter((item): item is ServerJsonLogEntry => null !== item);
+    .filter((item): item is ServerJsonLogEntry => {
+      if (null === item || knownIds.has(item.id)) {
+        return false;
+      }
+      knownIds.add(item.id);
+      return true;
+    });
   if (entries.length < 1) {
     return;
   }
   data.value = prepend ? [...entries, ...data.value] : [...data.value, ...entries];
 };
 
-const loadContent = async (force = false): Promise<void> => {
-  if (isLoading.value || activeSearch.value) {
-    return;
-  }
-  if (hasActiveFilter.value && !force && data.value.length > 0) {
+const loadContent = async (): Promise<void> => {
+  if (disposed || isLoading.value || activeSearch.value || reachedEnd.value) {
     return;
   }
 
@@ -603,6 +606,9 @@ const loadContent = async (force = false): Promise<void> => {
     const response = await request(`/log/${filename}?offset=${offset.value}`);
     const json = await parse_api_response<LogResponse>(response);
 
+    if (disposed || 'logs-filename' !== route.name) {
+      return;
+    }
     if (200 !== response.status) {
       error.value =
         'error' in json
@@ -610,13 +616,17 @@ const loadContent = async (force = false): Promise<void> => {
           : `${response.status}: ${response.statusText}`;
       return;
     }
-    if ('logs-filename' !== route.name) {
-      return;
-    }
     if ('error' in json) {
       error.value = `${json.error.code}: ${json.error.message}`;
       return;
     }
+
+    const container = logContainer.value;
+    const containerTop = container?.getBoundingClientRect().top ?? 0;
+    const anchor = Array.from(container?.querySelectorAll<HTMLElement>('[data-log-id]') ?? []).find(
+      (element) => element.getBoundingClientRect().bottom > containerTop,
+    );
+    const anchorTop = anchor?.getBoundingClientRect().top ?? 0;
 
     if (0 < json.lines.length) {
       applyLogBatch(json.lines as Array<unknown>, true);
@@ -628,14 +638,20 @@ const loadContent = async (force = false): Promise<void> => {
       reachedEnd.value = true;
     }
 
-    await nextTick(() => {
-      if (autoScroll.value) {
-        scrollLogContainerToBottom('auto');
-      }
-    });
+    await nextTick();
+    if (disposed || container !== logContainer.value) {
+      return;
+    }
+    if (autoScroll.value) {
+      scrollLogContainerToBottom('auto');
+    } else if (container && anchor?.isConnected) {
+      container.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
+    }
     watchLog();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unexpected error';
+    if (!disposed) {
+      error.value = err instanceof Error ? err.message : 'Unexpected error';
+    }
   } finally {
     isLoading.value = false;
   }
@@ -707,6 +723,9 @@ const reloadLog = async (): Promise<void> => {
   offset.value = 0;
   reachedEnd.value = false;
   data.value = [];
+  hasResults.value = false;
+  autoScroll.value = true;
+  expandedLogRows.value = new Set();
   await loadContent();
 };
 
@@ -732,9 +751,7 @@ const emptyDescription = computed(() => {
     return 'Adjust your search or clear it to return to the log view.';
   }
   if (hasActiveFilter.value) {
-    return canLoadFilteredHistory.value
-      ? 'Adjust filters or load older lines into the current filter.'
-      : 'Adjust the text or level filters to show log entries.';
+    return 'Adjust the text or level filters to show log entries.';
   }
   return stream.value
     ? 'Waiting for new stream output.'
@@ -753,7 +770,7 @@ watch(detailsOpen, (open) => {
 });
 
 const handleScroll = (): void => {
-  if (!logContainer.value || hasActiveFilter.value || activeSearch.value) {
+  if (disposed || !logContainer.value || activeSearch.value || error.value) {
     return;
   }
   const container = logContainer.value;
@@ -761,18 +778,41 @@ const handleScroll = (): void => {
   const nearTop = container.scrollTop < 50;
   autoScroll.value = nearBottom;
 
-  if (nearTop && !isLoading.value && !scrollTimeout && !reachedEnd.value) {
-    scrollTimeout = setTimeout(async () => {
-      const previousHeight = container.scrollHeight;
-      await loadContent();
-      await nextTick(() => {
-        const newHeight = container.scrollHeight;
-        container.scrollTop += newHeight - previousHeight;
-      });
+  if (
+    nearTop &&
+    !isLoading.value &&
+    !scrollTimeout &&
+    !reachedEnd.value &&
+    0 < selectedLevelSet.value.size
+  ) {
+    scrollTimeout = setTimeout(() => {
       scrollTimeout = null;
+      if (
+        container === logContainer.value &&
+        50 > container.scrollTop &&
+        0 < selectedLevelSet.value.size &&
+        !isLoading.value &&
+        !activeSearch.value &&
+        !reachedEnd.value &&
+        !error.value &&
+        !disposed
+      ) {
+        autoScroll.value = false;
+        void loadContent();
+      }
     }, 300);
   }
 };
+
+watch(
+  [isLoading, normalizedQuery, selectedLevelSet],
+  () => {
+    if (hasResults.value && !isLoading.value) {
+      handleScroll();
+    }
+  },
+  { flush: 'post' },
+);
 
 const scrollToBottom = (): void => {
   autoScroll.value = true;
@@ -784,8 +824,8 @@ const scrollToBottom = (): void => {
 onMounted(async () => {
   await loadContent();
 });
-onBeforeUnmount(() => closeStream());
-onUnmounted(async () => {
+onBeforeUnmount(() => {
+  disposed = true;
   closeStream();
   if (scrollTimeout) {
     clearTimeout(scrollTimeout);
@@ -794,7 +834,13 @@ onUnmounted(async () => {
 });
 
 const watchLog = (): void => {
-  if (!isTodayLog.value || stream.value || activeSearch.value || 'logs-filename' !== route.name) {
+  if (
+    disposed ||
+    !isTodayLog.value ||
+    stream.value ||
+    activeSearch.value ||
+    'logs-filename' !== route.name
+  ) {
     return;
   }
 

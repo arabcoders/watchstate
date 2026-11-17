@@ -140,34 +140,32 @@
         />
       </div>
 
-      <div
+      <UAlert
         v-if="loadError"
         role="alert"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/5 p-4"
+        color="error"
+        variant="soft"
+        icon="i-lucide-circle-alert"
+        :title="
+          0 < backends.length ? 'Backends could not be refreshed' : 'Backends could not be loaded'
+        "
       >
-        <div class="min-w-0 space-y-1">
-          <p class="text-sm font-medium text-highlighted">
-            {{
-              0 < backends.length
-                ? 'Backends could not be refreshed'
-                : 'Backends could not be loaded'
-            }}
-          </p>
-          <p class="wrap-break-word text-sm text-toned">{{ loadError }}</p>
-          <p v-if="0 < backends.length" class="text-xs text-toned">
-            These settings may be out of date.
-          </p>
-        </div>
-        <UButton
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-refresh-cw"
-          :loading="isLoading"
-          @click="loadContent"
-        >
-          Retry
-        </UButton>
-      </div>
+        <template #description>
+          <p class="wrap-break-word">{{ loadError }}</p>
+          <p v-if="0 < backends.length" class="mt-1 text-xs">These settings may be out of date.</p>
+        </template>
+        <template #actions>
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-refresh-cw"
+            :loading="isLoading"
+            @click="loadContent"
+          >
+            Retry
+          </UButton>
+        </template>
+      </UAlert>
 
       <div
         v-if="isLoading && 0 === backends.length"
@@ -371,12 +369,25 @@
         </div>
       </article>
 
-      <p v-if="reportError && 0 < backends.length" role="alert" class="text-sm text-toned">
-        Local record counts are unavailable. {{ reportError }}
-        <NuxtLink to="/backend_report" class="font-medium text-primary"
-          >Open Backend Report</NuxtLink
-        >
-      </p>
+      <UAlert
+        v-if="reportError && 0 < backends.length"
+        color="error"
+        variant="soft"
+        icon="i-lucide-circle-alert"
+        title="Local record counts are unavailable"
+        :description="reportError"
+      >
+        <template #actions>
+          <UButton
+            to="/backend_report"
+            color="neutral"
+            variant="ghost"
+            trailing-icon="i-lucide-arrow-right"
+          >
+            Backend Report
+          </UButton>
+        </template>
+      </UAlert>
       <p
         v-else-if="!isLoading && 0 < backends.length && !backendReport?.report?.summary"
         class="text-sm text-toned"
@@ -399,6 +410,7 @@ import { onBeforeUnmount, onMounted, ref, computed, useId, watch } from 'vue';
 import { navigateTo, useHead } from '#app';
 import {
   NuxtLink,
+  UAlert,
   UBadge,
   UButton,
   UEmpty,

@@ -278,7 +278,11 @@
                     class="min-w-0 py-3"
                   >
                     <div class="flex flex-wrap items-center gap-2">
-                      <UBadge :color="responseColor(response.status)" variant="soft" size="sm">
+                      <UBadge
+                        :color="getHttpStatusColor(Number.parseInt(response.status, 10))"
+                        variant="soft"
+                        size="sm"
+                      >
                         {{ response.status }}
                       </UBadge>
 
@@ -338,7 +342,7 @@ import { UAlert, UBadge, UButton, UEmpty, UFormField, UIcon, UInput, USelect } f
 import Lazy from '~/components/Lazy.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import TryItModal from '~/components/TryItModal.vue';
-import { notification, parse_api_response, request } from '~/utils';
+import { getHttpStatusColor, notification, parse_api_response, request } from '~/utils';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
 import type {
   Backend,
@@ -1092,28 +1096,6 @@ const methodColor = (
     default:
       return 'neutral';
   }
-};
-
-const responseColor = (status: string): 'success' | 'warning' | 'error' | 'neutral' => {
-  const code = Number.parseInt(status, 10);
-
-  if (!Number.isFinite(code)) {
-    return 'neutral';
-  }
-
-  if (code >= 200 && code < 300) {
-    return 'success';
-  }
-
-  if (code >= 300 && code < 500) {
-    return 'warning';
-  }
-
-  if (code >= 500) {
-    return 'error';
-  }
-
-  return 'neutral';
 };
 
 watch(selectedBackend, async () => await loadSpec(), { immediate: true });
