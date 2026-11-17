@@ -102,8 +102,6 @@ final class EnvFile
      */
     public function persist(): void
     {
-        $stream = Stream::make($this->file, 'w');
-
         $lines = [];
 
         foreach ($this->data as $key => $value) {
@@ -114,7 +112,10 @@ final class EnvFile
             $lines[] = r('{key}={value}', ['key' => $key, 'value' => $value]);
         }
 
+        $stream = Stream::make($this->file, 'w');
+        set_file_permissions($this->file);
         $stream->write(implode(PHP_EOL, $lines) . PHP_EOL);
+        $stream->close();
     }
 
     /**

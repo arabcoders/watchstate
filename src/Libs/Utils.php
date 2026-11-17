@@ -338,6 +338,41 @@ if (!function_exists('get_env_spec')) {
     }
 }
 
+if (!function_exists('set_file_permissions')) {
+    /**
+     * Apply file permissions.
+     *
+     * @param string $file The file to apply permissions to.
+     * @param int $mode The file mode to apply. Default is 0o600.
+     *
+     * @return void
+     */
+    function set_file_permissions(string $file, int $mode = 0o600): void
+    {
+        static $checked = [];
+        if (isset($checked[$file][$mode])) {
+            return;
+        }
+
+        set_error_handler(static fn(): bool => true);
+        try {
+            clearstatcache(true, $file);
+            if (false === is_file($file)) {
+                return;
+            }
+
+            $checked[$file][$mode] = true;
+            $permissions = fileperms($file);
+            if (false === $permissions || $mode !== ($permissions & 0o7777)) {
+                chmod($file, $mode);
+            }
+        } catch (Throwable) {
+        } finally {
+            restore_error_handler();
+        }
+    }
+}
+
 if (!function_exists('parse_env_file')) {
     /**
      * Parse the environment file, and returns key/value pairs.
@@ -354,6 +389,8 @@ if (!function_exists('parse_env_file')) {
         if (false === file_exists($file)) {
             throw new InvalidArgumentException(r("The file '{file}' does not exist.", ['file' => $file]));
         }
+
+        set_file_permissions($file);
 
         foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
             if (true === str_starts_with($line, '#') || false === str_contains($line, '=')) {

@@ -38,6 +38,8 @@ class envFileTest extends TestCase
         $tmpFile = self::$tmpPath . '/watchstate_test.env';
         $envFile = new EnvFile($tmpFile, create: true);
         $this->assertFileExists($tmpFile);
+        clearstatcache(true, $tmpFile);
+        self::assertSame(0o600, fileperms($tmpFile) & 0o777);
         $this->assertEmpty($envFile->get(array_keys($this->data)[0]));
     }
 
@@ -139,6 +141,9 @@ class envFileTest extends TestCase
             $envFile->set($key, $value);
         }
         $envFile->persist();
+        clearstatcache(true, $tmpFile);
+        self::assertSame(0o600, fileperms($tmpFile) & 0o777);
+        self::assertFileDoesNotExist($tmpFile . '.bak');
 
         $envFile = new EnvFile($tmpFile);
         $this->assertSame($this->data, $envFile->getAll(), 'The data should be persisted and retrieved correctly.');

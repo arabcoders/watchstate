@@ -21,30 +21,37 @@
       v-if="0 < queued.length"
       id="queued_tasks"
       aria-labelledby="queued-tasks-title"
-      class="ws-panel-padded scroll-mt-24 space-y-3"
+      class="ws-card scroll-mt-24 overflow-hidden"
     >
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div
+        class="flex flex-wrap items-center justify-between gap-2 border-b border-default px-4 py-3"
+      >
         <h2
           id="queued-tasks-title"
           class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted"
         >
-          <UIcon name="i-lucide-clock-3" class="size-4 text-toned" />
+          <UIcon name="i-lucide-list-ordered" class="size-4 text-toned" />
           Queued tasks
-          <UBadge color="neutral" variant="soft" size="xs">{{ queued.length }}</UBadge>
+          <UBadge color="neutral" variant="soft" size="xs">
+            {{ queued.length }} {{ 1 === queued.length ? 'task' : 'tasks' }}
+          </UBadge>
         </h2>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <UButton
-          v-for="name in queued"
-          :key="name"
-          :to="`#${name}`"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-        >
-          {{ formatTaskName(name) }}
-        </UButton>
-      </div>
+      <ul class="divide-y divide-default">
+        <li v-for="name in queued" :key="name">
+          <NuxtLink
+            :to="`#${name}`"
+            :aria-label="`View ${formatTaskName(name)} task`"
+            class="flex min-w-0 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-elevated/30 focus-visible:outline-primary focus-visible:-outline-offset-2"
+          >
+            <UIcon name="i-lucide-clock-3" class="size-4 shrink-0 text-muted" />
+            <span class="min-w-0 flex-1 wrap-anywhere font-medium text-highlighted">
+              {{ formatTaskName(name) }}
+            </span>
+            <UIcon name="i-lucide-arrow-down" class="size-4 shrink-0 text-muted" />
+          </NuxtLink>
+        </li>
+      </ul>
     </section>
 
     <section aria-label="Scheduled tasks" :aria-busy="isLoading" class="space-y-4">

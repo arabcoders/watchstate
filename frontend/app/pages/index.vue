@@ -627,6 +627,12 @@ const loadContent = async (): Promise<void> => {
     }
 
     if ('error' in historyResponse) {
+      if (404 === response.status && 'filters' in historyResponse) {
+        lastHistory.value = [];
+        historyError.value = '';
+        return;
+      }
+
       throw new Error(`${historyResponse.error.code}: ${historyResponse.error.message}`);
     }
 

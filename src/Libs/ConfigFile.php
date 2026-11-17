@@ -25,6 +25,7 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
     private array $data = [];
     private array $operations = [];
     private string $file_hash = '';
+    private readonly ?int $fileMode;
     private ?LoggerInterface $logger = null;
     /**
      * @var array<string, Closure> $filters List of filters to apply to the data before saving.
@@ -38,7 +39,6 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
      * @param string $type The content type. Default to 'yaml'.
      * @param bool $autoSave Auto save changes. Default to 'true'.
      * @param bool $autoCreate Auto create the file if it does not exist. Default is 'false'.
-     * @param bool $autoBackup Auto backup the file. Default is 'true'.
      * @param array $opts Additional options.
      *
      * @throws InvalidArgumentException If the content type is invalid.
@@ -48,7 +48,6 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
         private readonly string $type = 'yaml',
         private readonly bool $autoSave = true,
         private readonly bool $autoCreate = false,
-        private readonly bool $autoBackup = true,
         private readonly array $opts = [],
     ) {
         if (false === in_array($this->type, self::CONTENT_TYPES, true)) {
@@ -67,6 +66,13 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
             }
         }
 
+        $this->fileMode = in_array(basename($this->file), Config::get('secure_files', []), true)
+            ? 0o600
+            : null;
+        if (null !== $this->fileMode) {
+            set_file_permissions($this->file, $this->fileMode);
+        }
+
         $this->loadData();
     }
 
@@ -77,7 +83,6 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
      * @param string $type The content type. Default to 'yaml'.
      * @param bool $autoSave Auto save changes. Default to 'true'.
      * @param bool $autoCreate Auto create the file if it does not exist. Default is 'false'.
-     * @param bool $autoBackup Auto backup the file. Default is 'true'.
      * @param array $opts Additional options.
      *
      * @return self
@@ -87,10 +92,9 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
         string $type = 'yaml',
         bool $autoSave = true,
         bool $autoCreate = false,
-        bool $autoBackup = true,
         array $opts = [],
     ): self {
-        return new self($file, $type, $autoSave, $autoCreate, $autoBackup, $opts);
+        return new self($file, $type, $autoSave, $autoCreate, $opts);
     }
 
     /**
@@ -229,29 +233,23 @@ final class ConfigFile implements ArrayAccess, LoggerAwareInterface, Countable
             $json_encode = $this->opts['json_encode'];
         }
 
-        if (true === $this->autoBackup) {
-            try {
-                copy($this->file, $this->file . '.bak');
-            } catch (\Exception) {
-                // Do nothing
-            }
-        }
-
         foreach ($this->filters as $filter) {
             $this->data = $filter($this->data);
         }
 
-        $stream = Stream::make($this->file, 'w');
-        $stream->write(
-            match ($this->type) {
-                'yaml' => Yaml::dump($this->data, inline: 8, indent: 2),
-                'json' => json_encode($this->data, flags: $json_encode),
-                default => throw new RuntimeException(r("Invalid content type '{type}'.", [
-                    'type' => $this->type,
-                ])),
-            },
-        );
+        $content = match ($this->type) {
+            'yaml' => Yaml::dump($this->data, inline: 8, indent: 2),
+            'json' => json_encode($this->data, flags: $json_encode),
+            default => throw new RuntimeException(r("Invalid content type '{type}'.", [
+                'type' => $this->type,
+            ])),
+        };
 
+        $stream = Stream::make($this->file, 'w');
+        if (null !== $this->fileMode) {
+            set_file_permissions($this->file, $this->fileMode);
+        }
+        $stream->write($content);
         $stream->close();
 
         $this->operations = [];

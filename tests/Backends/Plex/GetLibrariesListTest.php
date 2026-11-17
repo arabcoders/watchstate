@@ -54,7 +54,6 @@ class GetLibrariesListTest extends TestCase
                     file: __DIR__ . '/../../Fixtures/test_servers.yaml',
                     autoSave: false,
                     autoCreate: false,
-                    autoBackup: false,
                 ),
                 mapper: new DirectMapper(
                     logger: $this->logger,

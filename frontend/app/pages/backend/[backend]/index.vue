@@ -464,6 +464,11 @@ const loadRecentHistory = async (): Promise<void> => {
     }
 
     if ('error' in json) {
+      if (404 === response.status && 'filters' in json) {
+        bHistory.value = [];
+        return;
+      }
+
       throw new Error(`${json.error.code}: ${json.error.message}`);
     }
 

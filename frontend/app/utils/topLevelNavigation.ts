@@ -411,17 +411,6 @@ const TOP_LEVEL_NAVIGATION: Array<TopLevelNavigationDefinition> = [
     to: '/changelog',
     matchPath: '/changelog',
   },
-  {
-    id: 'github',
-    section: 'help',
-    label: 'GitHub',
-    pageLabel: 'GitHub',
-    breadcrumbSectionLabel: 'Help',
-    description: 'Project source code and issue tracker.',
-    icon: 'i-lucide-github',
-    href: 'https://github.com/arabcoders/watchstate',
-    target: '_blank',
-  },
 ];
 
 const getSectionLabel = (sectionId: TopLevelSectionId): string => {

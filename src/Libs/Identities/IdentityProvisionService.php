@@ -131,7 +131,7 @@ final class IdentityProvisionService
             unlink($mapFile);
         }
 
-        return ConfigFile::open($mapFile, 'yaml', true, true, true)
+        return ConfigFile::open($mapFile, 'yaml', autoCreate: true)
             ->set('version', $version)
             ->set('map', $mapping)
             ->persist()
@@ -602,7 +602,6 @@ final class IdentityProvisionService
                 type: 'yaml',
                 autoSave: !$request->dryRun,
                 autoCreate: !$request->dryRun,
-                autoBackup: !$request->dryRun,
             );
             $perIdentity->setLogger($this->logger);
 

@@ -152,7 +152,7 @@ final class Guids
             ],
         ];
 
-        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoSave: false, autoCreate: true, autoBackup: true);
+        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoSave: false, autoCreate: true);
 
         if (false === $file->has('guids') || false === is_array($file->get('guids'))) {
             $file->set('guids', []);
@@ -168,7 +168,7 @@ final class Guids
     #[Delete(self::URL . '/custom/{id:uuid}[/]', name: 'system.guids.custom.guid.remove')]
     public function custom_guid_remove(string $id): iResponse
     {
-        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoCreate: true, autoBackup: true);
+        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoCreate: true);
 
         $data = [];
         $found = false;
@@ -303,7 +303,7 @@ final class Guids
             }
         }
 
-        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoSave: false, autoCreate: true, autoBackup: true);
+        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoSave: false, autoCreate: true);
 
         if (false === $file->has('links') || false === is_array($file->get('links'))) {
             $file->set('links', []);
@@ -320,7 +320,7 @@ final class Guids
     #[Delete(self::URL . '/custom/{client:word}/{id:uuid}[/]', name: 'system.guids.custom.client.remove')]
     public function custom_client_guid_remove(string $client, string $id): iResponse
     {
-        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoCreate: true, autoBackup: true);
+        $file = ConfigFile::open(Config::get('guid.file'), 'yaml', autoCreate: true);
         $refIndex = $refData = null;
 
         foreach ($file->get('links', []) as $i => $link) {

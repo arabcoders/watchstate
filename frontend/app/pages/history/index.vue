@@ -662,30 +662,42 @@ const loadContent = async (pageNumber: number, fromPopState: boolean = false): P
       paging: HistoryPagination;
       searchable: Array<HistorySearchableField>;
     }>(response);
-    if (active.signal.aborted || id !== loadId || selectedUser !== apiUser.value) {
-      return;
-    }
-    if ('error' in json) {
-      throw new Error(json.error?.message || 'Failed to load History.');
-    }
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    if ('history' !== route.name) {
+    if (
+      active.signal.aborted ||
+      id !== loadId ||
+      selectedUser !== apiUser.value ||
+      'history' !== route.name
+    ) {
       return;
     }
 
-    page.value = json.paging.current_page;
-    perpage.value = json.paging.perpage;
-    total.value = json.paging.total;
-    items.value = json.history.map(
-      (item) =>
-        ({
-          ...item,
-          full_title: makeName(item as unknown as JsonObject),
-        }) as unknown as HistoryListItem,
-    );
-    searchable.value = json.searchable ?? [];
+    if ('error' in json) {
+      if (404 !== response.status || !('filters' in json)) {
+        throw new Error(json.error.message || 'Failed to load History.');
+      }
+
+      page.value = 1;
+      total.value = 0;
+      items.value = [];
+      clearSelection();
+    } else {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      page.value = json.paging.current_page;
+      perpage.value = json.paging.perpage;
+      total.value = json.paging.total;
+      items.value = json.history.map(
+        (item) =>
+          ({
+            ...item,
+            full_title: makeName(item as unknown as JsonObject),
+          }) as unknown as HistoryListItem,
+      );
+      searchable.value = json.searchable ?? [];
+    }
+
     applyQuery(filters, total.value, items.value);
     hasResults.value = true;
     requestedPage.value = page.value;

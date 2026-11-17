@@ -256,7 +256,6 @@ final class Index
             file: $userContext->getPath() . '/ignore.yaml',
             type: 'yaml',
             autoCreate: true,
-            autoBackup: false,
         );
     }
 }

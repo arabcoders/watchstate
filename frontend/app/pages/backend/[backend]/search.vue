@@ -429,6 +429,10 @@ const searchContent = async (fromPopState: boolean = false): Promise<void> => {
     }
 
     if ('error' in data) {
+      if (404 === response.status && data.error.message.startsWith('No results were found for ')) {
+        return;
+      }
+
       error.value = { message: data.error.message, code: data.error.code };
       return;
     }
