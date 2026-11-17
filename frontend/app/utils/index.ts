@@ -668,7 +668,7 @@ const syncOpacity = (): boolean => {
   const enabled = getStorageValue<boolean>('bg_enable', true, false);
   const opacity =
     enabled && 0 === opacityLockCount
-      ? Math.min(0.4, Math.max(0, 1 - getStorageValue<number>('bg_opacity', 0.95)))
+      ? Math.min(0.4, Math.max(0, 1 - getStorageValue<number>('bg_opacity_v2', 0.85)))
       : 0;
   document.documentElement.style.setProperty('--ws-artwork-opacity', String(opacity));
   document.body?.style.removeProperty('opacity');
@@ -728,21 +728,57 @@ const awaiter = async <T>(
 
 const makeEventName = (id: string | number): string => String(id).replace(/-/g, '').slice(0, 12);
 
-const getEventStatusClass = (status: number): string => {
+const getEventStatusColor = (status: number): 'error' | 'neutral' | 'success' | 'warning' => {
+  switch (status) {
+    case 1:
+      return 'warning';
+    case 2:
+      return 'success';
+    case 3:
+    case 4:
+      return 'error';
+    default:
+      return 'neutral';
+  }
+};
+
+const getEventStatusIcon = (status: number): string => {
   switch (status) {
     case 0:
-      return 'is-light has-text-dark';
+      return 'i-lucide-clock-3';
     case 1:
-      return 'is-warning';
+      return 'i-lucide-loader-circle';
     case 2:
-      return 'is-success';
+      return 'i-lucide-circle-check';
     case 3:
-      return 'is-danger';
+      return 'i-lucide-circle-x';
     case 4:
-      return 'is-danger is-light';
+      return 'i-lucide-ban';
     default:
-      return 'is-light has-text-dark';
+      return 'i-lucide-circle-help';
   }
+};
+
+const getHttpStatusColor = (
+  status: number | null | undefined,
+): 'success' | 'warning' | 'error' | 'neutral' => {
+  if (null === status || undefined === status || !Number.isFinite(status)) {
+    return 'neutral';
+  }
+
+  if (200 <= status && 300 > status) {
+    return 'success';
+  }
+
+  if (300 <= status && 400 > status) {
+    return 'warning';
+  }
+
+  if (400 <= status) {
+    return 'error';
+  }
+
+  return 'neutral';
 };
 
 const formatCommandEcho = (
@@ -789,6 +825,8 @@ export {
   disableOpacity,
   awaiter,
   makeEventName,
-  getEventStatusClass,
+  getEventStatusColor,
+  getEventStatusIcon,
+  getHttpStatusColor,
   formatCommandEcho,
 };

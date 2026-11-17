@@ -54,13 +54,23 @@
 
 @layer components {
   .ws-shell-surface {
-    background: var(--ui-bg);
+    background:
+      radial-gradient(circle at top left, rgb(99 102 241 / 0.14), transparent 28%),
+      radial-gradient(circle at top right, rgb(245 158 11 / 0.12), transparent 22%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.6), rgb(248 250 252 / 0.72));
+    backdrop-filter: blur(16px);
+  }
+
+  .dark .ws-shell-surface {
+    background:
+      radial-gradient(circle at top left, rgb(99 102 241 / 0.12), transparent 26%),
+      radial-gradient(circle at top right, rgb(245 158 11 / 0.07), transparent 20%),
+      linear-gradient(180deg, rgb(9 12 18 / 0.84), rgb(17 24 39 / 0.9));
   }
 
   .ws-shell {
     min-height: 100vh;
     min-height: 100dvh;
-    background: var(--ui-bg);
   }
 
   .ws-header-artwork {
@@ -97,22 +107,12 @@
   }
 
   .ws-card {
-    @apply min-w-0 max-w-full rounded-xl border bg-default;
-    border-color: var(--ws-surface-border-soft);
-  }
-
-  .ws-card-padded {
-    @apply min-w-0 max-w-full rounded-xl border bg-default p-4;
+    @apply min-w-0 max-w-full rounded-xl border bg-elevated/20;
     border-color: var(--ws-surface-border-soft);
   }
 
   .ws-card-padded-lg {
-    @apply min-w-0 max-w-full rounded-xl border bg-default p-4 sm:p-5;
-    border-color: var(--ws-surface-border-soft);
-  }
-
-  .ws-panel {
-    @apply min-w-0 max-w-full rounded-lg border;
+    @apply min-w-0 max-w-full rounded-xl border bg-elevated/20 p-4 sm:p-5;
     border-color: var(--ws-surface-border-soft);
   }
 
@@ -121,13 +121,8 @@
     border-color: var(--ws-surface-border-soft);
   }
 
-  .ws-panel-padded-lg {
-    @apply min-w-0 max-w-full rounded-lg border p-4 sm:p-5;
-    border-color: var(--ws-surface-border-soft);
-  }
-
   .ws-table-surface {
-    @apply min-w-0 max-w-full rounded-lg border bg-default;
+    @apply min-w-0 max-w-full rounded-lg border bg-elevated/20;
     border-color: var(--ws-surface-border-solid);
   }
 
@@ -148,7 +143,6 @@
   }
 
   .dark .ws-floating-surface {
-    background: color-mix(in oklab, var(--ui-bg) 92%, var(--ui-bg-elevated) 8%);
     box-shadow: 0 1rem 2rem rgb(0 0 0 / 0.3);
   }
 
@@ -156,21 +150,6 @@
   .dark .ws-floating-surface [data-slot='item'][data-state='open']::before,
   .dark .ws-floating-surface [data-slot='item']:hover::before {
     background-color: color-mix(in oklab, var(--ui-primary) 16%, transparent) !important;
-  }
-
-  .ws-border-top-soft {
-    @apply border-t;
-    border-color: var(--ws-surface-border-soft);
-  }
-
-  .ws-border-bottom-soft {
-    @apply border-b;
-    border-color: var(--ws-surface-border-soft);
-  }
-
-  .ws-border-left-soft {
-    @apply border-l;
-    border-color: var(--ws-surface-border-soft);
   }
 
   .bg-fanart {
@@ -182,7 +161,7 @@
   }
 
   .ws-terminal {
-    background-color: var(--ui-bg-elevated);
+    background-color: color-mix(in srgb, var(--ui-bg-elevated) 40%, transparent);
     color: var(--ui-text);
     line-height: 1.7;
   }
@@ -259,19 +238,7 @@
     padding: 1rem;
   }
 
-  .ws-terminal-panel-sm {
-    max-height: 18rem;
-  }
-
-  .ws-terminal-panel-md {
-    max-height: 22rem;
-  }
-
   .ws-terminal-panel-lg {
     max-height: 50vh;
-  }
-
-  .ws-terminal-panel-dashboard {
-    max-height: 20vh;
   }
 }

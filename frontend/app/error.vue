@@ -1,7 +1,7 @@
 <template>
   <NuxtLayout name="error-layout">
     <div class="flex min-h-full flex-1 items-start justify-center py-4 sm:py-8">
-      <div class="ytp-card p-0 w-full">
+      <div class="ws-card p-0 w-full">
         <div class="space-y-6 px-4 py-5 sm:px-6 sm:py-6 lg:px-7">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div class="min-w-0 space-y-2">
@@ -19,7 +19,7 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-              <UButton color="neutral" variant="outline" size="sm" icon="i-lucide-house" to="/">
+              <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-house" to="/">
                 Overview
               </UButton>
 
@@ -48,6 +48,8 @@
             <button
               type="button"
               class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted transition hover:text-primary"
+              :aria-expanded="showStacks"
+              aria-controls="error-stack-trace"
               @click="showStacks = !showStacks"
             >
               <UIcon
@@ -58,7 +60,8 @@
             </button>
 
             <div
-              v-if="showStacks"
+              id="error-stack-trace"
+              v-show="showStacks"
               class="overflow-x-auto rounded-lg border border-default bg-elevated/60"
             >
               <pre

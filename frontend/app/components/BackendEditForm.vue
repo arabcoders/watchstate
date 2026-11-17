@@ -86,7 +86,7 @@
 
       <nav
         aria-label="Backend settings sections"
-        class="sticky top-0 z-10 -mt-2 flex flex-wrap gap-1 border-b border-default bg-default py-2"
+        class="sticky top-0 z-10 -mt-2 flex flex-wrap gap-1 border-b border-default bg-default/85 py-2 backdrop-blur-md"
       >
         <UButton
           as="a"
@@ -1108,6 +1108,7 @@ const removeOption = async (key: string): Promise<void> => {
   const { status } = await useDialog().confirmDialog({
     title: 'Remove saved option now?',
     message: `Remove '${key}' now? Closing without saving won't restore this option. Your other edits will remain unsaved.`,
+    confirmText: 'Remove option',
     confirmColor: 'error',
   });
 

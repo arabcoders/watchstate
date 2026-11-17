@@ -98,57 +98,35 @@
     <template v-if="report">
       <section aria-labelledby="summary-heading" class="space-y-4">
         <h2 id="summary-heading" class="text-lg font-semibold text-highlighted">Summary</h2>
-        <dl
-          class="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-default bg-default min-[400px]:grid-cols-2 xl:grid-cols-4"
-        >
-          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
-            <dt class="flex items-center gap-2 text-sm text-toned">
-              <UIcon name="i-lucide-film" class="size-4" />Movies watched
-            </dt>
-            <dd class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span class="text-2xl font-semibold tabular-nums text-highlighted">
-                {{ formatNumber(report.summary.movies.watched) }}
-              </span>
-              <span class="text-xs tabular-nums text-toned">
-                of {{ formatNumber(report.summary.movies.total) }}
-              </span>
-            </dd>
-          </div>
-          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
-            <dt class="flex items-center gap-2 text-sm text-toned">
-              <UIcon name="i-lucide-clapperboard" class="size-4" />Episodes watched
-            </dt>
-            <dd class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span class="text-2xl font-semibold tabular-nums text-highlighted">
-                {{ formatNumber(report.summary.episodes.watched) }}
-              </span>
-              <span class="text-xs tabular-nums text-toned">
-                of {{ formatNumber(report.summary.episodes.total) }}
-              </span>
-            </dd>
-          </div>
-          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
-            <dt class="flex items-center gap-2 text-sm text-toned">
-              <UIcon name="i-lucide-tv" class="size-4" />Shows started
-            </dt>
-            <dd class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span class="text-2xl font-semibold tabular-nums text-highlighted">
-                {{ formatNumber(report.summary.shows.started) }}
-              </span>
-              <span class="text-xs tabular-nums text-toned">
-                of {{ formatNumber(report.summary.shows.total) }}
-              </span>
-            </dd>
-          </div>
-          <div class="space-y-3 bg-elevated/20 p-4 sm:p-5">
-            <dt class="flex items-center gap-2 text-sm text-toned">
-              <UIcon name="i-lucide-circle-check" class="size-4" />Fully watched shows
-            </dt>
-            <dd class="text-2xl font-semibold tabular-nums text-highlighted">
-              {{ formatNumber(report.summary.shows.fully_watched) }}
-            </dd>
-          </div>
-        </dl>
+        <div class="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Movies watched"
+            :value="formatNumber(report.summary.movies.watched)"
+            :hint="`of ${formatNumber(report.summary.movies.total)}`"
+            icon="i-lucide-film"
+            color="success"
+          />
+          <StatCard
+            label="Episodes watched"
+            :value="formatNumber(report.summary.episodes.watched)"
+            :hint="`of ${formatNumber(report.summary.episodes.total)}`"
+            icon="i-lucide-clapperboard"
+            color="success"
+          />
+          <StatCard
+            label="Shows started"
+            :value="formatNumber(report.summary.shows.started)"
+            :hint="`of ${formatNumber(report.summary.shows.total)}`"
+            icon="i-lucide-tv"
+            color="info"
+          />
+          <StatCard
+            label="Fully watched shows"
+            :value="formatNumber(report.summary.shows.fully_watched)"
+            icon="i-lucide-circle-check"
+            color="success"
+          />
+        </div>
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-toned">
           <span class="inline-flex items-center gap-1.5"
             ><UIcon name="i-lucide-circle-play" class="size-4" />In progress</span
@@ -474,6 +452,7 @@ import {
 import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
 import RecentHistoryCards from '~/components/RecentHistoryCards.vue';
+import StatCard from '~/components/StatCard.vue';
 import StatisticsPoster from '~/components/StatisticsPoster.vue';
 import { useUserStatistics } from '~/composables/useUserStatistics';
 import type {

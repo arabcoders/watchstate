@@ -1,78 +1,24 @@
 <template>
   <div class="space-y-4">
     <div class="flex justify-end">
-      <Popover placement="bottom-end" trigger="click" :z-index="13000">
-        <template #trigger>
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-copy"
-            trailing-icon="i-lucide-chevron-down"
-            aria-label="Copy transport item"
-            title="Copy transport item"
-          >
-            <span class="hidden sm:inline">Copy</span>
-          </UButton>
-        </template>
-
-        <template #content="{ hide }">
-          <div class="w-52 space-y-1 p-1">
-            <button
-              type="button"
-              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
-              @click="
-                () => {
-                  copyText(props.item.id);
-                  hide();
-                }
-              "
-            >
-              <UIcon name="i-lucide-hash" class="size-4 text-toned" />
-              <span>Copy ID</span>
-            </button>
-            <button
-              type="button"
-              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
-              @click="
-                () => {
-                  copyText(fullJson);
-                  hide();
-                }
-              "
-            >
-              <UIcon name="i-lucide-copy" class="size-4 text-toned" />
-              <span>Copy item</span>
-            </button>
-            <button
-              type="button"
-              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
-              @click="
-                () => {
-                  copyText(displayedData);
-                  hide();
-                }
-              "
-            >
-              <UIcon name="i-lucide-database" class="size-4 text-toned" />
-              <span>Copy data</span>
-            </button>
-            <button
-              type="button"
-              class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
-              @click="
-                () => {
-                  copyText(displayedOptions);
-                  hide();
-                }
-              "
-            >
-              <UIcon name="i-lucide-settings-2" class="size-4 text-toned" />
-              <span>Copy options</span>
-            </button>
-          </div>
-        </template>
-      </Popover>
+      <UDropdownMenu
+        :items="copyMenuItems"
+        :content="{ side: 'bottom', align: 'end' }"
+        :modal="false"
+        :ui="{ content: 'z-[13000]' }"
+      >
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-copy"
+          trailing-icon="i-lucide-chevron-down"
+          aria-label="Copy transport item"
+          title="Copy transport item"
+        >
+          <span class="hidden sm:inline">Copy</span>
+        </UButton>
+      </UDropdownMenu>
     </div>
 
     <dl class="grid grid-cols-2 gap-x-6 gap-y-4 border-y border-default py-4 sm:grid-cols-4">
@@ -255,10 +201,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { UBadge, UButton, UEmpty, UIcon, UInput, UTooltip } from '#components';
+import { UBadge, UButton, UDropdownMenu, UEmpty, UIcon, UInput, UTooltip } from '#components';
+import type { DropdownMenuItem } from '@nuxt/ui';
 import { useStorage } from '@vueuse/core';
 import moment from 'moment';
-import Popover from '~/components/Popover.vue';
 import type { TransportQueueDetail } from '~/types';
 import { copyText, TOOLTIP_DATE_FORMAT } from '~/utils';
 import { filterLogTextLines } from '~/utils/logs';
@@ -287,6 +233,37 @@ const displayedData = computed<string>(() =>
 const displayedOptions = computed<string>(() =>
   optionsQuery.value ? filteredOptionsLines.value.join('\n') : optionsJson.value,
 );
+
+const copyMenuItems: Array<DropdownMenuItem> = [
+  {
+    label: 'Copy ID',
+    icon: 'i-lucide-hash',
+    onSelect: () => {
+      copyText(props.item.id);
+    },
+  },
+  {
+    label: 'Copy item',
+    icon: 'i-lucide-copy',
+    onSelect: () => {
+      copyText(fullJson.value);
+    },
+  },
+  {
+    label: 'Copy data',
+    icon: 'i-lucide-database',
+    onSelect: () => {
+      copyText(displayedData.value);
+    },
+  },
+  {
+    label: 'Copy options',
+    icon: 'i-lucide-settings-2',
+    onSelect: () => {
+      copyText(displayedOptions.value);
+    },
+  },
+];
 
 const stateIcon = computed<string>(() => {
   if ('processing' === props.item.state) {

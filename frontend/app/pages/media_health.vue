@@ -1,6 +1,6 @@
 <template>
-  <div
-    class="space-y-6"
+  <main
+    class="w-full min-w-0 max-w-full space-y-6"
     @click.capture="openMainLink"
     @auxclick.capture="openMainLink"
     @contextmenu.capture="openMainLink"
@@ -17,7 +17,7 @@
             :disabled="isLoading || isQueueing || massActionInProgress"
             @click="loadContent(page)"
           >
-            Reload
+            Reload report
           </UButton>
 
           <UDropdownMenu
@@ -32,10 +32,11 @@
               size="sm"
               icon="i-lucide-download"
               trailing-icon="i-lucide-chevron-down"
+              aria-label="Export full completed report"
               :loading="null !== exporting"
               :disabled="null !== exporting"
             >
-              Export
+              Export report
             </UButton>
           </UDropdownMenu>
 
@@ -48,7 +49,7 @@
             :disabled="isLoading || isQueueing || massActionInProgress || reportState?.queued"
             @click="queueReport"
           >
-            {{ reportState?.queued ? 'Queued' : report ? 'Queue refresh' : 'Generate audit' }}
+            Run audit
           </UButton>
         </template>
       </PageHeader>
@@ -72,6 +73,21 @@
             <span v-else>{{ report ? 'Unknown' : 'No report loaded' }}</span>
           </dd>
         </div>
+        <div v-if="report" class="flex items-center gap-2">
+          <dt>Backends:</dt>
+          <dd>{{ formatNumber(report.backend_count) }}</dd>
+        </div>
+        <div v-if="report && reportState?.stale" class="flex items-center gap-2 text-warning">
+          <UIcon name="i-lucide-clock-alert" class="size-4" />
+          <dt class="sr-only">Report status:</dt>
+          <dd>
+            <UTooltip
+              text="Records changed after this audit. Run a new audit to update the report."
+            >
+              <span class="cursor-help">Report is out of date</span>
+            </UTooltip>
+          </dd>
+        </div>
       </dl>
     </div>
 
@@ -80,15 +96,19 @@
       color="info"
       variant="soft"
       icon="i-lucide-clock-3"
-      title="Report queued"
-      description="Reload to check for a completed report."
+      title="Audit queued or running"
+      :description="
+        report
+          ? 'Results remain from the last completed audit. Reload report to check for new results.'
+          : 'Reload report to check for a completed audit.'
+      "
     />
 
     <UEmpty
       v-if="!isLoading && !loadError && reportState && !reportState.queued && !report"
       icon="i-lucide-file-search"
       title="No audit found"
-      description="Use Generate audit to check records in the main database."
+      description="Run an audit to check records in the main database."
     />
 
     <UAlert
@@ -100,46 +120,40 @@
       :description="loadError"
     />
 
-    <div v-if="report" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div v-if="report" class="grid gap-3 sm:grid-cols-3">
       <StatCard
-        label="Actionable"
+        label="Needs review"
         :value="formatNumber(report.summary.actionable_count)"
         icon="i-lucide-triangle-alert"
         color="warning"
       />
       <StatCard
-        label="Healthy"
+        label="No issues detected"
         :value="formatNumber(statusCount('healthy'))"
         icon="i-lucide-check-circle"
         color="success"
       />
       <StatCard
-        label="Records"
+        label="Records checked"
         :value="formatNumber(report.state_count)"
         icon="i-lucide-library"
         color="neutral"
       />
-      <StatCard
-        label="Backends"
-        :value="formatNumber(report.backend_count)"
-        icon="i-lucide-server"
-        color="neutral"
-      />
     </div>
 
-    <section v-if="report" class="ws-panel-padded space-y-3">
+    <section v-if="report" aria-label="Audit filters" class="space-y-3">
       <div class="flex flex-wrap items-end gap-3">
-        <UFormField label="Status" name="status">
+        <UFormField label="Main issue" name="status">
           <USelect
             v-model="status"
             :items="statusOptions"
             value-key="value"
             label-key="label"
-            class="w-48"
+            class="w-48 max-w-full"
             :disabled="isLoading || isQueueing || massActionInProgress"
           />
         </UFormField>
-        <UFormField label="Type" name="type">
+        <UFormField label="Media type" name="type">
           <USelect
             v-model="type"
             :items="typeOptions"
@@ -149,7 +163,7 @@
             :disabled="isLoading || isQueueing || massActionInProgress"
           />
         </UFormField>
-        <UFormField label="Filter this page" name="filter" class="min-w-0 flex-1">
+        <UFormField label="Filter this page" name="filter" class="min-w-48 flex-1">
           <UInput
             id="filter"
             v-model.lazy="filter"
@@ -168,58 +182,18 @@
           :disabled="isLoading || isQueueing || massActionInProgress"
           @click="clearFilters"
         >
-          Clear filters
+          Reset filters
         </UButton>
       </div>
 
       <p class="text-xs text-toned">
-        {{ formatNumber(filteredItems.length) }} shown on this page;
-        {{ formatNumber(total) }} records match Status and Type.
+        {{ formatNumber(total) }} {{ 1 === total ? 'record matches' : 'records match' }} the
+        filters.
+        <span v-if="filter">
+          {{ formatNumber(filteredItems.length) }} of {{ formatNumber(items.length) }} on this page.
+        </span>
+        <span v-else>{{ formatNumber(items.length) }} on this page.</span>
       </p>
-
-      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-default pt-3">
-        <div class="flex flex-wrap items-center gap-2">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-square-check"
-            :disabled="
-              isLoading ||
-              isQueueing ||
-              massActionInProgress ||
-              !!loadError ||
-              1 > filteredItems.length
-            "
-            @click="selected_ids = filteredItems.map((item) => item.state_id)"
-          >
-            Select page
-          </UButton>
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-square"
-            :disabled="isLoading || isQueueing || massActionInProgress || 1 > selected_ids.length"
-            @click="selected_ids = []"
-          >
-            Unselect page
-          </UButton>
-          <span class="text-sm text-toned">{{ selected_ids.length }} selected</span>
-        </div>
-        <UButton
-          v-if="0 < selected_ids.length"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-trash-2"
-          :loading="massActionInProgress"
-          :disabled="isLoading || isQueueing || massActionInProgress || !!loadError"
-          @click="massDelete"
-        >
-          Delete selected
-        </UButton>
-      </div>
     </section>
 
     <Pager
@@ -249,455 +223,256 @@
       </template>
     </UEmpty>
 
-    <div v-else-if="filteredItems.length > 0" class="space-y-3">
-      <Lazy
-        v-for="item in filteredItems"
-        :key="item.id"
-        :unrender="true"
-        :min-height="200"
-        class="block"
-      >
-        <UCard
-          class="h-full shadow-sm"
-          :class="item.severity >= 80 ? 'ring-1 ring-error/20' : ''"
-          :ui="itemCardUi"
+    <section v-else-if="0 < filteredItems.length" aria-label="Audit results" class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-square-check"
+            :disabled="isLoading || isQueueing || massActionInProgress || !!loadError"
+            @click="selected_ids = filteredItems.map((item) => item.state_id)"
+          >
+            Select shown records
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-square"
+            :disabled="isLoading || isQueueing || massActionInProgress || 1 > selected_ids.length"
+            @click="selected_ids = []"
+          >
+            Clear selection
+          </UButton>
+          <span class="text-sm text-toned">{{ selected_ids.length }} selected</span>
+        </div>
+        <UButton
+          v-if="0 < selected_ids.length"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-trash-2"
+          :loading="massActionInProgress"
+          :disabled="isLoading || isQueueing || massActionInProgress || !!loadError"
+          @click="massDelete"
         >
-          <template #header>
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="min-w-0 flex flex-1 items-start gap-2">
-                <UIcon :name="mediaIcon(item.type)" class="mt-0.5 size-4 shrink-0 text-toned" />
+          Delete from history
+        </UButton>
+      </div>
 
-                <div class="min-w-0 flex-1 text-base font-semibold text-highlighted">
-                  <FloatingImage
-                    :image="`/history/${item.state_id}/images/poster?user=main`"
-                    v-if="poster_enable && 'main' === apiUser"
+      <div class="ws-card divide-y divide-default">
+        <Lazy
+          v-for="item in filteredItems"
+          :key="item.id"
+          :unrender="true"
+          :min-height="152"
+          class="block min-w-0"
+        >
+          <article
+            :aria-labelledby="`media-health-item-${item.id}`"
+            class="flex min-w-0 items-start gap-3 p-4"
+          >
+            <StatisticsPoster
+              v-if="poster_enable"
+              :key="`main:${item.state_id}`"
+              :history-id="item.state_id"
+              :title="item.title"
+              user="main"
+              preview
+              class="hidden w-16 shrink-0 sm:block"
+            />
+            <div class="min-w-0 flex-1 space-y-3">
+              <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1.5">
+                <div class="flex min-w-0 items-start gap-2">
+                  <UIcon :name="mediaIcon(item.type)" class="mt-0.5 size-4 shrink-0 text-toned" />
+
+                  <h2
+                    :id="`media-health-item-${item.id}`"
+                    class="min-w-0 flex-1 text-base font-semibold text-highlighted"
                   >
-                    <UTooltip :text="String(makeName(item as unknown as JsonObject))">
+                    <UTooltip
+                      :text="String(makeName(item as unknown as JsonObject))"
+                      :content="{ align: 'start' }"
+                    >
                       <NuxtLink
                         :to="`/history/${item.state_id}`"
-                        class="block truncate text-highlighted hover:text-primary"
+                        class="block w-fit max-w-full truncate text-highlighted hover:text-primary"
                       >
                         {{ makeName(item as unknown as JsonObject) }}
                       </NuxtLink>
                     </UTooltip>
-                  </FloatingImage>
+                  </h2>
+                </div>
 
-                  <UTooltip v-else :text="String(makeName(item as unknown as JsonObject))">
-                    <NuxtLink
-                      :to="`/history/${item.state_id}`"
-                      class="block truncate text-highlighted hover:text-primary"
-                    >
-                      {{ makeName(item as unknown as JsonObject) }}
-                    </NuxtLink>
+                <div class="shrink-0 pt-0.5">
+                  <UTooltip
+                    :text="selected_ids.includes(item.state_id) ? 'Unselect item' : 'Select item'"
+                  >
+                    <UCheckbox
+                      color="primary"
+                      :aria-label="`Select ${item.title}`"
+                      :disabled="isLoading || isQueueing || massActionInProgress || !!loadError"
+                      :model-value="selected_ids.includes(item.state_id)"
+                      @update:model-value="toggleSelected(item.state_id, $event)"
+                    />
                   </UTooltip>
                 </div>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-2">
-                <UBadge :color="severityColor(item.severity)" variant="outline">
-                  {{ statusLabel(item.status) }}
-                </UBadge>
-                <UTooltip :text="`Severity ${item.severity}`">
-                  <UBadge :color="severityColor(item.severity)" variant="soft">
-                    {{ item.severity }}
+                <div class="col-span-2 flex flex-wrap items-center gap-2">
+                  <UBadge
+                    :color="statusColor(item.status, item.severity)"
+                    :icon="statusPresentation[item.status]?.icon ?? 'i-lucide-circle-help'"
+                    variant="soft"
+                  >
+                    {{ statusPresentation[item.status]?.label ?? 'Unknown issue' }}
                   </UBadge>
-                </UTooltip>
-                <UTooltip
-                  :text="selected_ids.includes(item.state_id) ? 'Unselect item' : 'Select item'"
-                >
-                  <UCheckbox
-                    color="primary"
-                    :aria-label="`Select ${item.title}`"
-                    :disabled="isLoading || isQueueing || massActionInProgress || !!loadError"
-                    :model-value="selected_ids.includes(item.state_id)"
-                    @update:model-value="toggleSelected(item.state_id, $event)"
-                  />
-                </UTooltip>
+                  <UBadge color="neutral" variant="soft" icon="i-lucide-link">
+                    Matched IDs: {{ objectEntries(item.signals.guids).length }}
+                  </UBadge>
+                </div>
               </div>
-            </div>
-          </template>
 
-          <div class="space-y-3">
-            <div class="flex flex-wrap items-center gap-2 text-xs text-toned">
-              <span>{{ item.backend_count }}/{{ item.expected_backend_count }} backends</span>
-              <BackendItemLink
-                v-for="backend in backendNames(item)"
-                :key="`${item.id}-backend-${backend}`"
-                :backend="backend"
-                :url="backendItemUrl(item, backend)"
-                color="neutral"
+              <MediaHealthFindings
+                :item="item"
+                @toggle-file-paths="item.expand_file_checks = !item.expand_file_checks"
+                @toggle-duplicate-path="item.expand_duplicate_path = !item.expand_duplicate_path"
               />
-              <span v-if="0 < missingBackendNames(item).length">
-                Missing: {{ missingBackendNames(item).join(', ') }}
-              </span>
-            </div>
 
-            <div>
-              <div class="mb-1 flex items-center gap-2 font-medium text-highlighted">
-                <UIcon :name="statusIcon(item.status)" class="size-4 text-toned" />
-                <span>{{ statusActionTitle(item.status) }}</span>
-              </div>
-              <p class="text-sm text-toned">{{ statusActionText(item.status) }}</p>
-            </div>
-          </div>
+              <details
+                :open="item.show_details"
+                class="space-y-3 border-t border-default pt-3"
+                @toggle="item.show_details = ($event.target as HTMLDetailsElement).open"
+              >
+                <summary class="cursor-pointer text-sm font-medium text-highlighted">
+                  <span class="inline-flex items-center gap-2">
+                    <UIcon name="i-lucide-list-tree" class="size-4 text-toned" />
+                    <span>Supporting details</span>
+                  </span>
+                </summary>
+                <p class="text-xs text-toned">
+                  {{ item.backend_count }} of {{ item.expected_backend_count }} backends reported
+                  this record.
+                </p>
 
-          <details
-            :open="item.show_details"
-            class="mt-3 space-y-3 border-t border-default pt-3"
-            @toggle="item.show_details = ($event.target as HTMLDetailsElement).open"
-          >
-            <summary class="cursor-pointer text-sm font-medium text-highlighted">Details</summary>
-            <div
-              v-if="guidConflictEntries(item).length > 0"
-              class="rounded-md border border-error/30 bg-error/5 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-error">
-                <UIcon name="i-lucide-git-compare-arrows" class="size-4" />
-                <span>GUID conflicts</span>
-              </div>
+                <div v-if="0 < pathRows(item).length" class="space-y-2">
+                  <h3 class="flex items-center gap-2 text-sm font-medium text-highlighted">
+                    <UIcon name="i-lucide-file-text" class="size-4 text-toned" />
+                    <span>Backend paths</span>
+                  </h3>
 
-              <div class="space-y-2">
-                <div
-                  v-for="[key, values] in guidConflictEntries(item)"
-                  :key="`${item.id}-${key}`"
-                  class="space-y-2 rounded-md border border-default bg-elevated/40 p-2"
-                >
-                  <div class="text-xs font-semibold uppercase tracking-[0.14em] text-toned">
-                    {{ guidSource(key) }}
-                  </div>
-
-                  <div
-                    v-for="[value, backends] in objectEntries(values)"
-                    :key="`${item.id}-${key}-${value}`"
-                    class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
-                  >
-                    <NuxtLink
-                      :to="guidLink(item, key, value)"
-                      target="_blank"
-                      class="block min-w-0 truncate font-mono text-xs text-primary hover:underline"
+                  <div class="space-y-3">
+                    <div
+                      v-for="group in pathRows(item)"
+                      :key="`${item.id}-path-${group.path}`"
+                      class="min-w-0 space-y-1.5 text-sm text-default"
                     >
-                      {{ guidSource(key) }}://{{ value }}
-                    </NuxtLink>
-
-                    <div class="flex flex-wrap gap-1.5">
-                      <BackendItemLink
-                        v-for="backend in backends"
-                        :key="`${item.id}-${key}-${value}-${backend}`"
-                        :backend="backend"
-                        :url="backendItemUrl(item, backend)"
-                        color="error"
-                      />
+                      <div class="flex min-w-0 flex-wrap gap-1.5">
+                        <UTooltip
+                          v-for="backend in group.backends"
+                          :key="`${item.id}-path-${group.path}-${backend}`"
+                          :text="item.signals.file_checks?.[backend]?.message"
+                          :ui="{
+                            content: 'h-auto max-w-xs',
+                            text: 'whitespace-normal wrap-anywhere',
+                          }"
+                        >
+                          <BackendItemLink
+                            :backend="backend"
+                            :url="backendItemUrl(item, backend)"
+                            :color="
+                              false === item.signals.file_checks?.[backend]?.status
+                                ? 'warning'
+                                : 'neutral'
+                            "
+                            :icon="
+                              undefined === item.signals.file_checks?.[backend]
+                                ? 'i-lucide-server'
+                                : item.signals.file_checks[backend].status
+                                  ? 'i-lucide-circle-check'
+                                  : 'i-lucide-file-x-2'
+                            "
+                          />
+                        </UTooltip>
+                      </div>
+                      <div class="flex min-w-0 items-start gap-2">
+                        <UTooltip
+                          v-if="group.path"
+                          :text="
+                            item.expand_paths ? 'Truncate backend paths' : 'Wrap backend paths'
+                          "
+                        >
+                          <UButton
+                            color="neutral"
+                            :variant="item.expand_paths ? 'soft' : 'outline'"
+                            size="xs"
+                            square
+                            icon="i-lucide-wrap-text"
+                            class="shrink-0"
+                            :aria-label="
+                              item.expand_paths ? 'Truncate backend paths' : 'Wrap backend paths'
+                            "
+                            :aria-pressed="true === item.expand_paths"
+                            @click="item.expand_paths = !item.expand_paths"
+                          />
+                        </UTooltip>
+                        <UTooltip v-if="group.path" :text="group.path">
+                          <NuxtLink
+                            :to="makeSearchLink('path', group.path)"
+                            class="min-w-0 flex-1 hover:text-primary"
+                            :class="item.expand_paths ? 'wrap-anywhere' : 'truncate'"
+                          >
+                            {{ group.path }}
+                          </NuxtLink>
+                        </UTooltip>
+                        <span v-else class="min-w-0 flex-1 text-toned">No path reported</span>
+                        <UTooltip v-if="group.path" text="Copy backend path">
+                          <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            square
+                            icon="i-lucide-copy"
+                            aria-label="Copy backend path"
+                            @click="copyText(group.path, false)"
+                          />
+                        </UTooltip>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div
-              v-if="item.signals.duplicate_guid"
-              class="rounded-md border border-error/30 bg-error/5 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-error">
-                <UIcon name="i-lucide-fingerprint" class="size-4" />
-                <span>Duplicate GUID</span>
-              </div>
+                <div v-if="0 < objectEntries(item.signals.guids).length" class="space-y-2">
+                  <h3 class="flex items-center gap-2 text-sm font-medium text-highlighted">
+                    <UIcon name="i-lucide-link" class="size-4 text-toned" />
+                    <span>Matched IDs</span>
+                  </h3>
+                  <p class="text-sm text-toned">IDs used to match this item to backend records.</p>
 
-              <div class="space-y-2 text-sm text-default">
-                <NuxtLink
-                  :to="
-                    guidLink(
-                      item,
-                      item.signals.duplicate_guid.key,
-                      String(item.signals.duplicate_guid.value),
-                    )
-                  "
-                  target="_blank"
-                  class="block min-w-0 truncate font-mono text-xs text-primary hover:underline"
-                >
-                  {{ guidSource(item.signals.duplicate_guid.key) }}://{{
-                    item.signals.duplicate_guid.value
-                  }}
-                </NuxtLink>
-
-                <div class="flex flex-wrap gap-1.5">
-                  <HistoryRecordLink
-                    v-for="stateId in item.signals.duplicate_guid.state_ids"
-                    :key="`${item.id}-dg-${stateId}`"
-                    :state-id="stateId"
-                    :current-state-id="item.state_id"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-if="item.signals.duplicate_reference"
-              class="rounded-md border border-warning/30 bg-warning/5 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-warning">
-                <UIcon name="i-lucide-layers-3" class="size-4" />
-                <span>Duplicate file reference</span>
-              </div>
-
-              <div class="space-y-2">
-                <div
-                  class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 text-sm text-default"
-                >
-                  <UTooltip text="Toggle duplicate path wrapping">
-                    <button
-                      type="button"
-                      class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                      aria-label="Toggle duplicate path wrapping"
-                      @click="item.expand_duplicate_path = !item.expand_duplicate_path"
-                    >
-                      <UIcon name="i-lucide-file-text" class="size-4" />
-                    </button>
-                  </UTooltip>
-                  <NuxtLink
-                    :to="makeSearchLink('path', item.signals.duplicate_reference.path)"
-                    class="min-w-0 flex-1 hover:text-primary"
-                    :class="item.expand_duplicate_path ? 'wrap-break-word' : 'truncate'"
-                  >
-                    {{ item.signals.duplicate_reference.path }}
-                  </NuxtLink>
-                  <UTooltip text="Copy duplicate path">
-                    <UButton
+                  <div class="flex flex-wrap gap-2">
+                    <UBadge
+                      v-for="[key, value] in objectEntries(item.signals.guids)"
+                      :key="`${item.id}-guid-${key}-${value}`"
                       color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      square
-                      icon="i-lucide-copy"
-                      aria-label="Copy duplicate path"
-                      @click="copyText(item.signals.duplicate_reference?.path ?? '', false)"
-                    />
-                  </UTooltip>
-                </div>
-
-                <div class="flex flex-wrap gap-1.5">
-                  <HistoryRecordLink
-                    v-for="stateId in duplicateReferenceStateIds(item)"
-                    :key="`${item.id}-dr-${stateId}`"
-                    :state-id="stateId"
-                    :current-state-id="item.state_id"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-if="metadataConflictEntries(item).length > 0"
-              class="rounded-md border border-warning/30 bg-warning/5 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-warning">
-                <UIcon name="i-lucide-list-x" class="size-4" />
-                <span>Metadata disagreement</span>
-              </div>
-
-              <div class="space-y-2">
-                <div
-                  v-for="[field, values] in metadataConflictEntries(item)"
-                  :key="`${item.id}-metadata-${field}`"
-                  class="space-y-2 rounded-md border border-default bg-elevated/40 p-2"
-                >
-                  <div class="text-xs font-semibold uppercase tracking-[0.14em] text-toned">
-                    {{ statusLabel(field) }}
-                  </div>
-
-                  <div
-                    v-for="[value, backends] in objectEntries(values)"
-                    :key="`${item.id}-metadata-${field}-${value}`"
-                    class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
-                  >
-                    <span class="min-w-0 wrap-break-word text-sm font-medium text-default">
-                      {{ value }}
-                    </span>
-
-                    <div class="flex flex-wrap gap-1.5">
-                      <BackendItemLink
-                        v-for="backend in backends"
-                        :key="`${item.id}-metadata-${field}-${value}-${backend}`"
-                        :backend="backend"
-                        :url="backendItemUrl(item, backend)"
-                        color="warning"
-                      />
-                    </div>
+                      variant="soft"
+                      class="max-w-full"
+                    >
+                      <NuxtLink
+                        :to="guidLink(item, key, String(value))"
+                        target="_blank"
+                        class="block max-w-64 truncate hover:text-primary"
+                      >
+                        {{ guidSource(key) }}://{{ value }}
+                      </NuxtLink>
+                    </UBadge>
                   </div>
                 </div>
-              </div>
+              </details>
             </div>
-
-            <div
-              v-if="missingFileChecks(item).length > 0"
-              class="rounded-md border border-error/30 bg-error/5 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-error">
-                <UIcon name="i-lucide-file-x-2" class="size-4" />
-                <span>Missing files</span>
-              </div>
-
-              <div class="space-y-2">
-                <div
-                  v-for="check in missingFileChecks(item)"
-                  :key="`${item.id}-file-${check.backend}-${check.path}`"
-                  class="grid min-w-0 grid-cols-[8rem_auto_minmax(0,1fr)_auto] items-start gap-2 text-sm text-default"
-                >
-                  <BackendItemLink
-                    :backend="check.backend"
-                    :url="backendItemUrl(item, check.backend)"
-                    color="error"
-                  />
-                  <UTooltip text="Toggle missing file path wrapping">
-                    <button
-                      type="button"
-                      class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                      aria-label="Toggle missing file path wrapping"
-                      @click="item.expand_file_checks = !item.expand_file_checks"
-                    >
-                      <UIcon name="i-lucide-file-x-2" class="size-4" />
-                    </button>
-                  </UTooltip>
-                  <NuxtLink
-                    v-if="check.path"
-                    :to="makeSearchLink('path', check.path)"
-                    class="min-w-0 flex-1 hover:text-primary"
-                    :class="item.expand_file_checks ? 'wrap-break-word' : 'truncate'"
-                  >
-                    {{ check.path }}
-                  </NuxtLink>
-                  <span v-else class="min-w-0 flex-1 truncate text-toned">No path</span>
-                  <UTooltip v-if="check.path" text="Copy missing file path">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      square
-                      icon="i-lucide-copy"
-                      aria-label="Copy missing file path"
-                      @click="copyText(check.path, false)"
-                    />
-                  </UTooltip>
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-if="missingBackendNames(item).length > 0"
-              class="rounded-md border border-warning/30 bg-warning/5 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-warning">
-                <UIcon name="i-lucide-server-off" class="size-4" />
-                <span>Missing backend metadata</span>
-              </div>
-
-              <div class="flex flex-wrap gap-1.5">
-                <BackendItemLink
-                  v-for="backend in missingBackendNames(item)"
-                  :key="`${item.id}-missing-${backend}`"
-                  :backend="backend"
-                  color="warning"
-                  icon="i-lucide-circle-alert"
-                />
-              </div>
-            </div>
-
-            <div
-              v-if="0 < pathRows(item).length"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-highlighted">
-                <UIcon name="i-lucide-file-text" class="size-4 text-toned" />
-                <span>Backend paths</span>
-              </div>
-
-              <div class="space-y-2">
-                <div
-                  v-for="group in pathRows(item)"
-                  :key="`${item.id}-path-${group.path}`"
-                  class="grid min-w-0 grid-cols-[8rem_auto_minmax(0,1fr)_auto] items-start gap-2 text-sm text-default"
-                >
-                  <div class="flex min-w-0 flex-wrap gap-1.5">
-                    <BackendItemLink
-                      v-for="backend in group.backends"
-                      :key="`${item.id}-path-${group.path}-${backend}`"
-                      :backend="backend"
-                      :url="backendItemUrl(item, backend)"
-                      color="neutral"
-                    />
-                  </div>
-                  <UTooltip text="Toggle backend path wrapping">
-                    <button
-                      type="button"
-                      class="mt-0.5 shrink-0 text-toned hover:text-primary"
-                      aria-label="Toggle backend path wrapping"
-                      @click="item.expand_paths = !item.expand_paths"
-                    >
-                      <UIcon name="i-lucide-file-text" class="size-4" />
-                    </button>
-                  </UTooltip>
-                  <UTooltip v-if="group.path" :text="group.path">
-                    <NuxtLink
-                      v-if="group.path"
-                      :to="makeSearchLink('path', group.path)"
-                      class="min-w-0 flex-1 hover:text-primary"
-                      :class="item.expand_paths ? 'wrap-break-word' : 'truncate'"
-                    >
-                      {{ group.path }}
-                    </NuxtLink>
-                  </UTooltip>
-                  <span v-else class="min-w-0 flex-1 truncate text-toned">No metadata</span>
-                  <UTooltip v-if="group.path" text="Copy backend path">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      square
-                      icon="i-lucide-copy"
-                      aria-label="Copy backend path"
-                      @click="copyText(group.path, false)"
-                    />
-                  </UTooltip>
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-if="objectEntries(item.signals.guids).length > 0"
-              class="rounded-md border border-default bg-elevated/40 px-3 py-2.5"
-            >
-              <div class="mb-2 flex items-center gap-2 font-medium text-highlighted">
-                <UIcon name="i-lucide-link" class="size-4 text-toned" />
-                <span>Stored GUIDs</span>
-              </div>
-
-              <div class="flex flex-wrap gap-2">
-                <UBadge
-                  v-for="[key, value] in objectEntries(item.signals.guids)"
-                  :key="`${item.id}-guid-${key}-${value}`"
-                  color="neutral"
-                  variant="soft"
-                  class="max-w-full"
-                >
-                  <NuxtLink
-                    :to="guidLink(item, key, String(value))"
-                    target="_blank"
-                    class="block max-w-64 truncate hover:text-primary"
-                  >
-                    {{ guidSource(key) }}://{{ value }}
-                  </NuxtLink>
-                </UBadge>
-              </div>
-            </div>
-
-            <ul
-              v-if="0 < item.reasons.length"
-              class="list-disc space-y-1 pl-5 text-sm text-default"
-            >
-              <li v-for="reason in item.reasons" :key="reason">{{ reason }}</li>
-            </ul>
-          </details>
-        </UCard>
-      </Lazy>
-    </div>
+          </article>
+        </Lazy>
+      </div>
+    </section>
 
     <UEmpty
       v-else-if="!isLoading && report && !loadError && 0 === report.summary.total"
@@ -716,7 +491,7 @@
         report.summary.total === statusCount('healthy')
       "
       icon="i-lucide-check-circle"
-      title="No unhealthy records"
+      title="No issues detected"
     />
 
     <UEmpty
@@ -733,37 +508,22 @@
       @navigate="loadContent"
     />
 
-    <UCard v-if="report" class="shadow-sm" :ui="tipsCardUi">
-      <template #header>
-        <button
-          type="button"
-          class="flex w-full items-center justify-between gap-3 text-left"
-          @click="show_page_tips = !show_page_tips"
-        >
-          <span class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <UIcon name="i-lucide-info" class="size-4 text-toned" />
-            <span>Tips</span>
-          </span>
-          <span class="inline-flex items-center gap-1 text-xs font-medium text-toned">
-            <UIcon
-              :name="show_page_tips ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-              class="size-4"
-            />
-            <span>{{ show_page_tips ? 'Hide' : 'Show' }}</span>
-          </span>
-        </button>
-      </template>
-
-      <ul v-if="show_page_tips" class="list-disc space-y-2 pl-5 text-sm leading-6 text-default">
-        <li>Backend names open the exact remote item when the backend supplied a source ID.</li>
-        <li>Use record links to compare duplicate GUID or file reference records in history.</li>
-        <li>
-          After correcting backend metadata, force a metadata import from the affected backends,
-          then queue a new audit.
-        </li>
-      </ul>
-    </UCard>
-  </div>
+    <details v-if="report" class="ws-panel-padded space-y-3">
+      <summary class="cursor-pointer text-sm font-medium text-highlighted">
+        <span class="inline-flex items-center gap-2">
+          <UIcon name="i-lucide-wrench" class="size-4 text-toned" />
+          <span>Correcting audit findings</span>
+        </span>
+      </summary>
+      <p class="text-sm text-toned">
+        After correcting backend metadata, force a metadata import from the affected backends, then
+        run a new audit.
+      </p>
+      <p class="text-sm text-toned">
+        File checks use paths accessible to WatchState, not the backend filesystem.
+      </p>
+    </details>
+  </main>
 </template>
 
 <script setup lang="ts">
@@ -776,7 +536,6 @@ import {
   UAlert,
   UBadge,
   UButton,
-  UCard,
   UCheckbox,
   UDropdownMenu,
   UEmpty,
@@ -786,18 +545,18 @@ import {
   USelect,
   UTooltip,
 } from '#components';
-import FloatingImage from '~/components/FloatingImage.vue';
 import BackendItemLink from '~/components/BackendItemLink.vue';
-import HistoryRecordLink from '~/components/HistoryRecordLink.vue';
 import Lazy from '~/components/Lazy.vue';
+import MediaHealthFindings from '~/components/MediaHealthFindings.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import Pager from '~/components/Pager.vue';
 import StatCard from '~/components/StatCard.vue';
+import StatisticsPoster from '~/components/StatisticsPoster.vue';
 import { useDialog } from '~/composables/useDialog';
 import { requireTopLevelPageShell } from '~/utils/topLevelNavigation';
+import { mediaHealthGuidLink as guidLink } from '~/utils/mediaHealth';
 import {
   copyText,
-  makeGUIDLink,
   makeName,
   makeSearchLink,
   notification,
@@ -808,6 +567,7 @@ import {
 import type {
   JsonObject,
   MediaHealthItem,
+  MediaHealthItemWithUI,
   MediaHealthReport,
   MediaHealthResponse,
   MediaHealthRunResponse,
@@ -828,20 +588,6 @@ type SelectItem = {
   value: string;
 };
 
-type MediaHealthItemWithUI = MediaHealthItem & {
-  expand_duplicate_path?: boolean;
-  expand_file_checks?: boolean;
-  expand_paths?: boolean;
-  show_details?: boolean;
-};
-
-type MediaHealthFileCheck = {
-  backend: string;
-  path: string;
-  status: boolean;
-  message: string;
-};
-
 type ItemsResponse = PaginatedResponse<MediaHealthItemWithUI> & {
   report: MediaHealthReport;
 };
@@ -849,7 +595,6 @@ type ItemsResponse = PaginatedResponse<MediaHealthItemWithUI> & {
 const ALL_FILTER_VALUE = 'all';
 const UNHEALTHY_FILTER_VALUE = 'unhealthy';
 
-const show_page_tips = useStorage('show_page_tips', true);
 const poster_enable = useStorage('poster_enable', true);
 const reportState = ref<MediaHealthResponse | null>(null);
 const report = ref<MediaHealthReport | null>(null);
@@ -922,17 +667,11 @@ const openMainLink = async (event: MouseEvent): Promise<void> => {
   }
 };
 
-const itemCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-const tipsCardUi = { header: 'p-4', body: 'px-4 pb-4 pt-0' };
-
 const statusOptions = computed<Array<SelectItem>>(() => [
-  { label: 'Unhealthy', value: UNHEALTHY_FILTER_VALUE },
-  { label: 'All statuses', value: ALL_FILTER_VALUE },
+  { label: 'Needs review', value: UNHEALTHY_FILTER_VALUE },
+  { label: 'All records', value: ALL_FILTER_VALUE },
   ...Object.keys(report.value?.summary.statuses ?? {}).map((value) => ({
-    label: statusLabel(value as MediaHealthStatus),
+    label: statusPresentation[value as MediaHealthStatus]?.label ?? 'Unknown issue',
     value,
   })),
 ]);
@@ -954,13 +693,19 @@ const filteredItems = computed<Array<MediaHealthItemWithUI>>(() => {
       item.title,
       item.type,
       item.status,
+      statusPresentation[item.status]?.label,
       String(item.state_id),
       ...backendNames(item),
       ...missingBackendNames(item),
       ...Object.values(item.signals.paths ?? {}),
+      ...Object.values(item.signals.backend_items ?? {}).map((backend) => backend.path ?? ''),
       ...missingFileChecks(item).map((check) => `${check.backend} ${check.path} ${check.message}`),
       ...metadataConflictEntries(item).flatMap(([field, values]) => [
         field,
+        ...Object.keys(values),
+      ]),
+      ...Object.entries(item.signals.guid_conflicts ?? {}).flatMap(([provider, values]) => [
+        provider,
         ...Object.keys(values),
       ]),
       ...Object.values(item.signals.guids ?? {}).map(String),
@@ -1091,7 +836,7 @@ const massDelete = async (): Promise<void> => {
   const { status: confirmStatus } = await useDialog().confirmDialog({
     title: 'Delete selected records?',
     confirmText: 'Delete',
-    message: `Delete ${ids.length} selected records from main database history? Backend items and media files are not deleted.`,
+    message: `Delete ${ids.length} selected records from main database history? Backend items and media files are not deleted. Run another audit to update this report.`,
     confirmColor: 'error',
   });
 
@@ -1218,6 +963,10 @@ const exportReport = async (format: 'markdown' | 'json' | 'csv'): Promise<void> 
 const exportMenuItems = computed(() => [
   [
     {
+      label: 'Full completed report',
+      type: 'label' as const,
+    },
+    {
       label: 'Markdown',
       icon: 'i-lucide-file-text',
       disabled: null !== exporting.value,
@@ -1270,108 +1019,30 @@ const relativeDate = (value: number | null): string => {
   return moment.unix(value).fromNow();
 };
 
-const statusLabel = (value: MediaHealthStatus | string): string =>
-  value
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
-const statusIcon = (value: MediaHealthStatus): string => {
-  if ('file_missing' === value) {
-    return 'i-lucide-file-x-2';
-  }
-  if ('guid_conflict' === value || 'duplicate_guid' === value) {
-    return 'i-lucide-fingerprint';
-  }
-  if ('duplicate_reference' === value) {
-    return 'i-lucide-layers-3';
-  }
-  if ('metadata_disagreement' === value) {
-    return 'i-lucide-list-x';
-  }
-  if ('partial' === value) {
-    return 'i-lucide-server-off';
-  }
-  if ('path_disagreement' === value) {
-    return 'i-lucide-file-warning';
-  }
-  if ('weak_match' === value) {
-    return 'i-lucide-link-2-off';
-  }
-
-  return 'i-lucide-check-circle';
-};
-
-const statusActionTitle = (value: MediaHealthStatus): string => {
-  if ('file_missing' === value) {
-    return 'A backend points at a file WatchState cannot find';
-  }
-  if ('guid_conflict' === value) {
-    return 'Backends point at different external records';
-  }
-  if ('duplicate_guid' === value) {
-    return 'The same external record is attached to multiple local records';
-  }
-  if ('duplicate_reference' === value) {
-    return 'Multiple local records use the same file path';
-  }
-  if ('metadata_disagreement' === value) {
-    return 'Backends disagree on structural metadata';
-  }
-  if ('partial' === value) {
-    return 'Some backends did not report this record';
-  }
-  if ('path_disagreement' === value) {
-    return 'Backends disagree on the media path';
-  }
-  if ('weak_match' === value) {
-    return 'No strong external identifier was stored';
-  }
-
-  return 'No action needed';
-};
-
-const statusActionText = (value: MediaHealthStatus): string => {
-  if ('file_missing' === value) {
-    return 'Check the listed backend path, restore the media file, or point it to the correct one.';
-  }
-  if ('guid_conflict' === value) {
-    return 'Compare external IDs on the linked backend items and correct any mismatch.';
-  }
-  if ('duplicate_guid' === value) {
-    return 'Compare the linked history records and remove or refresh the record that is mapped to the wrong external ID.';
-  }
-  if ('duplicate_reference' === value) {
-    return 'Compare the linked history records and fix duplicate media-file reporting in the affected backend.';
-  }
-  if ('metadata_disagreement' === value) {
-    return 'Open the affected backend items and correct the type, year, season, or episode number that differs.';
-  }
-  if ('partial' === value) {
-    return 'Open the missing backend names and refresh or import metadata so every expected backend reports the item.';
-  }
-  if ('path_disagreement' === value) {
-    return 'Compare backend paths below and fix the backend reporting a different file or folder.';
-  }
-  if ('weak_match' === value) {
-    return 'Refresh metadata in the backend so WatchState stores a strong external GUID for future matching.';
-  }
-
-  return 'This record matched across the available backend metadata.';
+const statusPresentation: Record<MediaHealthStatus, { label: string; icon: string }> = {
+  healthy: { label: 'No issues detected', icon: 'i-lucide-circle-check' },
+  file_missing: { label: 'File check failed', icon: 'i-lucide-file-x-2' },
+  partial: { label: 'Missing backend metadata', icon: 'i-lucide-server-off' },
+  duplicate_reference: { label: 'Duplicate file path', icon: 'i-lucide-layers-3' },
+  guid_conflict: { label: 'ID conflict', icon: 'i-lucide-git-compare-arrows' },
+  duplicate_guid: { label: 'Duplicate ID', icon: 'i-lucide-fingerprint' },
+  metadata_disagreement: { label: 'Metadata mismatch', icon: 'i-lucide-list-x' },
+  path_disagreement: { label: 'Path mismatch', icon: 'i-lucide-file-warning' },
+  weak_match: { label: 'Missing external IDs', icon: 'i-lucide-link-2-off' },
 };
 
 const mediaIcon = (itemType: string): string =>
   'episode' === itemType.toLowerCase() ? 'i-lucide-tv' : 'i-lucide-film';
 
-const severityColor = (severity: number): 'error' | 'warning' | 'success' => {
-  if (severity >= 80) {
-    return 'error';
-  }
-  if (severity >= 50) {
-    return 'warning';
+const statusColor = (
+  status: MediaHealthStatus,
+  severity: number,
+): 'error' | 'warning' | 'success' => {
+  if ('healthy' === status) {
+    return 'success';
   }
 
-  return 'success';
+  return 80 <= severity ? 'error' : 'warning';
 };
 
 const backendNames = (item: MediaHealthItem): Array<string> => item.signals.backends ?? [];
@@ -1379,18 +1050,12 @@ const backendNames = (item: MediaHealthItem): Array<string> => item.signals.back
 const missingBackendNames = (item: MediaHealthItem): Array<string> =>
   item.signals.missing_backends ?? [];
 
-const missingFileChecks = (item: MediaHealthItem): Array<MediaHealthFileCheck> =>
-  item.signals.missing_files ?? [];
-
-const duplicateReferenceStateIds = (item: MediaHealthItem): Array<number> =>
-  (item.signals.duplicate_reference?.state_ids ?? []).map(Number).filter(Number.isFinite);
+const missingFileChecks = (
+  item: MediaHealthItem,
+): NonNullable<MediaHealthItem['signals']['missing_files']> => item.signals.missing_files ?? [];
 
 const backendItemUrl = (item: MediaHealthItem, backend: string): string | null =>
   item.signals.backend_items?.[backend]?.webUrl ?? null;
-
-const guidConflictEntries = (
-  item: MediaHealthItem,
-): Array<[string, Record<string, Array<string>>]> => objectEntries(item.signals.guid_conflicts);
 
 const metadataConflictEntries = (
   item: MediaHealthItem,
@@ -1398,8 +1063,15 @@ const metadataConflictEntries = (
 
 const pathGroups = (item: MediaHealthItem): Array<{ path: string; backends: Array<string> }> => {
   const groups = new Map<string, Array<string>>();
+  const paths = { ...item.signals.paths };
 
-  for (const [backend, path] of objectEntries(item.signals.paths)) {
+  for (const [backend, metadata] of Object.entries(item.signals.backend_items ?? {})) {
+    if (metadata.path) {
+      paths[backend] = metadata.path;
+    }
+  }
+
+  for (const [backend, path] of Object.entries(paths)) {
     const normalizedPath = String(path).trim();
     if ('' === normalizedPath) {
       continue;
@@ -1414,11 +1086,13 @@ const pathGroups = (item: MediaHealthItem): Array<{ path: string; backends: Arra
 const pathRows = (item: MediaHealthItem): Array<{ path: string; backends: Array<string> }> => {
   const rows = pathGroups(item);
   const backendsWithoutPath = backendNames(item).filter((backend) => {
-    const path = String(item.signals.paths?.[backend] ?? '').trim();
+    const path = String(
+      item.signals.backend_items?.[backend]?.path || item.signals.paths?.[backend] || '',
+    ).trim();
     return '' === path;
   });
 
-  if (backendsWithoutPath.length > 0 && rows.length > 0) {
+  if (0 < backendsWithoutPath.length) {
     rows.push({ path: '', backends: backendsWithoutPath });
   }
 
@@ -1430,16 +1104,6 @@ function objectEntries<T>(value: Record<string, T> | undefined): Array<[string, 
 }
 
 const guidSource = (key: string): string => key.replace(/^guid_/, '');
-
-const guidLink = (item: MediaHealthItem, key: string, value: string): string => {
-  const source = guidSource(key);
-  const externalLink = makeGUIDLink(item.type, source, value);
-  if ('' !== externalLink) {
-    return externalLink;
-  }
-
-  return makeSearchLink('guid', `${source}://${value}`);
-};
 
 watch([status, type], async () => await loadContent(1));
 watch(filter, async () => {

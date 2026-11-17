@@ -18,13 +18,13 @@
       size="sm"
       variant="naked"
       icon="i-lucide-info"
-      title="No other records reference this file"
+      title="No records found"
     />
 
     <div v-else class="space-y-3">
       <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-        <UIcon name="i-lucide-copy" class="size-4" />
-        <span>Duplicate file references</span>
+        <UIcon name="i-lucide-files" class="size-4" />
+        <span>{{ 1 === records.length ? 'History record' : 'Related records' }}</span>
       </div>
 
       <ul class="divide-y divide-default">
@@ -60,19 +60,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import moment from 'moment';
 import { NuxtLink, UAlert, UEmpty, UIcon } from '#components';
 import { makeName, parse_api_response, request } from '~/utils';
 import { useSessionCache } from '~/utils/cache';
 import type { HistoryItem, JsonObject } from '~/types';
 
-const props = defineProps<{ ids: Array<number> }>();
+const props = defineProps<{ ids: Array<number>; user: string }>();
 
 const records = ref<Array<HistoryItem>>([]);
 const isLoading = ref<boolean>(true);
 const errorMessage = ref<string>('');
-const cache = useSessionCache();
+const cache = useSessionCache(`history-records:${props.user}`);
+const controller = new AbortController();
 
 onMounted(async () => {
   const unique = new Set<number>();
@@ -91,36 +92,42 @@ onMounted(async () => {
   }
 
   try {
-    const items: Array<HistoryItem> = [];
-    const missingIds: Array<number> = [];
+    const items = await Promise.all(
+      ids.map(async (id) => {
+        const cacheKey = `history_${id}`;
+        const cachedItem = cache.get<HistoryItem>(cacheKey);
+        if (null !== cachedItem) {
+          return cachedItem;
+        }
 
-    for (const id of ids) {
-      const cacheKey = `history_${id}`;
-      const cachedItem = cache.get<HistoryItem>(cacheKey) ?? null;
-      if (null !== cachedItem) {
-        items.push(cachedItem);
-        continue;
-      }
-      missingIds.push(id);
-    }
-
-    await Promise.all(
-      missingIds.map(async (id) => {
-        const response = await request(`/history/${id}`);
+        const response = await request(`/history/${id}`, {
+          headers: { 'X-User': props.user },
+          signal: controller.signal,
+        });
         const record = await parse_api_response<HistoryItem>(response);
         if ('error' in record) {
           throw new Error(record.error.message || `Unable to load record ${id}`);
         }
-        cache?.set(`history_${id}`, record, 300);
-        items.push(record);
+        if (!response.ok) {
+          throw new Error(`Unable to load record ${id} (${response.status})`);
+        }
+
+        cache.set(cacheKey, record, 300);
+        return record;
       }),
     );
 
-    records.value = items;
+    if (!controller.signal.aborted) {
+      records.value = items;
+    }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to load records.';
+    if (!controller.signal.aborted) {
+      errorMessage.value = error instanceof Error ? error.message : 'Failed to load records.';
+    }
   } finally {
     isLoading.value = false;
   }
 });
+
+onBeforeUnmount(() => controller.abort());
 </script>

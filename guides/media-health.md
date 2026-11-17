@@ -1,11 +1,9 @@
 # Media Health
 
-Media Health is an audit for the main WatchState database. It combines backend coverage, duplicate reference, 
-identity, path, and optional file checks into one report focused on records that need attention.
+Media Health checks stored records in the main WatchState database for conflicting IDs, duplicate records,
+backend coverage, and path differences. File checks are optional.
 
 # What It Checks
-
-Media Health can report these states. Each state includes an action hint in the WebUI.
 
 - `guid_conflict`: Backends attached different strong external IDs to the same local record.
 - `duplicate_guid`: More than one local record has the same strong external ID.
@@ -14,22 +12,22 @@ Media Health can report these states. Each state includes an action hint in the 
 - `partial`: One or more expected backends did not report metadata for the record.
 - `weak_match`: The record has no strong external GUID.
 - `path_disagreement`: Backends reported paths with different normalized suffixes.
-- `file_missing`: Optional file checks found a missing file or parent directory.
-- `healthy`: No Media Health problem was found.
+- `file_missing`: Optional file checks found an empty path, missing file, or missing parent directory.
+- `healthy`: No issue was detected in the audit.
 
 # Run An Audit
 
 From the WebUI:
 
 1. Open **Activity** > <!--i:i-lucide-radar--> **Media Health**.
-2. Click **Generate audit**, or **Queue refresh** if a report already exists.
+2. Click **Run audit**.
 3. Wait for the background task to finish.
-4. Click **Reload**.
+4. Click **Reload report**.
 
-**Last completed** shows when the displayed audit finished. Its results remain visible while a new audit is
-queued or running. **Reload** checks for a completed audit; it does not start another one.
+Results remain visible while a new audit is queued or running. **Reload report** checks for a completed audit;
+it does not start another one.
 
-Use **Export** to download the latest completed report. Exports include the whole report, not just the current page,
+Use **Export report** to download the latest completed report. Exports include the whole report, not just the current page,
 filters, or selection.
 
 # File Checks Are Optional
@@ -56,18 +54,10 @@ To enable file checks globally:
 
 # Using The Page
 
-The default filter is **Unhealthy**, so healthy records are hidden. This keeps large libraries usable.
-
-Useful controls:
-
-- **Status** narrows the audit to one health state.
-- **Type** limits audit results to movies or episodes.
-- **Filter this page** searches loaded records by title, status, backend name, GUID, path, file-check message, or reason.
-- **Select page** selects the displayed records. **Delete selected** removes only the selected main-identity history records
-  from WatchState; it does not repair metadata on your media servers.
-- Backend badges open the source backend item when WatchState can build a direct item URL.
-- Record titles open the linked WatchState history record under the main identity.
-- Expand **Details** for GUIDs, metadata disagreements, file checks, and paths. Identical paths from multiple backends are grouped.
+- **Main issue** narrows the audit to a record's main issue, not every finding shown for that record.
+- **Filter this page** searches only the records loaded on the current page.
+- **Delete from history** removes the selected records from
+  main database history, not backend items or media files.
 
 # Fix And Refresh Workflow
 
@@ -81,7 +71,7 @@ Useful controls:
 state:import -f -v --metadata-only
 ```
 
-5. Return to **Media Health** and click **Queue refresh**.
+5. Return to **Media Health** and click **Run audit**.
 6. Repeat until the remaining records are expected or harmless.
 
 # Main Database Only

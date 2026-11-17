@@ -303,7 +303,11 @@
               </UButton>
             </template>
             <template #content>
-              <DuplicateRecordList :ids="data.duplicate_reference_ids ?? []" />
+              <DuplicateRecordList
+                :key="`${apiUser}:${id}`"
+                :ids="data.duplicate_reference_ids ?? []"
+                :user="apiUser"
+              />
             </template>
           </Popover>
         </template>
@@ -695,554 +699,13 @@
             </div>
           </section>
 
-          <div v-if="Object.keys(data.metadata).length > 0" class="space-y-4 xl:hidden">
-            <div class="space-y-1">
-              <div class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-                <UIcon name="i-lucide-panels-top-left" class="size-4 text-toned" />
-                <h2>Backend reports</h2>
-              </div>
-              <p class="text-sm text-toned">
-                Compare the last reported watch state from each backend.
-              </p>
-            </div>
-
-            <div class="grid gap-4 xl:grid-cols-2">
-              <UCard
-                v-for="(item, key) in data.metadata"
-                :key="key"
-                class="h-full shadow-sm"
-                :class="[Number(item.watched) ? 'ring-1 ring-success/30' : '']"
-                :ui="detailCardUi"
-              >
-                <template #header>
-                  <div class="flex items-start justify-between gap-3">
-                    <div
-                      class="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-highlighted"
-                    >
-                      <UTooltip
-                        :text="
-                          item._toggle ? 'Collapse backend metadata' : 'Expand backend metadata'
-                        "
-                      >
-                        <button
-                          type="button"
-                          class="inline-flex shrink-0 items-center"
-                          :aria-label="
-                            item._toggle ? 'Collapse backend metadata' : 'Expand backend metadata'
-                          "
-                          @click="item._toggle = !item._toggle"
-                        >
-                          <UIcon
-                            :name="item?._toggle ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                            class="size-4 text-toned"
-                          />
-                        </button>
-                      </UTooltip>
-                      <UIcon
-                        :name="
-                          undefined === item?.validated
-                            ? 'i-lucide-loader-circle'
-                            : true === item?.validated
-                              ? 'i-lucide-circle-check'
-                              : 'i-lucide-x'
-                        "
-                        :class="[
-                          'size-4 shrink-0',
-                          undefined === item?.validated
-                            ? 'animate-spin text-toned'
-                            : true === item?.validated
-                              ? 'text-success'
-                              : 'text-error',
-                        ]"
-                      />
-                      <UTooltip :text="Number(item.watched) ? 'Watched' : 'Unwatched'">
-                        <UIcon
-                          :name="Number(item.watched) ? 'i-lucide-eye' : 'i-lucide-eye-off'"
-                          :class="[
-                            'size-4 shrink-0',
-                            Number(item.watched) ? 'text-success' : 'text-toned',
-                          ]"
-                        />
-                      </UTooltip>
-                      <span>Metadata via</span>
-                      <NuxtLink
-                        :to="`/backend/${key}`"
-                        class="inline-flex min-w-0 items-center gap-1 text-highlighted hover:text-primary"
-                      >
-                        <span class="truncate">{{ key }}</span>
-                      </NuxtLink>
-                    </div>
-
-                    <div class="flex shrink-0 items-center gap-3">
-                      <UButton
-                        color="neutral"
-                        variant="outline"
-                        size="sm"
-                        icon="i-lucide-trash-2"
-                        :disabled="isMutating || isLoading"
-                        @click="
-                          Object.keys(data.metadata).length > 1 ? deleteMetadata(key) : deleteItem()
-                        "
-                      >
-                        Delete
-                      </UButton>
-                    </div>
-                  </div>
-                </template>
-
-                <p class="mb-3 text-sm text-toned">
-                  Availability:
-                  {{
-                    undefined === item.validated
-                      ? 'Checking'
-                      : item.validated
-                        ? 'Available'
-                        : 'Not confirmed'
-                  }}.
-                  <span v-if="item.validated_message">{{ item.validated_message }}</span>
-                </p>
-
-                <div v-if="item?._toggle" class="space-y-5 text-sm leading-6 text-default">
-                  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 cursor-pointer flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                        @click="item.expandId = !item.expandId"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon name="i-lucide-id-card" class="size-4 shrink-0" />
-                          <span>Source ID</span>
-                        </span>
-                        <NuxtLink
-                          v-if="item?.webUrl"
-                          :to="item.webUrl"
-                          target="_blank"
-                          class="block min-w-0 font-medium text-highlighted hover:text-primary sm:ml-auto sm:text-right"
-                          :class="expandableInlineClass(item.expandId, true)"
-                        >
-                          {{ item.id }}
-                        </NuxtLink>
-                        <span
-                          v-else
-                          class="block min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right"
-                          :class="expandableInlineClass(item.expandId, true)"
-                          >{{ item.id }}</span
-                        >
-                      </div>
-                    </div>
-
-                    <div
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon
-                            :name="Number(item.watched) ? 'i-lucide-eye' : 'i-lucide-eye-off'"
-                            class="size-4 shrink-0"
-                          />
-                          <span>Status</span>
-                        </span>
-                        <span
-                          class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right"
-                          >{{ Number(item.watched) ? 'Watched' : 'Unwatched' }}</span
-                        >
-                      </div>
-                    </div>
-
-                    <div
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon name="i-lucide-mail" class="size-4 shrink-0" />
-                          <span>Event</span>
-                        </span>
-                        <span
-                          class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right"
-                          >{{ ag(data.extra, `${key}.event`, 'Unknown') }}</span
-                        >
-                      </div>
-                    </div>
-
-                    <div
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon name="i-lucide-clock-3" class="size-4 shrink-0" />
-                          <span>Progress</span>
-                        </span>
-                        <span class="min-w-0 font-medium text-highlighted sm:ml-auto sm:text-right">
-                          {{
-                            Number(item?.progress) > 0
-                              ? formatDuration(Number(item?.progress ?? 0))
-                              : 'None'
-                          }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon name="i-lucide-calendar" class="size-4 shrink-0" />
-                          <span>Last report</span>
-                        </span>
-
-                        <div class="min-w-0 sm:ml-auto sm:text-right">
-                          <UTooltip
-                            :text="
-                              ag(data.extra, `${key}.received_at`, null)
-                                ? `Last reported at: ${getMoment(ag(data.extra, `${key}.received_at`, 0)).format(TOOLTIP_DATE_FORMAT)}`
-                                : 'Unknown'
-                            "
-                          >
-                            <span class="cursor-help font-medium text-highlighted">{{
-                              ag(data.extra, `${key}.received_at`, null)
-                                ? getMoment(ag(data.extra, `${key}.received_at`, 0)).fromNow()
-                                : 'Unknown'
-                            }}</span>
-                          </UTooltip>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon
-                            :name="'episode' === item.type ? 'i-lucide-tv' : 'i-lucide-film'"
-                            class="size-4 shrink-0"
-                          />
-                          <span>Type</span>
-                        </span>
-                        <NuxtLink
-                          :to="makeSearchLink('type', item.type)"
-                          class="block min-w-0 font-medium text-highlighted hover:text-primary sm:ml-auto sm:text-right"
-                          >{{ ucFirst(item.type) }}</NuxtLink
-                        >
-                      </div>
-                    </div>
-
-                    <div
-                      v-if="'episode' === item.type"
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon name="i-lucide-tv" class="size-4 shrink-0" />
-                          <span>Season</span>
-                        </span>
-                        <NuxtLink
-                          :to="makeSearchLink('season', String(item.season ?? ''))"
-                          class="block min-w-0 font-medium text-highlighted hover:text-primary sm:ml-auto sm:text-right"
-                        >
-                          {{ item.season }}
-                        </NuxtLink>
-                      </div>
-                    </div>
-
-                    <div
-                      v-if="'episode' === item.type"
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-2.5 text-sm text-default"
-                    >
-                      <div
-                        class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                      >
-                        <span
-                          class="inline-flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-toned"
-                        >
-                          <UIcon name="i-lucide-tv" class="size-4 shrink-0" />
-                          <span>Episode</span>
-                        </span>
-                        <NuxtLink
-                          :to="makeSearchLink('episode', String(item.episode ?? ''))"
-                          class="block min-w-0 font-medium text-highlighted hover:text-primary sm:ml-auto sm:text-right"
-                        >
-                          {{ item.episode }}
-                        </NuxtLink>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="
-                      item?.extra?.title ||
-                      item?.path ||
-                      (item?.extra?.genres && item.extra.genres.length > 0) ||
-                      item?.extra?.overview
-                    "
-                    class="space-y-3"
-                  >
-                    <div
-                      class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted"
-                    >
-                      <UIcon name="i-lucide-clapperboard" class="size-4 text-toned" />
-                      <span>Content</span>
-                    </div>
-
-                    <div class="grid gap-3 xl:grid-cols-2">
-                      <div
-                        v-if="item?.extra?.title"
-                        class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-1"
-                        :class="item?.extra?.overview ? '' : 'xl:col-span-2'"
-                      >
-                        <div class="mb-2 flex items-center justify-between gap-3">
-                          <button
-                            type="button"
-                            class="inline-flex items-center gap-2 text-left text-xs font-medium text-toned"
-                            @click="item.expandTitle = !item.expandTitle"
-                          >
-                            <UIcon name="i-lucide-heading" class="size-4" />
-                            <span>Subtitle</span>
-                          </button>
-
-                          <UTooltip text="Copy subtitle">
-                            <UButton
-                              color="neutral"
-                              variant="outline"
-                              size="sm"
-                              square
-                              icon="i-lucide-copy"
-                              aria-label="Copy subtitle"
-                              @click="() => void copyText(item.extra?.title ?? '', false)"
-                            />
-                          </UTooltip>
-                        </div>
-
-                        <div
-                          class="min-w-0 cursor-pointer text-default"
-                          :class="expandableBlockClass(item.expandTitle)"
-                          @click="item.expandTitle = !item.expandTitle"
-                        >
-                          <NuxtLink
-                            :to="makeSearchLink('subtitle', item.extra.title)"
-                            class="block min-w-0 hover:text-primary"
-                            @click.stop
-                          >
-                            {{ item.extra.title }}
-                          </NuxtLink>
-                        </div>
-                      </div>
-
-                      <div
-                        v-if="item?.extra?.overview"
-                        class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-2"
-                        :class="item?.extra?.title ? '' : 'xl:col-span-2'"
-                      >
-                        <button
-                          type="button"
-                          class="mb-2 inline-flex items-center gap-2 text-left text-xs font-medium text-toned"
-                          @click="item.expandOverview = !item.expandOverview"
-                        >
-                          <UIcon name="i-lucide-message-square" class="size-4" />
-                          <span>Content Summary</span>
-                        </button>
-                        <div
-                          class="cursor-pointer text-default"
-                          :class="expandableBlockClass(item.expandOverview)"
-                          @click="item.expandOverview = !item.expandOverview"
-                        >
-                          {{ item.extra.overview }}
-                        </div>
-                      </div>
-
-                      <div
-                        v-if="item?.path"
-                        class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-3 xl:col-span-2"
-                      >
-                        <div class="mb-2 flex items-center justify-between gap-3">
-                          <button
-                            type="button"
-                            class="inline-flex items-center gap-2 text-left text-xs font-medium text-toned"
-                            @click="item.expandPath = !item.expandPath"
-                          >
-                            <UIcon name="i-lucide-file-text" class="size-4" />
-                            <span>File Path</span>
-                          </button>
-
-                          <UTooltip text="Copy file path">
-                            <UButton
-                              color="neutral"
-                              variant="outline"
-                              size="sm"
-                              square
-                              icon="i-lucide-copy"
-                              aria-label="Copy file path"
-                              @click="() => void copyText(item.path ?? '', false)"
-                            />
-                          </UTooltip>
-                        </div>
-
-                        <div
-                          class="min-w-0 cursor-pointer text-default"
-                          :class="expandableBlockClass(item.expandPath, true)"
-                          @click="item.expandPath = !item.expandPath"
-                        >
-                          <NuxtLink
-                            :to="makeSearchLink('path', item.path)"
-                            class="block min-w-0 hover:text-primary"
-                            @click.stop
-                          >
-                            {{ item.path }}
-                          </NuxtLink>
-                        </div>
-                      </div>
-
-                      <div
-                        v-if="item?.extra?.genres && item.extra.genres.length > 0"
-                        class="rounded-md border border-default bg-elevated/40 px-3 py-3 xl:order-4 xl:col-span-2"
-                      >
-                        <div
-                          class="mb-2 inline-flex items-center gap-2 text-xs font-medium text-toned"
-                        >
-                          <UIcon name="i-lucide-tag" class="size-4" />
-                          <span>Genres</span>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                          <UBadge
-                            v-for="genre in item.extra.genres"
-                            :key="`${item.id}-${genre}`"
-                            color="info"
-                            variant="soft"
-                          >
-                            <span class="capitalize">{{ genre }}</span>
-                          </UBadge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="metadataGuidSectionCount(item) > 0"
-                    :class="[
-                      'grid gap-3',
-                      metadataGuidSectionCount(item) > 1 ? 'xl:grid-cols-2' : '',
-                    ]"
-                  >
-                    <div
-                      v-if="item.guids && Object.keys(item.guids).length > 0"
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-3"
-                      :class="1 === metadataGuidSectionCount(item) ? 'xl:col-span-2' : ''"
-                    >
-                      <UTooltip text="Globally unique identifier for this item">
-                        <span
-                          class="mb-2 inline-flex cursor-help items-center gap-2 font-medium text-highlighted"
-                        >
-                          <UIcon name="i-lucide-link" class="size-4 text-toned" />
-                          <span>GUIDs</span>
-                        </span>
-                      </UTooltip>
-
-                      <div class="flex flex-wrap gap-2">
-                        <UBadge
-                          v-for="(guid, source) in item.guids"
-                          :key="`guid-${item.id}-${source}-${guid}`"
-                          color="neutral"
-                          variant="soft"
-                          class="max-w-full"
-                        >
-                          <NuxtLink
-                            target="_blank"
-                            class="break-all hover:text-primary"
-                            :to="
-                              makeGUIDLink(
-                                item.type,
-                                String(source).split('guid_')[1] ?? String(source),
-                                guid,
-                                item as unknown as JsonObject,
-                              )
-                            "
-                          >
-                            {{ String(source).split('guid_')[1] ?? String(source) }}://{{ guid }}
-                          </NuxtLink>
-                        </UBadge>
-                      </div>
-                    </div>
-
-                    <div
-                      v-if="item.parent && Object.keys(item.parent).length > 0"
-                      class="rounded-md border border-default bg-elevated/40 px-3 py-3"
-                      :class="1 === metadataGuidSectionCount(item) ? 'xl:col-span-2' : ''"
-                    >
-                      <UTooltip text="Globally unique identifier for the series">
-                        <span
-                          class="mb-2 inline-flex cursor-help items-center gap-2 font-medium text-highlighted"
-                        >
-                          <UIcon name="i-lucide-link" class="size-4 text-toned" />
-                          <span>Series GUIDs</span>
-                        </span>
-                      </UTooltip>
-
-                      <div class="flex flex-wrap gap-2">
-                        <UBadge
-                          v-for="(guid, source) in item.parent"
-                          :key="`parent-guid-${item.id}-${source}-${guid}`"
-                          color="neutral"
-                          variant="soft"
-                          class="max-w-full"
-                        >
-                          <NuxtLink
-                            target="_blank"
-                            class="break-all hover:text-primary"
-                            :to="
-                              makeGUIDLink(
-                                'series',
-                                String(source).split('guid_')[1] ?? String(source),
-                                guid,
-                                item as unknown as JsonObject,
-                              )
-                            "
-                          >
-                            {{ String(source).split('guid_')[1] ?? String(source) }}://{{ guid }}
-                          </NuxtLink>
-                        </UBadge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </UCard>
-            </div>
-          </div>
-
-          <section v-if="comparisonBackends.length > 0" class="hidden space-y-3 xl:block">
-            <h2>
+          <section v-if="comparisonBackends.length > 0" class="space-y-3">
+            <h2 :id="comparisonHeadingId">
               <button
                 type="button"
                 class="flex w-full items-center justify-between gap-3 text-left"
                 :aria-expanded="showComparison"
+                :aria-controls="comparisonContentId"
                 @click="showComparison = !showComparison"
               >
                 <div class="flex items-center gap-2 text-sm font-semibold text-highlighted">
@@ -1263,44 +726,52 @@
               Highlighted values differ from WatchState.
             </p>
 
-            <div v-if="showComparison" class="space-y-4">
-              <section v-for="section in comparisonSections" :key="section.key" class="space-y-2">
-                <h3 class="inline-flex items-center gap-2 text-sm font-semibold text-highlighted">
-                  <UIcon
-                    :name="
-                      'identity' === section.key
-                        ? 'i-lucide-badge-info'
-                        : 'playback' === section.key
-                          ? 'i-lucide-circle-play'
-                          : 'content' === section.key
-                            ? 'i-lucide-clapperboard'
-                            : 'i-lucide-link'
-                    "
-                    class="size-4 shrink-0 text-toned"
-                  />
-                  <span>{{ section.label }}</span>
-                </h3>
+            <div
+              v-if="showComparison"
+              :id="comparisonContentId"
+              class="ws-table-surface min-w-0 max-w-full overflow-x-auto [--ws-comparison-label-width:6rem] sm:[--ws-comparison-label-width:9rem]"
+              role="region"
+              tabindex="0"
+              :aria-labelledby="comparisonHeadingId"
+            >
+              <div class="grid" :style="comparisonGridStyle">
+                <div
+                  class="sticky left-0 z-10 border-b border-default bg-default/95 px-3 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-toned backdrop-blur-sm"
+                >
+                  Field
+                </div>
+                <div class="border-b border-default bg-primary/5 px-3 py-3">
+                  <p class="text-sm font-semibold text-primary">WatchState</p>
+                </div>
 
-                <div class="overflow-x-auto rounded-lg bg-elevated/20">
-                  <div class="grid" :style="comparisonGridStyle">
-                    <div
-                      class="border-b border-default bg-elevated/40 px-3 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-toned"
-                    >
-                      Field
-                    </div>
-                    <div class="border-b border-default bg-primary/5 px-3 py-3">
-                      <p class="text-sm font-semibold text-primary">WatchState</p>
-                    </div>
-
-                    <div
-                      v-for="backend in comparisonBackends"
-                      :key="`${section.key}-${backend.key}`"
-                      class="border-b border-default bg-elevated/40 px-3 py-3"
-                    >
-                      <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                          <div
-                            class="inline-flex min-w-0 items-center gap-1.5 text-sm text-highlighted"
+                <div
+                  v-for="backend in comparisonBackends"
+                  :key="backend.key"
+                  class="border-b border-default bg-elevated/40 px-3 py-3"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <div
+                        class="inline-flex min-w-0 items-center gap-1.5 text-sm text-highlighted"
+                      >
+                        <UTooltip
+                          :open="true === availabilityTooltipOpen[backend.key]"
+                          :disable-closing-trigger="true"
+                          :ui="{
+                            content: 'h-auto max-w-xs',
+                            text: 'whitespace-normal wrap-anywhere',
+                          }"
+                          :text="backend.availabilityMessage"
+                          @update:open="availabilityTooltipOpen[backend.key] = $event"
+                        >
+                          <button
+                            type="button"
+                            class="inline-flex shrink-0 cursor-help rounded p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            :aria-label="`${backend.key}: ${backend.availabilityMessage}`"
+                            @click="
+                              availabilityTooltipOpen[backend.key] =
+                                !availabilityTooltipOpen[backend.key]
+                            "
                           >
                             <UIcon
                               :name="
@@ -1319,187 +790,195 @@
                                     : 'text-warning',
                               ]"
                             />
-                            <NuxtLink
-                              :to="`/backend/${backend.key}`"
-                              class="truncate hover:text-primary"
-                            >
-                              {{ backend.key }}
-                            </NuxtLink>
-                          </div>
-                        </div>
-
-                        <UButton
-                          color="neutral"
-                          variant="outline"
-                          size="xs"
-                          icon="i-lucide-trash-2"
-                          :disabled="isMutating || isLoading"
-                          @click="
-                            Object.keys(data.metadata).length > 1
-                              ? deleteMetadata(backend.key)
-                              : deleteItem()
-                          "
+                          </button>
+                        </UTooltip>
+                        <NuxtLink
+                          :to="`/backend/${backend.key}`"
+                          class="truncate hover:text-primary"
                         >
-                          Delete
-                        </UButton>
+                          {{ backend.key }}
+                        </NuxtLink>
                       </div>
-                      <p class="mt-2 text-xs leading-5 text-toned">
-                        Availability:
-                        {{
-                          undefined === backend.item.validated
-                            ? 'Checking'
-                            : backend.item.validated
-                              ? 'Available'
-                              : 'Not confirmed'
-                        }}.
-                        <span v-if="backend.item.validated_message">{{
-                          backend.item.validated_message
-                        }}</span>
-                      </p>
                     </div>
 
-                    <div
-                      v-for="(row, rowIndex) in section.rows"
-                      :key="row.key"
-                      class="contents group/row"
+                    <UButton
+                      color="neutral"
+                      variant="outline"
+                      size="xs"
+                      icon="i-lucide-trash-2"
+                      :disabled="isMutating || isLoading"
+                      @click="
+                        Object.keys(data.metadata).length > 1
+                          ? deleteMetadata(backend.key)
+                          : deleteItem()
+                      "
                     >
-                      <div
-                        class="border-b border-default/50 px-3 py-3 text-sm text-default transition-colors"
-                        :class="[
-                          0 === rowIndex % 2 ? 'bg-elevated/40' : 'bg-elevated/20',
-                          'group-hover/row:bg-elevated/50',
-                          row.expandable ? 'cursor-pointer' : '',
-                        ]"
-                        @click="row.expandable ? toggleComparisonRow(row.key) : undefined"
+                      Delete
+                    </UButton>
+                  </div>
+                </div>
+
+                <template v-for="section in comparisonSections" :key="section.key">
+                  <div class="col-span-full border-b border-default bg-elevated/40 px-3 py-3">
+                    <h3
+                      class="sticky left-3 inline-flex w-fit items-center gap-2 text-sm font-semibold text-highlighted"
+                    >
+                      <UIcon
+                        :name="
+                          'identity' === section.key
+                            ? 'i-lucide-badge-info'
+                            : 'playback' === section.key
+                              ? 'i-lucide-circle-play'
+                              : 'content' === section.key
+                                ? 'i-lucide-clapperboard'
+                                : 'i-lucide-link'
+                        "
+                        class="size-4 shrink-0 text-toned"
+                      />
+                      <span>{{ section.label }}</span>
+                    </h3>
+                  </div>
+
+                  <div
+                    v-for="(row, rowIndex) in section.rows"
+                    :key="row.key"
+                    class="contents group/row"
+                  >
+                    <component
+                      :is="row.expandable ? 'button' : 'div'"
+                      :type="row.expandable ? 'button' : undefined"
+                      :aria-expanded="row.expandable ? isComparisonRowExpanded(row.key) : undefined"
+                      class="sticky left-0 z-10 border-b border-default/50 bg-default/95 px-3 py-3 text-left text-sm text-default backdrop-blur-sm transition-colors"
+                      :class="row.expandable ? 'cursor-pointer' : ''"
+                      @click="row.expandable ? toggleComparisonRow(row.key) : undefined"
+                    >
+                      <span
+                        class="flex min-w-0 items-center justify-between gap-1 text-xs font-medium text-toned sm:font-semibold sm:uppercase sm:tracking-[0.16em]"
                       >
-                        <div
-                          class="flex min-w-0 items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-toned"
-                        >
-                          <span class="inline-flex min-w-0 items-center gap-2">
-                            <UIcon :name="row.icon" class="size-4 shrink-0" />
-                            <span>{{ row.label }}</span>
-                          </span>
+                        <span class="inline-flex min-w-0 items-center gap-1 sm:gap-2">
+                          <UIcon :name="row.icon" class="hidden size-4 shrink-0 sm:block" />
+                          <span class="min-w-0 wrap-break-word">{{ row.label }}</span>
+                        </span>
 
-                          <UIcon
-                            v-if="row.expandable"
-                            :name="
-                              isComparisonRowExpanded(row.key)
-                                ? 'i-lucide-chevron-up'
-                                : 'i-lucide-chevron-down'
-                            "
-                            class="size-3.5 shrink-0"
-                          />
-                        </div>
-                      </div>
+                        <UIcon
+                          v-if="row.expandable"
+                          :name="
+                            isComparisonRowExpanded(row.key)
+                              ? 'i-lucide-chevron-up'
+                              : 'i-lucide-chevron-down'
+                          "
+                          class="size-3.5 shrink-0"
+                        />
+                      </span>
+                    </component>
 
-                      <div
-                        v-for="entry in row.cells"
-                        :key="`${row.key}:${entry.backend}`"
-                        class="border-b border-default/50 px-3 py-3 text-sm text-default transition-colors"
-                        :class="[
-                          false !== row.compareDiffs && entry.differs
-                            ? 'bg-warning/10 ring-1 ring-inset ring-warning/20'
-                            : 0 === rowIndex % 2
-                              ? 'bg-elevated/40'
-                              : 'bg-elevated/20',
-                          false !== row.compareDiffs && entry.differs
-                            ? 'group-hover/row:bg-warning/15'
-                            : 'group-hover/row:bg-elevated/50',
-                        ]"
-                      >
-                        <div class="flex min-w-0 items-start justify-between gap-2">
-                          <div class="min-w-0 flex-1">
-                            <template v-if="'tags' === entry.cell.kind">
-                              <div
-                                v-if="(entry.cell.tags?.length ?? 0) > 0"
-                                class="flex flex-wrap gap-2"
-                              >
-                                <UBadge
-                                  v-for="tag in entry.cell.tags"
-                                  :key="`${row.key}:${entry.backend}:${tag.label}`"
-                                  color="neutral"
-                                  variant="soft"
-                                  class="max-w-full"
-                                >
-                                  <NuxtLink
-                                    v-if="tag.href"
-                                    :to="tag.href"
-                                    :target="tag.target"
-                                    class="break-all hover:text-primary"
-                                  >
-                                    {{ tag.label }}
-                                  </NuxtLink>
-                                  <span v-else class="break-all">{{ tag.label }}</span>
-                                </UBadge>
-                              </div>
-                              <span v-else class="text-toned">None</span>
-                            </template>
-
-                            <template v-else-if="'date' === entry.cell.kind && entry.cell.tooltip">
-                              <UTooltip :text="entry.cell.tooltip">
-                                <span class="cursor-help font-medium text-highlighted">
-                                  {{ entry.cell.value }}
-                                </span>
-                              </UTooltip>
-                            </template>
-
-                            <template v-else>
-                              <div
-                                class="min-w-0 text-default"
-                                :class="[
-                                  entry.cell.expandable
-                                    ? expandableBlockClass(
-                                        isComparisonRowExpanded(row.key),
-                                        entry.cell.allowBreakAll,
-                                      )
-                                    : entry.cell.allowBreakAll
-                                      ? 'break-all'
-                                      : 'wrap-break-word',
-                                ]"
+                    <div
+                      v-for="entry in row.cells"
+                      :key="`${row.key}:${entry.backend}`"
+                      class="border-b border-default/50 px-3 py-3 text-sm text-default transition-colors"
+                      :class="[
+                        false !== row.compareDiffs && entry.differs
+                          ? 'bg-warning/10 ring-1 ring-inset ring-warning/20'
+                          : 0 === rowIndex % 2
+                            ? 'bg-elevated/40'
+                            : 'bg-elevated/20',
+                        false !== row.compareDiffs && entry.differs
+                          ? 'group-hover/row:bg-warning/15'
+                          : 'group-hover/row:bg-elevated/50',
+                      ]"
+                    >
+                      <div class="flex min-w-0 items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                          <template v-if="'tags' === entry.cell.kind">
+                            <div
+                              v-if="(entry.cell.tags?.length ?? 0) > 0"
+                              class="flex flex-wrap gap-2"
+                            >
+                              <UBadge
+                                v-for="tag in entry.cell.tags"
+                                :key="`${row.key}:${entry.backend}:${tag.label}`"
+                                color="neutral"
+                                variant="soft"
+                                class="max-w-full"
                               >
                                 <NuxtLink
-                                  v-if="entry.cell.href"
-                                  :to="entry.cell.href"
-                                  :target="entry.cell.target"
-                                  :external="'_blank' === entry.cell.target"
-                                  class="block min-w-0 font-medium text-highlighted hover:text-primary"
-                                  @click.stop
+                                  v-if="tag.href"
+                                  :to="tag.href"
+                                  :target="tag.target"
+                                  class="break-all hover:text-primary"
                                 >
-                                  {{ entry.cell.value }}
+                                  {{ tag.label }}
                                 </NuxtLink>
-                                <span
-                                  v-else
-                                  :class="
-                                    ['None', 'Unknown'].includes(entry.cell.value ?? '')
-                                      ? 'text-toned'
-                                      : 'font-medium text-highlighted'
-                                  "
-                                >
-                                  {{ entry.cell.value }}
-                                </span>
-                              </div>
-                            </template>
-                          </div>
+                                <span v-else class="break-all">{{ tag.label }}</span>
+                              </UBadge>
+                            </div>
+                            <span v-else class="text-toned">None</span>
+                          </template>
 
-                          <UTooltip text="Copy value">
-                            <UButton
-                              color="neutral"
-                              variant="outline"
-                              size="xs"
-                              square
-                              icon="i-lucide-copy"
-                              aria-label="Copy cell value"
-                              @click.stop="
-                                () => void copyText(comparisonCellCopyText(entry.cell), false)
-                              "
-                            />
-                          </UTooltip>
+                          <template v-else-if="'date' === entry.cell.kind && entry.cell.tooltip">
+                            <UTooltip :text="entry.cell.tooltip">
+                              <span class="cursor-help font-medium text-highlighted">
+                                {{ entry.cell.value }}
+                              </span>
+                            </UTooltip>
+                          </template>
+
+                          <template v-else>
+                            <div
+                              class="min-w-0 text-default"
+                              :class="[
+                                entry.cell.expandable
+                                  ? expandableBlockClass(
+                                      isComparisonRowExpanded(row.key),
+                                      entry.cell.allowBreakAll,
+                                    )
+                                  : entry.cell.allowBreakAll
+                                    ? 'break-all'
+                                    : 'wrap-break-word',
+                              ]"
+                            >
+                              <NuxtLink
+                                v-if="entry.cell.href"
+                                :to="entry.cell.href"
+                                :target="entry.cell.target"
+                                :external="'_blank' === entry.cell.target"
+                                class="block min-w-0 font-medium text-highlighted hover:text-primary"
+                                @click.stop
+                              >
+                                {{ entry.cell.value }}
+                              </NuxtLink>
+                              <span
+                                v-else
+                                :class="
+                                  ['None', 'Unknown'].includes(entry.cell.value ?? '')
+                                    ? 'text-toned'
+                                    : 'font-medium text-highlighted'
+                                "
+                              >
+                                {{ entry.cell.value }}
+                              </span>
+                            </div>
+                          </template>
                         </div>
+
+                        <UTooltip text="Copy value">
+                          <UButton
+                            color="neutral"
+                            variant="outline"
+                            size="xs"
+                            square
+                            icon="i-lucide-copy"
+                            aria-label="Copy cell value"
+                            @click.stop="
+                              () => void copyText(comparisonCellCopyText(entry.cell), false)
+                            "
+                          />
+                        </UTooltip>
                       </div>
                     </div>
                   </div>
-                </div>
-              </section>
+                </template>
+              </div>
             </div>
           </section>
         </div>
@@ -1807,7 +1286,6 @@ import {
   UAlert,
   UBadge,
   UButton,
-  UCard,
   UDropdownMenu,
   UEmpty,
   UIcon,
@@ -1842,6 +1320,8 @@ import {
   ag,
   copyText,
   formatDuration,
+  getEventStatusColor,
+  getEventStatusIcon,
   makeGUIDLink,
   makeEventName,
   makeSearchLink,
@@ -1871,14 +1351,8 @@ type HistoryMetadataItem = {
     genres?: Array<string>;
     overview?: string;
   };
-  _toggle?: boolean;
   validated?: boolean;
   validated_message?: string;
-  expandId?: boolean;
-  expandTitle?: boolean;
-  expandPath?: boolean;
-  expandGenres?: boolean;
-  expandOverview?: boolean;
 };
 
 type HistoryViewItem = {
@@ -1944,6 +1418,7 @@ type ComparisonCell = {
 type ComparisonBackend = {
   key: string;
   item: HistoryMetadataItem;
+  availabilityMessage: string;
 };
 
 type ComparisonRowCell = {
@@ -1987,11 +1462,8 @@ const {
 } = usePageBackground();
 const backgroundOverrideId = computed(() => `history:${apiUser.value}:${id.value}`);
 
-const detailCardUi = {
-  header: 'p-4',
-  body: 'px-4 pb-4 pt-0',
-};
-
+const comparisonHeadingId = useId();
+const comparisonContentId = useId();
 const eventActionsId = useId();
 const eventViewModalUi = {
   content: 'max-w-5xl',
@@ -2013,6 +1485,7 @@ const showRawData = ref(false);
 const playbackModalOpen = ref(false);
 const isDeleting = ref(false);
 const isMutating = ref(false);
+const availabilityTooltipOpen = ref<Record<string, boolean>>({});
 const comparisonExpanded = ref<Record<string, boolean>>({});
 const expandLocalId = ref(false);
 const expandLocalTitle = ref(false);
@@ -2100,26 +1573,23 @@ const localGuidSectionCount = computed<number>(() => {
   return count;
 });
 
-const metadataGuidSectionCount = (item: HistoryMetadataItem): number => {
-  let count = 0;
-
-  if (item.guids && Object.keys(item.guids).length > 0) {
-    count++;
-  }
-
-  if (item.parent && Object.keys(item.parent).length > 0) {
-    count++;
-  }
-
-  return count;
-};
-
 const comparisonBackends = computed<Array<ComparisonBackend>>(() =>
-  Object.entries(data.value.metadata).map(([key, item]) => ({ key, item })),
+  Object.entries(data.value.metadata).map(([key, item]) => ({
+    key,
+    item,
+    availabilityMessage:
+      item.validated_message ||
+      (undefined === item.validated
+        ? 'Checking availability'
+        : item.validated
+          ? 'Available'
+          : 'Availability not confirmed'),
+  })),
 );
 
 const comparisonGridStyle = computed<Record<string, string>>(() => ({
-  gridTemplateColumns: `minmax(9rem, 10rem) repeat(${comparisonBackends.value.length + 1}, minmax(12rem, 1fr))`,
+  gridTemplateColumns: `var(--ws-comparison-label-width) repeat(${comparisonBackends.value.length + 1}, minmax(12rem, 1fr))`,
+  minWidth: `calc(var(--ws-comparison-label-width) + ${(comparisonBackends.value.length + 1) * 12}rem)`,
 }));
 
 const isComparisonRowExpanded = (rowKey: string): boolean =>
@@ -2322,21 +1792,30 @@ const comparisonSections = computed<Array<ComparisonSection>>(() => {
       'Type',
       'i-lucide-clapperboard',
       makeTextCell(ucFirst(data.value.type), { emptyLabel: 'Unknown' }),
-      ({ item }) => makeTextCell(ucFirst(item.type), { emptyLabel: 'Unknown' }),
+      ({ item }) =>
+        makeLinkCell(ucFirst(item.type), makeSearchLink('type', item.type), {
+          emptyLabel: 'Unknown',
+        }),
     ),
     makeComparisonRow(
       'season',
       'Season',
       'i-lucide-tv',
       makeTextCell(data.value.season, { emptyLabel: 'None' }),
-      ({ item }) => makeTextCell(item.season, { emptyLabel: 'None' }),
+      ({ item }) =>
+        makeLinkCell(item.season, makeSearchLink('season', String(item.season ?? '')), {
+          emptyLabel: 'None',
+        }),
     ),
     makeComparisonRow(
       'episode',
       'Episode',
       'i-lucide-tv',
       makeTextCell(data.value.episode, { emptyLabel: 'None' }),
-      ({ item }) => makeTextCell(item.episode, { emptyLabel: 'None' }),
+      ({ item }) =>
+        makeLinkCell(item.episode, makeSearchLink('episode', String(item.episode ?? '')), {
+          emptyLabel: 'None',
+        }),
     ),
     makeComparisonRow(
       'guids',
@@ -2604,37 +2083,6 @@ const openEventFromLog = (eventId: string): void => {
 const openEvent = (eventId: string): void => {
   if ('' !== eventId) {
     selectedEventId.value = eventId;
-  }
-};
-
-const getEventStatusColor = (status: number): 'error' | 'neutral' | 'success' | 'warning' => {
-  switch (status) {
-    case 1:
-      return 'warning';
-    case 2:
-      return 'success';
-    case 3:
-    case 4:
-      return 'error';
-    default:
-      return 'neutral';
-  }
-};
-
-const getEventStatusIcon = (status: number): string => {
-  switch (status) {
-    case 0:
-      return 'i-lucide-clock-3';
-    case 1:
-      return 'i-lucide-loader-circle';
-    case 2:
-      return 'i-lucide-circle-check';
-    case 3:
-      return 'i-lucide-circle-x';
-    case 4:
-      return 'i-lucide-ban';
-    default:
-      return 'i-lucide-circle-help';
   }
 };
 

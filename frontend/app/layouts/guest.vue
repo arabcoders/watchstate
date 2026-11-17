@@ -1,6 +1,6 @@
 <template>
   <UApp>
-    <div class="ws-shell min-h-screen">
+    <div class="ws-shell ws-shell-surface min-h-screen">
       <slot />
     </div>
   </UApp>

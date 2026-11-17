@@ -63,35 +63,35 @@
         </UButton>
       </div>
 
-      <div
+      <UAlert
         v-if="historyError"
         role="alert"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error/30 bg-error/5 p-4"
+        color="error"
+        variant="soft"
+        icon="i-lucide-circle-alert"
+        :title="
+          0 < bHistory.length
+            ? 'Recent updates could not be refreshed'
+            : 'Recent updates could not be loaded'
+        "
       >
-        <div class="min-w-0 space-y-1">
-          <p class="text-sm font-medium text-highlighted">
-            {{
-              0 < bHistory.length
-                ? 'Recent updates could not be refreshed'
-                : 'Recent updates could not be loaded'
-            }}
-          </p>
-          <p class="wrap-break-word text-sm text-toned">{{ historyError }}</p>
-          <p v-if="0 < bHistory.length" class="text-xs text-toned">
-            These results may be out of date.
-          </p>
-        </div>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-refresh-cw"
-          :loading="historyLoading"
-          @click="void loadRecentHistory()"
-        >
-          Retry
-        </UButton>
-      </div>
+        <template #description>
+          <p class="wrap-break-word">{{ historyError }}</p>
+          <p v-if="0 < bHistory.length" class="mt-1 text-xs">These results may be out of date.</p>
+        </template>
+        <template #actions>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :loading="historyLoading"
+            @click="void loadRecentHistory()"
+          >
+            Retry
+          </UButton>
+        </template>
+      </UAlert>
 
       <div
         v-if="historyLoading && 0 === bHistory.length"
@@ -263,31 +263,33 @@
         </div>
       </div>
 
-      <div
+      <UAlert
         v-if="infoError"
         role="alert"
-        class="flex flex-wrap items-center justify-between gap-3 border-t border-default px-4 py-3 sm:px-5"
+        color="error"
+        variant="soft"
+        icon="i-lucide-circle-alert"
+        :title="
+          info ? 'Connection details could not be refreshed' : 'Connection details unavailable'
+        "
       >
-        <div class="min-w-0 space-y-1">
-          <p class="text-sm font-medium text-highlighted">
-            {{
-              info ? 'Connection details could not be refreshed' : 'Connection details unavailable'
-            }}
-          </p>
-          <p class="wrap-break-word text-sm text-toned">{{ infoError }}</p>
-          <p v-if="info" class="text-xs text-toned">These details may be out of date.</p>
-        </div>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-refresh-cw"
-          :loading="infoLoading"
-          @click="void loadInfo()"
-        >
-          Retry
-        </UButton>
-      </div>
+        <template #description>
+          <p class="wrap-break-word">{{ infoError }}</p>
+          <p v-if="info" class="mt-1 text-xs">These details may be out of date.</p>
+        </template>
+        <template #actions>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :loading="infoLoading"
+            @click="void loadInfo()"
+          >
+            Retry
+          </UButton>
+        </template>
+      </UAlert>
       <p
         v-if="infoLoading && !info"
         role="status"
@@ -343,7 +345,7 @@ import moment from 'moment';
 import { computed, onBeforeUnmount, ref, shallowRef, useId, watch } from 'vue';
 import { useHead, useRoute } from '#app';
 import { useStorage } from '@vueuse/core';
-import { NuxtLink, UButton, UEmpty, UIcon, UModal, USkeleton } from '#components';
+import { NuxtLink, UAlert, UButton, UEmpty, UIcon, UModal, USkeleton } from '#components';
 import BackendEditForm from '~/components/BackendEditForm.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import RecentHistoryCards from '~/components/RecentHistoryCards.vue';

@@ -133,8 +133,10 @@
             </span>
           </div>
 
-          <dl class="col-span-2 min-w-0 space-y-2 text-sm xl:col-span-1">
-            <div class="space-y-1">
+          <dl
+            class="col-span-2 flex min-w-0 flex-wrap content-start items-baseline gap-x-4 gap-y-2 text-sm xl:col-span-1"
+          >
+            <div class="w-full space-y-1">
               <dt class="text-xs text-muted">Schedule</dt>
               <dd>
                 <NuxtLink

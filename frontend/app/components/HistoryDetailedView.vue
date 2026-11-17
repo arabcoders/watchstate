@@ -1,8 +1,5 @@
 <template>
-  <section
-    class="overflow-hidden rounded-xl border border-default bg-default"
-    aria-label="History inspection"
-  >
+  <section class="ws-card overflow-hidden" aria-label="History inspection">
     <Lazy
       v-for="item in items"
       :key="`${user}:${item.id}`"

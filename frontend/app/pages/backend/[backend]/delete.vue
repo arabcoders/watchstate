@@ -157,6 +157,7 @@ const deleteBackend = async (): Promise<void> => {
   const { status: confirmStatus } = await useDialog().confirmDialog({
     title: 'Delete permanently?',
     message: `This action is irreversible. Are you sure you want to delete the backend '${id}'?`,
+    confirmText: 'Delete backend',
     confirmColor: 'error',
   });
 

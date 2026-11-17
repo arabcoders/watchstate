@@ -1,6 +1,6 @@
 <template>
   <UApp>
-    <div class="min-h-screen bg-default text-default">
+    <div class="ws-shell ws-shell-surface min-h-screen text-default">
       <div
         class="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8"
       >
@@ -23,3 +23,7 @@
     </div>
   </UApp>
 </template>
+
+<script setup lang="ts">
+import { NuxtLink, UApp, UIcon } from '#components';
+</script>

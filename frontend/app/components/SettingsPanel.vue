@@ -28,14 +28,14 @@
             </div>
 
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <label class="text-sm font-medium text-default" for="random_bg_opacity">
+              <label class="text-sm font-medium text-default" for="random_bg_opacity_v2">
                 Header artwork visibility
               </label>
               <code class="text-sm text-toned">{{ Math.round(bgVisibilityModel * 100) }}%</code>
             </div>
 
             <USlider
-              id="random_bg_opacity"
+              id="random_bg_opacity_v2"
               v-model="bgVisibilityModel"
               color="primary"
               :min="0"
@@ -224,11 +224,11 @@ const passwordFormId = useId();
 
 const bg_enable = useStorage<boolean>('bg_enable', true);
 const poster_enable = useStorage<boolean>('poster_enable', true);
-const bg_opacity = useStorage<number>('bg_opacity', 0.95);
+const bg_opacity_v2 = useStorage<number>('bg_opacity_v2', 0.85);
 const bgVisibilityModel = computed<number>({
-  get: () => Number((1 - Number(bg_opacity.value)).toFixed(2)),
+  get: () => Number((1 - Number(bg_opacity_v2.value)).toFixed(2)),
   set: (value) => {
-    bg_opacity.value = Number((1 - Number(value)).toFixed(2));
+    bg_opacity_v2.value = Number((1 - Number(value)).toFixed(2));
   },
 });
 const tooltip_date_format = TOOLTIP_DATE_FORMAT;
@@ -236,7 +236,7 @@ const tooltip_date_format = TOOLTIP_DATE_FORMAT;
 const tooltipDatePreview = computed(() => moment().format(tooltip_date_format.value));
 
 const slideoverUi = {
-  content: 'ws-settings-panel w-full sm:max-w-2xl',
+  content: 'ws-settings-panel ws-shell-surface w-full bg-transparent sm:max-w-xl',
   body: 'p-4 sm:p-5',
 };
 

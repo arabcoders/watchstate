@@ -107,12 +107,13 @@
             />
 
             <UFormField label="JSON configuration" name="config_content">
-              <textarea
+              <UTextarea
                 v-model="configContent"
-                rows="20"
+                :rows="20"
                 :disabled="isSaving"
                 placeholder="Enter server configuration in JSON format..."
-                class="min-h-96 w-full rounded-md border border-default bg-elevated/30 px-3 py-2 font-mono text-sm text-default outline-none transition focus:border-primary"
+                class="w-full"
+                :ui="{ base: 'min-h-96 font-mono text-sm' }"
                 @blur="formatJSON"
               />
             </UFormField>
@@ -169,7 +170,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useId, watch } from 'vue';
-import { UAlert, UButton, UCard, UFormField, UIcon, UInput } from '#components';
+import { UAlert, UButton, UCard, UFormField, UIcon, UInput, UTextarea } from '#components';
 import { useDirtyState } from '~/composables/useDirtyState';
 import { notification, parse_api_response, request } from '~/utils';
 import { applyCommand, parseCommand } from '~/utils/jsonCommand';

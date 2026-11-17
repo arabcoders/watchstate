@@ -2,51 +2,24 @@
   <div class="space-y-5">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div class="flex flex-wrap items-center gap-2">
-        <Popover placement="bottom-end" trigger="click" :z-index="13000" :disabled="!item">
-          <template #trigger>
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-copy"
-              trailing-icon="i-lucide-chevron-down"
-              :disabled="!item"
-            >
-              Copy
-            </UButton>
-          </template>
-
-          <template #content="{ hide }">
-            <div class="w-52 space-y-1 p-1">
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
-                @click="copyEventId(hide)"
-              >
-                <UIcon name="i-lucide-hash" class="size-4 text-toned" />
-                <span>Copy ID</span>
-              </button>
-
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
-                @click="copyItem(hide)"
-              >
-                <UIcon name="i-lucide-copy" class="size-4 text-toned" />
-                <span>Copy event</span>
-              </button>
-
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-default hover:bg-elevated hover:text-highlighted"
-                @click="copyLogs(hide)"
-              >
-                <UIcon name="i-lucide-scroll-text" class="size-4 text-toned" />
-                <span>Copy logs</span>
-              </button>
-            </div>
-          </template>
-        </Popover>
+        <UDropdownMenu
+          :items="copyMenuItems"
+          :content="{ side: 'bottom', align: 'end' }"
+          :modal="false"
+          :disabled="!item"
+          :ui="{ content: 'z-[13000]' }"
+        >
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-copy"
+            trailing-icon="i-lucide-chevron-down"
+            :disabled="!item"
+          >
+            Copy
+          </UButton>
+        </UDropdownMenu>
 
         <UTooltip
           v-if="item && (0 === item.status || 1 === item.status)"
@@ -451,17 +424,27 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { UAlert, UBadge, UButton, UEmpty, UIcon, UInput, UTooltip } from '#components';
+import {
+  UAlert,
+  UBadge,
+  UButton,
+  UDropdownMenu,
+  UEmpty,
+  UIcon,
+  UInput,
+  UTooltip,
+} from '#components';
+import type { DropdownMenuItem } from '@nuxt/ui';
 import moment from 'moment';
 import { useStorage } from '@vueuse/core';
 import StructuredLogLine from '~/components/StructuredLogLine.vue';
 import LogDetailsModal from '~/components/LogDetailsModal.vue';
-import Popover from '~/components/Popover.vue';
 import { useDialog } from '~/composables/useDialog';
 import type { EventsItem, LogEntry, ServerJsonLogEntry } from '~/types';
 import {
   copyText,
-  getEventStatusClass,
+  getEventStatusColor,
+  getEventStatusIcon,
   makeEventName,
   notification,
   parse_api_response,
@@ -589,21 +572,15 @@ const toEventLogRow = (raw: LogEntry | ServerJsonLogEntry, index: number): Event
   };
 };
 
-const copyEventId = (hide?: () => void): void => {
+const copyEventId = (): void => {
   if (!item.value) {
     return;
   }
 
   copyText(item.value.id);
-  hide?.();
 };
 
-const copyItem = (hide?: () => void): void => {
-  copyText(JSON.stringify(item.value, null, 2));
-  hide?.();
-};
-
-const copyLogs = (hide?: () => void): void => {
+const copyLogs = (): void => {
   copyText(
     filteredRows.value
       .map((row) => {
@@ -615,44 +592,27 @@ const copyLogs = (hide?: () => void): void => {
       })
       .join('\n'),
   );
-  hide?.();
 };
 
-const getEventStatusColor = (
-  status: number,
-): 'primary' | 'success' | 'error' | 'warning' | 'info' | 'neutral' => {
-  const value = getEventStatusClass(status);
-  if (value.includes('danger')) {
-    return 'error';
-  }
-  if (value.includes('warning')) {
-    return 'warning';
-  }
-  if (value.includes('success')) {
-    return 'success';
-  }
-  if (value.includes('info')) {
-    return 'info';
-  }
-  return 'neutral';
-};
-
-const getEventStatusIcon = (status: number): string => {
-  switch (status) {
-    case 0:
-      return 'i-lucide-clock-3';
-    case 1:
-      return 'i-lucide-loader-circle';
-    case 2:
-      return 'i-lucide-circle-check';
-    case 3:
-      return 'i-lucide-circle-x';
-    case 4:
-      return 'i-lucide-ban';
-    default:
-      return 'i-lucide-circle-help';
-  }
-};
+const copyMenuItems: Array<DropdownMenuItem> = [
+  {
+    label: 'Copy ID',
+    icon: 'i-lucide-hash',
+    onSelect: copyEventId,
+  },
+  {
+    label: 'Copy event',
+    icon: 'i-lucide-copy',
+    onSelect: () => {
+      copyText(JSON.stringify(item.value, null, 2));
+    },
+  },
+  {
+    label: 'Copy logs',
+    icon: 'i-lucide-scroll-text',
+    onSelect: copyLogs,
+  },
+];
 
 const clearTimer = (): void => {
   if (null !== timer) {

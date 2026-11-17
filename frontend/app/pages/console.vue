@@ -1,6 +1,19 @@
 <template>
   <main class="w-full min-w-0 max-w-full space-y-6">
-    <PageHeader v-bind="pageShell" />
+    <PageHeader v-bind="pageShell">
+      <template #actions>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-eraser"
+          aria-label="Clear terminal output"
+          @click="clearOutput"
+        >
+          Clear output
+        </UButton>
+      </template>
+    </PageHeader>
 
     <section aria-label="Command" class="space-y-4">
       <UAlert
@@ -28,6 +41,19 @@
 
       <div class="grid items-end gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
         <UFormField id="command" label="Command &amp; arguments" name="command" class="min-w-0">
+          <template #label>
+            <span class="inline-flex flex-wrap items-center gap-2">
+              <span>Command &amp; arguments</span>
+              <UBadge :color="streamStatusColor" variant="soft" size="sm" role="status">
+                <UIcon
+                  :name="streamStatusIcon"
+                  class="size-3.5"
+                  :class="{ 'animate-spin': streamStatusSpinning }"
+                />
+                {{ streamStatusLabel }}
+              </UBadge>
+            </span>
+          </template>
           <UInput
             ref="commandInput"
             v-model="command"
@@ -181,34 +207,7 @@
       </p>
     </section>
 
-    <section
-      aria-labelledby="console-output-heading"
-      class="space-y-4 border-t border-default pt-6"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <h2 id="console-output-heading" class="text-lg font-semibold text-highlighted">Output</h2>
-          <UBadge :color="streamStatusColor" variant="soft" size="sm" role="status">
-            <UIcon
-              :name="streamStatusIcon"
-              class="size-3.5"
-              :class="{ 'animate-spin': streamStatusSpinning }"
-            />
-            {{ streamStatusLabel }}
-          </UBadge>
-        </div>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-eraser"
-          aria-label="Clear terminal output"
-          @click="clearOutput"
-        >
-          Clear output
-        </UButton>
-      </div>
-
+    <section aria-label="Command output" class="space-y-4 border-t border-default pt-6">
       <UAlert
         v-if="streamState.error"
         color="error"
