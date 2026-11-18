@@ -53,6 +53,34 @@ final class RedisStreamEventTransportTest extends TestCase
         $this->transport($redis)->inspect();
     }
 
+    public function test_count_pending(): void
+    {
+        $redis = $this->createMock(Redis::class);
+        $redis->expects(self::once())->method('xLen')->with('events')->willReturn(100_000);
+        $redis
+            ->expects(self::once())
+            ->method('rawCommand')
+            ->with('XPENDING', 'events', 'watchstate')
+            ->willReturn([2, '1-0', '2-0', [['consumer', 2]]]);
+        $redis->expects(self::never())->method('xRange');
+
+        self::assertSame(99_998, $this->transport($redis)->inspectCount(EventEnvelopeState::PENDING));
+    }
+
+    public function test_count_pending_no_group(): void
+    {
+        $redis = $this->createMock(Redis::class);
+        $redis->expects(self::once())->method('xLen')->with('events')->willReturn(2);
+        $redis
+            ->expects(self::once())
+            ->method('rawCommand')
+            ->with('XPENDING', 'events', 'watchstate')
+            ->willThrowException(new RuntimeException('NOGROUP No such consumer group.'));
+        $redis->expects(self::never())->method('xRange');
+
+        self::assertSame(2, $this->transport($redis)->inspectCount(EventEnvelopeState::PENDING));
+    }
+
     private function transport(Redis $redis): RedisStreamEventTransport
     {
         return new RedisStreamEventTransport($redis, 'events', 'watchstate', 'test');

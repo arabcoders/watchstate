@@ -17,6 +17,7 @@ use App\Commands\State\UserStatisticsCommand;
 use App\Commands\State\ValidateCommand;
 use App\Commands\System\PruneCommand;
 use App\Libs\Database\PdoFactory;
+use App\Libs\Exceptions\ValidationException;
 use App\Libs\Mappers\Import\DirectMapper;
 use Cron\CronExpression;
 use Monolog\Level;
@@ -341,13 +342,23 @@ return (function () {
         'pid_file' => env('WS_WORKER_PID_FILE', fn() => ag($config, 'tmpDir') . '/worker.pid'),
     ];
 
+    $defaultMemoryLimit = '265M';
+    $memoryLimit = $defaultMemoryLimit;
+    if (null !== ($override = env('WS_PHP_MEMORY_LIMIT'))) {
+        try {
+            $memoryLimit = get_env_spec('WS_PHP_MEMORY_LIMIT')['validate']($override);
+        } catch (ValidationException) {
+            $memoryLimit = $defaultMemoryLimit;
+        }
+    }
+
     $config['php'] = [
         'ini' => [
             'disable_functions' => null,
             'display_errors' => 0,
             'error_log' => $inContainer ? '/proc/self/fd/2' : 'syslog',
             'syslog.ident' => $inContainer ? 'frankenphp' : 'php-fpm',
-            'memory_limit' => '265M',
+            'memory_limit' => $memoryLimit,
             'post_max_size' => '100M',
             'upload_max_filesize' => '100M',
             'zend.exception_ignore_args' => $inContainer ? 1 : 0,

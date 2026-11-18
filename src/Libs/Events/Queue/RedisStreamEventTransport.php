@@ -132,8 +132,16 @@ final class RedisStreamEventTransport implements EventTransportInterface
      */
     public function inspectCount(?EventEnvelopeState $state = null, ?string $filter = null): int
     {
-        if (null === $state && '' === trim((string) $filter)) {
-            return $this->count();
+        if ('' === trim((string) $filter)) {
+            if (null === $state) {
+                return $this->count();
+            }
+
+            if (EventEnvelopeState::PENDING === $state) {
+                $count = $this->count();
+
+                return 0 === $count ? 0 : max(0, $count - $this->processingCount());
+            }
         }
 
         return count($this->inspectable($state, $filter));
@@ -184,25 +192,12 @@ final class RedisStreamEventTransport implements EventTransportInterface
      */
     private function processingIds(string $start = '-', string $end = '+'): array
     {
-        try {
-            $summary = $this->redis->rawCommand('XPENDING', $this->stream, $this->group);
-            $count = is_array($summary) && is_numeric($summary[0] ?? null) ? (int) $summary[0] : 0;
-            if ($count < 1) {
-                return [];
-            }
-
-            $records = $this->redis->rawCommand('XPENDING', $this->stream, $this->group, $start, $end, (string) $count);
-        } catch (Throwable $e) {
-            if (true === str_contains($e->getMessage(), 'NOGROUP')) {
-                return [];
-            }
-
-            throw $e;
-        }
-
-        if (false === is_array($records)) {
+        $count = $this->processingCount();
+        if (1 > $count) {
             return [];
         }
+
+        $records = $this->pendingRecords($start, $end, (string) $count);
 
         $ids = [];
         foreach ($records as $record) {
@@ -214,6 +209,31 @@ final class RedisStreamEventTransport implements EventTransportInterface
         }
 
         return $ids;
+    }
+
+    private function processingCount(): int
+    {
+        $summary = $this->pendingRecords();
+
+        return is_numeric($summary[0] ?? null) ? (int) $summary[0] : 0;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function pendingRecords(string ...$range): array
+    {
+        try {
+            $records = $this->redis->rawCommand('XPENDING', $this->stream, $this->group, ...$range);
+        } catch (Throwable $e) {
+            if (true === str_contains($e->getMessage(), 'NOGROUP')) {
+                return [];
+            }
+
+            throw $e;
+        }
+
+        return is_array($records) ? $records : [];
     }
 
     /**
