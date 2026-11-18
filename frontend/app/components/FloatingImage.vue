@@ -5,7 +5,7 @@
     :close-delay="150"
     :arrow="false"
     :content="{ side: 'top', sideOffset: 10, collisionPadding: 8 }"
-    :ui="{ content: 'w-auto rounded-md border border-default bg-default/95 p-2 shadow-xl' }"
+    :ui="{ content: 'w-auto p-2' }"
     @update:open="handleOpenChange"
   >
     <slot />

@@ -192,7 +192,7 @@
         </template>
       </UEmpty>
 
-      <div v-if="0 < filteredItems.length" class="ws-card divide-y divide-default overflow-hidden">
+      <div v-if="0 < filteredItems.length" class="ws-list-card overflow-hidden">
         <article
           v-for="item in filteredItems"
           :key="item.id"
@@ -246,7 +246,7 @@
     <UModal
       v-model:open="detailOpen"
       :title="selectedSummary ? `Transport item #${shortId(selectedSummary.id)}` : 'Transport item'"
-      :ui="{ content: 'max-w-4xl', body: 'p-4 sm:p-5' }"
+      :ui="{ content: 'max-w-4xl' }"
     >
       <template #body>
         <UAlert

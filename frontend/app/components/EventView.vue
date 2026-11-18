@@ -146,10 +146,14 @@
             <span v-else class="text-muted">Not started</span>
           </dd>
         </div>
+        <div
+          v-if="item.reference"
+          class="col-span-2 flex flex-wrap gap-x-2 text-sm text-toned sm:col-span-4"
+        >
+          <dt class="font-medium text-muted">Reference</dt>
+          <dd class="min-w-0 wrap-anywhere">{{ item.reference }}</dd>
+        </div>
       </dl>
-      <p v-if="item.reference" class="wrap-anywhere text-sm text-toned">
-        <span class="font-medium text-muted">Reference</span> {{ item.reference }}
-      </p>
 
       <section v-if="item.event_data && 0 < Object.keys(item.event_data).length" class="space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -287,18 +291,8 @@
             title="No matching logs"
           />
 
-          <div
-            class="min-w-0 overflow-y-auto overflow-x-hidden rounded-lg border border-default/70 bg-elevated/40 shadow-sm"
-            :style="{ maxHeight: '40vh' }"
-          >
-            <article
-              v-for="(row, idx) in filteredRows"
-              :key="row.key"
-              :class="[
-                'flex min-w-0 border-b border-default/40 bg-transparent last:border-b-0 hover:bg-elevated/70',
-                1 === idx % 2 ? 'bg-elevated/40' : '',
-              ]"
-            >
+          <div class="ws-card max-h-[40vh] overflow-y-auto overflow-x-hidden">
+            <article v-for="row in filteredRows" :key="row.key" class="ws-log-row">
               <div class="ws-log-line">
                 <template v-if="'structured' === row.kind">
                   <StructuredLogLine

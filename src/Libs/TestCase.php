@@ -290,7 +290,7 @@ class TestCase extends \PHPUnit\Framework\TestCase
         $filePath = TESTS_PATH . '/Fixtures/test_servers.yaml';
         $instances[$name] = new UserContext(
             name: $name,
-            config: $configFile ?? new ConfigFile($filePath, 'yaml', false, false, false),
+            config: $configFile ?? new ConfigFile($filePath, 'yaml', autoSave: false),
             mapper: $mapper ?? new DirectMapper(logger: $logger, db: $db, cache: $cache),
             cache: $cache,
             db: $db,

@@ -263,7 +263,6 @@ final class PlaylistSyncServiceTest extends TestCase
                 file: __DIR__ . '/../../Fixtures/test_servers.yaml',
                 autoSave: false,
                 autoCreate: false,
-                autoBackup: false,
             ),
             mapper: new DirectMapper(logger: $logger, db: $db, cache: $cache),
             cache: $cache,

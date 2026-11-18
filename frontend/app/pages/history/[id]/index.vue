@@ -485,7 +485,7 @@
                 <div class="grid gap-3 xl:grid-cols-2">
                   <div
                     v-if="data?.content_title"
-                    class="rounded-md border border-default bg-elevated/40 px-3 py-3"
+                    class="ws-inset px-3 py-3"
                     :class="data?.content_path ? '' : 'xl:col-span-2'"
                   >
                     <div class="mb-2 flex items-center justify-between gap-3">
@@ -528,7 +528,7 @@
 
                   <div
                     v-if="data?.content_path"
-                    class="rounded-md border border-default bg-elevated/40 px-3 py-3"
+                    class="ws-inset px-3 py-3"
                     :class="data?.content_title ? '' : 'xl:col-span-2'"
                   >
                     <div class="mb-2 flex items-center justify-between gap-3">
@@ -577,7 +577,7 @@
               >
                 <div
                   v-if="data.guids && Object.keys(data.guids).length > 0"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-3"
+                  class="ws-inset px-3 py-3"
                   :class="1 === localGuidSectionCount ? 'xl:col-span-2' : ''"
                 >
                   <UTooltip text="Globally unique identifier for this item">
@@ -617,7 +617,7 @@
 
                 <div
                   v-if="data.rguids && Object.keys(data.rguids).length > 0"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-3"
+                  class="ws-inset px-3 py-3"
                   :class="1 === localGuidSectionCount ? 'xl:col-span-2' : ''"
                 >
                   <UTooltip text="Relative Globally unique identifier for this episode">
@@ -654,7 +654,7 @@
 
                 <div
                   v-if="data.parent && Object.keys(data.parent).length > 0"
-                  class="rounded-md border border-default bg-elevated/40 px-3 py-3"
+                  class="ws-inset px-3 py-3"
                   :class="
                     1 === localGuidSectionCount || 3 === localGuidSectionCount
                       ? 'xl:col-span-2'
@@ -1086,14 +1086,14 @@
               <div
                 v-else-if="relatedLoaded"
                 ref="relatedLogsContainer"
-                class="max-h-96 min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-default"
+                class="ws-card max-h-96 overflow-y-auto overflow-x-hidden"
                 tabindex="0"
                 aria-label="Related logs"
               >
                 <article
                   v-for="(log, index) in related.logs"
                   :key="relatedLogKey(log, index)"
-                  class="flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30"
+                  class="ws-log-row"
                 >
                   <div class="ws-log-line">
                     <StructuredLogLine
@@ -1467,7 +1467,6 @@ const comparisonContentId = useId();
 const eventActionsId = useId();
 const eventViewModalUi = {
   content: 'max-w-5xl',
-  body: 'p-4 sm:p-5',
 };
 
 const playbackActionsId = useId();

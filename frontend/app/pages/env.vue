@@ -74,7 +74,7 @@
         </template>
       </UEmpty>
 
-      <div v-if="0 < filteredRows.length" class="ws-card divide-y divide-default">
+      <div v-if="0 < filteredRows.length" class="ws-list-card">
         <Lazy v-for="item in filteredRows" :key="item.key" :unrender="true" :min-height="112">
           <article
             :aria-labelledby="`env-${item.key}`"

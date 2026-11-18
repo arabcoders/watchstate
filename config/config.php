@@ -170,6 +170,7 @@ return (function () {
 
     $config['backends_file'] = fix_path(env('WS_BACKENDS_FILE', ag($config, 'path') . '/config/servers.yaml'));
     $config['mapper_file'] = fix_path(env('WS_MAPPER_FILE', ag($config, 'path') . '/config/mapper.yaml'));
+    $config['secure_files'] = array_unique(['.env', 'servers.yaml', 'config.yaml', basename($config['backends_file'])]);
 
     date_default_timezone_set(ag($config, 'tz', 'UTC'));
     $logDateFormat = make_date()->format('Ymd');

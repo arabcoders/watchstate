@@ -11,12 +11,16 @@
   --ws-border-strong: var(--ui-border-accented);
   --ws-surface-border-soft: var(--ui-border-accented);
   --ws-surface-border-solid: var(--ui-border-accented);
+  --ws-floating-bg: color-mix(in oklab, var(--ui-bg-elevated) 80%, transparent);
+  --ws-floating-shadow: 0 1rem 2rem rgb(15 23 42 / 0.1);
 }
 
 .dark {
   --ws-border-strong: var(--ui-border);
   --ws-surface-border-soft: color-mix(in oklab, var(--ui-border) 70%, transparent);
   --ws-surface-border-solid: var(--ui-border);
+  --ws-floating-bg: color-mix(in oklab, var(--ui-bg-elevated) 30%, transparent);
+  --ws-floating-shadow: 0 1rem 2rem rgb(0 0 0 / 0.3);
 }
 
 @layer base {
@@ -106,14 +110,23 @@
     border-color: var(--ws-surface-border-solid);
   }
 
-  .ws-card {
+  .ws-card,
+  .ws-card-padded-lg,
+  .ws-list-card {
     @apply min-w-0 max-w-full rounded-xl border bg-elevated/20;
     border-color: var(--ws-surface-border-soft);
   }
 
   .ws-card-padded-lg {
-    @apply min-w-0 max-w-full rounded-xl border bg-elevated/20 p-4 sm:p-5;
-    border-color: var(--ws-surface-border-soft);
+    @apply p-4 sm:p-5;
+  }
+
+  .ws-list-card {
+    @apply divide-y divide-default;
+  }
+
+  .ws-inset {
+    @apply rounded-md border border-default bg-elevated/40;
   }
 
   .ws-panel-padded {
@@ -127,29 +140,8 @@
   }
 
   .ws-floating-surface {
-    @apply border bg-default/95 shadow-xl backdrop-blur-md;
+    @apply border backdrop-blur-md;
     border-color: var(--ws-surface-border-solid);
-    box-shadow: 0 1rem 2rem rgb(15 23 42 / 0.1);
-  }
-
-  .ws-floating-surface [data-slot='item'][data-highlighted]::before,
-  .ws-floating-surface [data-slot='item'][data-state='open']::before,
-  .ws-floating-surface [data-slot='item']:hover::before {
-    background-color: color-mix(in oklab, var(--ui-primary) 11%, transparent) !important;
-  }
-
-  .ws-floating-surface [data-slot='item'][data-disabled]::before {
-    background-color: transparent !important;
-  }
-
-  .dark .ws-floating-surface {
-    box-shadow: 0 1rem 2rem rgb(0 0 0 / 0.3);
-  }
-
-  .dark .ws-floating-surface [data-slot='item'][data-highlighted]::before,
-  .dark .ws-floating-surface [data-slot='item'][data-state='open']::before,
-  .dark .ws-floating-surface [data-slot='item']:hover::before {
-    background-color: color-mix(in oklab, var(--ui-primary) 16%, transparent) !important;
   }
 
   .bg-fanart {
@@ -205,6 +197,10 @@
 
   .ws-wrap-anywhere {
     overflow-wrap: anywhere;
+  }
+
+  .ws-log-row {
+    @apply flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30;
   }
 
   .ws-log-line {

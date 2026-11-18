@@ -130,7 +130,7 @@
         v-if="isLoading && !hasResults"
         role="status"
         aria-label="Loading backups"
-        class="ws-card divide-y divide-default"
+        class="ws-list-card"
       >
         <div v-for="index in 4" :key="index" class="flex items-center gap-4 px-4 py-4">
           <USkeleton class="size-9 shrink-0" />
@@ -160,7 +160,7 @@
         </template>
       </UEmpty>
 
-      <ul v-if="0 < filteredItems.length" class="ws-card divide-y divide-default overflow-hidden">
+      <ul v-if="0 < filteredItems.length" class="ws-list-card overflow-hidden">
         <li
           v-for="item in filteredItems"
           :key="item.filename"
@@ -243,11 +243,7 @@
       </div>
     </details>
 
-    <UModal
-      v-model:open="restoreOpen"
-      title="Prepare restore"
-      :ui="{ content: 'max-w-2xl', body: 'p-4 sm:p-5' }"
-    >
+    <UModal v-model:open="restoreOpen" title="Prepare restore" :ui="{ content: 'max-w-2xl' }">
       <template #body>
         <div v-if="restoreFile" class="space-y-5">
           <div class="space-y-1">

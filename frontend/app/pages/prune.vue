@@ -45,7 +45,7 @@
 
       <UEmpty v-else-if="0 === pruners.length" icon="i-lucide-scissors" title="No pruners found" />
 
-      <div v-else class="ws-card divide-y divide-default">
+      <div v-else class="ws-list-card">
         <article
           v-for="pruner in pruners"
           :id="pruner.name"

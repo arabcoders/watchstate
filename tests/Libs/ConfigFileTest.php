@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Libs;
 
+use App\Libs\Config;
 use App\Libs\ConfigFile;
 use App\Libs\Extends\LogMessageProcessor;
 use App\Libs\TestCase;
@@ -33,7 +34,6 @@ class ConfigFileTest extends TestCase
             'type' => 'yaml',
             'autoSave' => false,
             'autoCreate' => false,
-            'autoBackup' => false,
             'opts' => [
                 'json_decode' => JSON_UNESCAPED_UNICODE,
                 'json_encode' => JSON_UNESCAPED_UNICODE,
@@ -49,7 +49,6 @@ class ConfigFileTest extends TestCase
                 type: 'json',
                 autoSave: false,
                 autoCreate: false,
-                autoBackup: false,
             ),
             reason: 'If file does not exist, and autoCreate is set to false, an exception should be thrown.',
             exception: InvalidArgumentException::class,
@@ -62,7 +61,6 @@ class ConfigFileTest extends TestCase
                 type: 'php',
                 autoSave: false,
                 autoCreate: false,
-                autoBackup: false,
             ),
             reason: 'If type is not supported, an exception should be thrown.',
             exception: InvalidArgumentException::class,
@@ -75,7 +73,6 @@ class ConfigFileTest extends TestCase
                 type: 'json',
                 autoSave: false,
                 autoCreate: true,
-                autoBackup: false,
             ),
             reason: 'If file is not writable, an exception should be thrown.',
             exception: InvalidArgumentException::class,
@@ -97,13 +94,12 @@ class ConfigFileTest extends TestCase
         }
     }
 
-    public function test_setLogger()
+    public function test_logger()
     {
         $tmpFile = self::$tmpPath . '/test_' . uniqid();
         copy(__DIR__ . '/../Fixtures/test_servers.yaml', $tmpFile);
         $params = $this->params;
         $params['file'] = $tmpFile;
-        $params['autoBackup'] = true;
         $class = new ConfigFile(...$params);
         $class->setLogger($this->logger);
         $class->set('foo', 'bar');
@@ -116,6 +112,78 @@ class ConfigFileTest extends TestCase
             'has been modified since last load.',
             $this->handler->getRecords()[0]['message'],
         );
+    }
+
+    public function test_permissions(): void
+    {
+        $this->initTempApp();
+        foreach (Config::get('secure_files', []) as $filename) {
+            $path = self::$tmpPath . '/' . $filename;
+            file_put_contents($path, 'key: old');
+            chmod($path, 0o666);
+
+            $config = ConfigFile::open($path, autoSave: false);
+            clearstatcache(true, $path);
+            self::assertSame(0o600, fileperms($path) & 0o777);
+
+            $config->set('key', 'new')->persist();
+            clearstatcache(true, $path);
+            self::assertSame(0o600, fileperms($path) & 0o777);
+            self::assertSame('new', ConfigFile::open($path)->get('key'));
+            self::assertFileDoesNotExist($path . '.bak');
+        }
+    }
+
+    public function test_backups(): void
+    {
+        $path = self::$tmpPath . '/config.yaml';
+        file_put_contents($path, 'key: old');
+        file_put_contents($path . '.bak', 'existing backup');
+        ConfigFile::open($path)->set('key', 'new')->persist();
+        self::assertSame('new', ConfigFile::open($path)->get('key'));
+        self::assertSame('existing backup', file_get_contents($path . '.bak'));
+    }
+
+    public function test_chmod_cache(): void
+    {
+        $path = self::$tmpPath . '/servers.yaml';
+        set_file_permissions($path);
+        file_put_contents($path, 'key: value');
+        chmod($path, 0o666);
+        set_file_permissions($path);
+        clearstatcache(true, $path);
+        self::assertSame(0o600, fileperms($path) & 0o777);
+
+        chmod($path, 0o666);
+        set_file_permissions($path);
+        clearstatcache(true, $path);
+        self::assertSame(0o666, fileperms($path) & 0o777);
+
+        set_file_permissions($path, 0o640);
+        clearstatcache(true, $path);
+        self::assertSame(0o640, fileperms($path) & 0o777);
+    }
+
+    public function test_chmod_failure(): void
+    {
+        if (false === is_file('/proc/self/status')) {
+            self::markTestSkipped('Requires procfs.');
+        }
+
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            error_clear_last();
+            set_file_permissions('/proc/self/status');
+            self::assertNull(error_get_last());
+            trigger_error('handler restored', E_USER_WARNING);
+            self::assertSame(['handler restored'], $warnings);
+        } finally {
+            restore_error_handler();
+        }
     }
 
     public function test_delete()
@@ -507,7 +575,7 @@ class ConfigFileTest extends TestCase
         $this->assertEquals('VALUE', $reloaded->get('key2'), 'All values should be filtered');
     }
 
-    public function test_replaceAll_json_format()
+    public function test_replace_json()
     {
         $tmpFile = self::$tmpPath . '/test_' . uniqid() . '.json';
         file_put_contents($tmpFile, json_encode(['original' => 'data'], JSON_PRETTY_PRINT));
@@ -516,7 +584,6 @@ class ConfigFileTest extends TestCase
             'type' => 'json',
             'autoSave' => false,
             'autoCreate' => false,
-            'autoBackup' => false,
         ];
 
         $class = ConfigFile::open(...$params);

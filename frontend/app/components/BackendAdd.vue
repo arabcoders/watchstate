@@ -300,7 +300,7 @@
               </p>
             </UFormField>
 
-            <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
+            <div class="ws-inset bg-elevated/20 px-3 py-3">
               <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
                   <div class="text-sm font-medium text-highlighted">Invited guest</div>
@@ -319,10 +319,7 @@
             </div>
           </template>
 
-          <div
-            v-if="backend?.options?.client"
-            class="rounded-md border border-default bg-elevated/20 px-3 py-3"
-          >
+          <div v-if="backend?.options?.client" class="ws-inset bg-elevated/20 px-3 py-3">
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <div class="text-sm font-medium text-highlighted">Validate SSL certificate</div>
@@ -438,7 +435,7 @@
         <div class="space-y-4">
           <div
             v-if="backend.import"
-            class="flex items-start justify-between gap-4 rounded-md border border-default bg-elevated/20 px-3 py-3"
+            class="ws-inset flex items-start justify-between gap-4 bg-elevated/20 px-3 py-3"
           >
             <div class="min-w-0">
               <p class="text-sm font-medium text-highlighted">Enable Import</p>
@@ -467,7 +464,7 @@
 
           <div
             v-if="backend.export"
-            class="flex items-start justify-between gap-4 rounded-md border border-default bg-elevated/20 px-3 py-3"
+            class="ws-inset flex items-start justify-between gap-4 bg-elevated/20 px-3 py-3"
           >
             <div class="min-w-0">
               <p class="text-sm font-medium text-highlighted">Enable Export</p>
@@ -483,7 +480,7 @@
 
           <USeparator label="One Time Operations" />
 
-          <div class="rounded-md border border-default bg-elevated/20 px-3 py-3">
+          <div class="ws-inset bg-elevated/20 px-3 py-3">
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <p class="text-sm font-medium text-highlighted">
@@ -499,10 +496,7 @@
             </div>
           </div>
 
-          <div
-            v-if="backends.length < 1"
-            class="rounded-md border border-default bg-elevated/20 px-3 py-3"
-          >
+          <div v-if="backends.length < 1" class="ws-inset bg-elevated/20 px-3 py-3">
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <p class="text-sm font-medium text-highlighted">
@@ -517,10 +511,7 @@
             </div>
           </div>
 
-          <div
-            v-if="backends.length > 0"
-            class="rounded-md border border-default bg-elevated/20 px-3 py-3"
-          >
+          <div v-if="backends.length > 0" class="ws-inset bg-elevated/20 px-3 py-3">
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <p class="text-sm font-medium text-highlighted">

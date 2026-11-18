@@ -559,12 +559,10 @@ const webhookFullUrl = computed((): string => {
 
 const backendAddModalUi = {
   content: 'max-w-5xl',
-  body: 'p-4 sm:p-5',
 };
 
 const backendEditModalUi = {
   content: 'max-w-6xl',
-  body: 'p-4 sm:p-5',
 };
 
 const { handleOpenChange: handleBackendAddOpenChange } = useDirtyCloseGuard(toggleForm, {

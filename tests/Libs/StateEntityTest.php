@@ -816,7 +816,7 @@ class StateEntityTest extends TestCase
         $updater = new StateEntity($this->testMovie);
         $updater->watched = 0;
 
-        $config = new ConfigFile(TESTS_PATH . '/Fixtures/test_servers.yaml', 'yaml', false, false, false);
+        $config = new ConfigFile(TESTS_PATH . '/Fixtures/test_servers.yaml', 'yaml', autoSave: false);
         $config->set('test_plex.options.' . Options::DISABLE_MARK_UNPLAYED, true);
 
         $userContext = $this->createUserContext(
@@ -829,7 +829,7 @@ class StateEntityTest extends TestCase
             'When DISABLE_MARK_UNPLAYED flag is set to true, shouldMarkAsUnplayed() returns false',
         );
 
-        $configFalse = new ConfigFile(TESTS_PATH . '/Fixtures/test_servers.yaml', 'yaml', false, false, false);
+        $configFalse = new ConfigFile(TESTS_PATH . '/Fixtures/test_servers.yaml', 'yaml', autoSave: false);
         $configFalse->set('test_plex.options.' . Options::DISABLE_MARK_UNPLAYED, false);
 
         $userContextFalse = $this->createUserContext(

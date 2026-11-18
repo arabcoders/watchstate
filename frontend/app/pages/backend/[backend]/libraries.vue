@@ -50,7 +50,7 @@
         title="No libraries found"
       />
 
-      <div v-else-if="0 < items.length" class="ws-card divide-y divide-default">
+      <div v-else-if="0 < items.length" class="ws-list-card">
         <Lazy v-for="item in items" :key="`library-${item.id}`" :unrender="true" :min-height="148">
           <article
             :aria-labelledby="`library-${item.id}`"

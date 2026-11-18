@@ -173,6 +173,7 @@
                 :forceShow="showScheduler"
                 @update="(e) => (scheduler = e)"
                 v-if="inContainer"
+                class="mb-6"
               />
 
               <div class="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -302,7 +303,7 @@ import {
   UTooltip,
 } from '#components';
 import type { NavigationMenuItem } from '@nuxt/ui';
-import type { VersionResponse } from '~/types';
+import type { SchedulerStatus, VersionResponse } from '~/types';
 import { useAuth } from '~/composables/useAuth';
 import { useMediaQuery } from '~/composables/useMediaQuery';
 import { usePageBackground } from '~/composables/usePageBackground';
@@ -560,10 +561,9 @@ const handleSwipeCancel = (): void => {
 
 const identitySelectionModalUi = {
   content: 'sm:max-w-lg',
-  body: 'p-4 sm:p-5',
 };
 
-const scheduler = ref<{ status: boolean; message: string; restartable: boolean }>({
+const scheduler = ref<SchedulerStatus>({
   status: false,
   message: 'Loading...',
   restartable: false,

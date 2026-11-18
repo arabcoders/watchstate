@@ -92,7 +92,7 @@
         :title="query ? 'No matching routes' : 'No routes found'"
       />
 
-      <div v-else class="ws-card divide-y divide-default">
+      <div v-else class="ws-list-card">
         <Lazy
           v-for="route in filteredRoutes"
           :key="`${selectedBackend}:${route.key}`"
@@ -213,7 +213,7 @@
 
                     <pre
                       v-if="shouldShowShape(parameter.schemaSummary, parameter.shape)"
-                      class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
+                      class="ws-inset mt-3 overflow-x-auto p-3 text-xs text-toned"
                     ><code>{{ parameter.shape }}</code></pre>
                   </div>
                 </div>
@@ -256,7 +256,7 @@
 
                   <pre
                     v-if="shouldShowShape(route.requestBody.schemaSummary, route.requestBody.shape)"
-                    class="overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
+                    class="ws-inset overflow-x-auto p-3 text-xs text-toned"
                   ><code>{{ route.requestBody.shape }}</code></pre>
 
                   <div v-else-if="!route.requestBody.schemaSummary" class="text-sm text-toned">
@@ -308,7 +308,7 @@
 
                     <pre
                       v-if="shouldShowShape(response.schemaSummary, response.shape)"
-                      class="mt-3 overflow-x-auto rounded-md border border-default bg-elevated/40 p-3 text-xs text-toned"
+                      class="ws-inset mt-3 overflow-x-auto p-3 text-xs text-toned"
                     ><code>{{ response.shape }}</code></pre>
 
                     <div v-else-if="!response.schemaSummary" class="mt-2 text-sm text-toned">

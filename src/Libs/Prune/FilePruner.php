@@ -16,10 +16,14 @@ final class FilePruner
         private readonly iLogger $logger,
     ) {}
 
+    /**
+     * Prune expired files, or report matches without removing them.
+     */
     public function __invoke(bool $execute): void
     {
         $time = time();
         $logsPruneAfter = (int) Config::get('logs.prune.after', 7);
+        $backupExpiresAt = strtotime(sprintf('-%d DAYS', (int) Config::get('backup.prune.after', 90)), $time);
 
         $directories = [
             [
@@ -60,9 +64,41 @@ final class FilePruner
                     '/^(\w+\.)?\w+\.\d{8}\.json(\.zip)?$/i',
                     $file->getBasename(),
                 ),
-                'time' => strtotime(sprintf('-%d DAYS', (int) Config::get('backup.prune.after', 90)), $time),
+                'time' => $backupExpiresAt,
             ],
         ];
+
+        $identityDirectories = glob(Config::get('path') . '/users/*', GLOB_ONLYDIR);
+        $configDirectories = [
+            Config::get('path') . '/config',
+            ...(false === $identityDirectories ? [] : $identityDirectories),
+        ];
+        foreach ($configDirectories as $directory) {
+            $directories[] = [
+                'name' => 'config_backups_remover',
+                'path' => $directory,
+                'base' => Config::get('path'),
+                'filter' => '/\.bak$/',
+                'time' => $backupExpiresAt,
+            ];
+        }
+
+        foreach (['backends_file', 'mapper_file', 'guid.file'] as $key) {
+            $file = Config::get($key);
+            if (null === $file || in_array(dirname($file), $configDirectories, true)) {
+                continue;
+            }
+
+            $directories[] = [
+                'name' => 'config_backups_remover',
+                'path' => dirname($file),
+                'base' => dirname($file),
+                'filter' => '/\.bak$/',
+                'validate' => static fn(SplFileInfo $entry): bool => $entry->getBasename() === basename($file) . '.bak',
+                'time' => $backupExpiresAt,
+                'report' => false,
+            ];
+        }
 
         $this->logger->debug('Scanning for expired generated files.', [
             'operation' => 'prune.files',
@@ -150,7 +186,7 @@ final class FilePruner
             $fileName = $entry->getBasename();
             $relativeFile = after($entry->getRealPath(), (string) ag($item, 'base') . '/');
 
-            if (null !== $filter && false === @preg_match($filter, $fileName)) {
+            if (null !== $filter && 1 !== @preg_match($filter, $fileName)) {
                 $this->logger->debug("File '{file}' did not pass filter checks.", [
                     'operation' => 'prune.files',
                     'error' => 'filter_mismatch',

@@ -258,7 +258,7 @@
         Execution options
       </h2>
 
-      <div class="divide-y divide-default">
+      <div class="ws-list-card px-4 sm:px-5">
         <div v-if="hasIdentities" class="flex items-center justify-between gap-6 py-4">
           <div class="min-w-0">
             <div class="text-sm font-medium text-highlighted">Re-create local identities</div>

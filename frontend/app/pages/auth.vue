@@ -8,7 +8,6 @@
           <img src="/images/logo_nobg.png" alt="WatchState" class="size-10 object-contain" />
         </div>
         <h1 class="text-2xl font-semibold text-highlighted">WatchState</h1>
-        <p class="text-sm text-muted">Sync watch state across Plex, Jellyfin &amp; Emby.</p>
       </header>
 
       <UAlert
@@ -197,13 +196,6 @@
                 />
               </UTooltip>
             </div>
-            <UAlert
-              color="warning"
-              variant="soft"
-              icon="i-lucide-triangle-alert"
-              title="Existing sessions will be signed out"
-              description="Other configuration settings are kept."
-            />
             <p
               v-if="polling_timer"
               role="status"

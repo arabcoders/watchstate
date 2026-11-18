@@ -185,7 +185,7 @@ final class BackendMetadataPrunerTest extends TestCase
 
     private function writeBackends(array $backends): void
     {
-        ConfigFile::open((string) Config::get('backends_file'), 'yaml', autoCreate: true, autoBackup: false)
+        ConfigFile::open((string) Config::get('backends_file'), 'yaml', autoCreate: true)
             ->replaceAll($backends)
             ->persist(true);
     }

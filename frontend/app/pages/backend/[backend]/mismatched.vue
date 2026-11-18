@@ -80,7 +80,7 @@
         description="These items might be misidentified on the backend. Review each match."
       />
 
-      <section aria-label="Possible mismatches" class="ws-card divide-y divide-default">
+      <section aria-label="Possible mismatches" class="ws-list-card">
         <Lazy
           v-for="item in items"
           :key="`${item.library}:${item.path ?? item.webUrl ?? item.title}:${item.title}:${item.year ?? ''}`"

@@ -68,7 +68,6 @@ const emit = defineEmits<{
 
 const modalUi = {
   content: 'max-w-5xl',
-  body: 'p-4 sm:p-5',
   footer: 'border-t border-default/70 px-4 py-4 sm:px-5',
 };
 

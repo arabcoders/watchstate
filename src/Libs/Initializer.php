@@ -105,6 +105,18 @@ class Initializer
 
         $this->createDirectories();
 
+        $identityDirectories = glob(Config::get('path') . '/users/*', GLOB_ONLYDIR);
+        $configDirectories = [
+            Config::get('path') . '/config',
+            ...(false === $identityDirectories ? [] : $identityDirectories),
+        ];
+        foreach ($configDirectories as $directory) {
+            foreach (Config::get('secure_files', []) as $filename) {
+                set_file_permissions($directory . '/' . $filename);
+            }
+        }
+        set_file_permissions(Config::get('backends_file'));
+
         (static function () {
             $path = Config::get('path') . '/config/config.yaml';
 

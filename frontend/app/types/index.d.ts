@@ -736,6 +736,12 @@ export interface IndexLogFile {
   lines: Array<LogEntry | ServerJsonLogEntry>;
 }
 
+export interface SchedulerStatus {
+  status: boolean;
+  message: string;
+  restartable: boolean;
+}
+
 /**
  *  Represents a scheduled task item from the API.
  */

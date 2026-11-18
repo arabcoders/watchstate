@@ -262,7 +262,7 @@
         </UButton>
       </div>
 
-      <div class="ws-card divide-y divide-default">
+      <div class="ws-list-card">
         <Lazy
           v-for="item in filteredItems"
           :key="item.id"

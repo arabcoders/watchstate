@@ -58,7 +58,6 @@ abstract class MediaBrowserTestCase extends TestCase
                 file: __DIR__ . '/../../Fixtures/test_servers.yaml',
                 autoSave: false,
                 autoCreate: false,
-                autoBackup: false,
             ),
             mapper: $this->createMapper($cache, $db),
             cache: $cache->getInterface(),
