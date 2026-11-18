@@ -196,7 +196,7 @@
                 title="No backends configured"
               />
 
-              <div v-else class="ws-card divide-y divide-default">
+              <div v-else class="ws-list-card">
                 <article
                   v-for="backend in group.backends"
                   :key="`${backend.user}@${backend.name}`"
@@ -284,7 +284,7 @@
                       </button>
                       <pre
                         v-if="isDetailOpen(`opts-${backend.user}@${backend.name}`)"
-                        class="mt-2 overflow-x-auto rounded-md border border-default bg-elevated/40 p-2 text-xs text-default"
+                        class="ws-inset mt-2 overflow-x-auto p-2 text-xs text-default"
                         >{{ JSON.stringify(backend.options, null, 2) }}</pre>
                     </div>
                   </div>
@@ -316,11 +316,7 @@
           />
         </button>
 
-        <div
-          id="report-tasks"
-          v-if="isSectionOpen('tasks')"
-          class="ws-card divide-y divide-default"
-        >
+        <div id="report-tasks" v-if="isSectionOpen('tasks')" class="ws-list-card">
           <UEmpty
             v-if="0 === report.tasks.length"
             size="sm"
@@ -447,7 +443,7 @@
             </button>
             <pre
               v-if="isDetailOpen('suppression-rules')"
-              class="mt-2 overflow-x-auto rounded-md border border-default bg-elevated/40 p-2 text-xs text-default"
+              class="ws-inset mt-2 overflow-x-auto p-2 text-xs text-default"
               >{{ JSON.stringify(report.suppression.rules, null, 2) }}</pre>
           </div>
         </div>
@@ -517,10 +513,7 @@
                 >
                   .....
                 </div>
-                <article
-                  v-else-if="entry.log"
-                  class="flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30"
-                >
+                <article v-else-if="entry.log" class="ws-log-row">
                   <div class="ws-log-line">
                     <StructuredLogLine
                       :log="entry.log"

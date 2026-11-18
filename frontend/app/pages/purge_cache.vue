@@ -109,7 +109,7 @@ const purgeCache = async (): Promise<void> => {
     const { status } = await useDialog().confirmDialog({
       title: 'Purge cache?',
       message:
-        'Purge shared cached data for every identity? Events in the Redis queue will be discarded. Local history, sync dates, and backend settings will be kept.',
+        'Purge shared cached data for every identity? Events in the queue will be discarded. Local history, sync dates, and backend settings will be kept.',
       confirmText: 'Purge cache',
       confirmColor: 'error',
     });

@@ -67,7 +67,7 @@
 
       <UEmpty v-if="0 === filteredItems.length" icon="i-lucide-search" title="No matching rules" />
 
-      <div v-else class="ws-card divide-y divide-default">
+      <div v-else class="ws-list-card">
         <article
           v-for="item in filteredItems"
           :key="String(item.id)"

@@ -54,7 +54,7 @@
         description="Plex tokens with limited access may not list users."
       />
 
-      <div v-else-if="items && 0 < items.length" class="ws-card divide-y divide-default">
+      <div v-else-if="items && 0 < items.length" class="ws-list-card">
         <Lazy v-for="item in items" :key="`users-${item.id}`" :unrender="true" :min-height="112">
           <article
             :aria-labelledby="`user-${item.id}`"

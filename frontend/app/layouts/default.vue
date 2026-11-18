@@ -561,7 +561,6 @@ const handleSwipeCancel = (): void => {
 
 const identitySelectionModalUi = {
   content: 'sm:max-w-lg',
-  body: 'p-4 sm:p-5',
 };
 
 const scheduler = ref<SchedulerStatus>({

@@ -71,7 +71,7 @@
           />
         </div>
 
-        <ul v-if="0 < filteredGuids.length" class="ws-card divide-y divide-default">
+        <ul v-if="0 < filteredGuids.length" class="ws-list-card">
           <li
             v-for="guid in filteredGuids"
             :key="guid.id"
@@ -120,7 +120,7 @@
           />
         </div>
 
-        <ul v-if="0 < filteredLinks.length" class="ws-card divide-y divide-default">
+        <ul v-if="0 < filteredLinks.length" class="ws-list-card">
           <li v-for="link in filteredLinks" :key="`${link.type}-${link.id}`" class="space-y-3 p-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0 flex-1 space-y-1">
@@ -316,7 +316,6 @@ const filteredLinks = computed(() => {
 
 const formModalUi = {
   content: 'sm:max-w-3xl',
-  body: 'p-4 sm:p-5',
 };
 
 const { handleOpenChange: handleAddGuidOpenChange } = useDirtyCloseGuard(addGuidModalOpen, {

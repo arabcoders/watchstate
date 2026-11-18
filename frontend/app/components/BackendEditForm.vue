@@ -66,27 +66,25 @@
       </template>
     </UAlert>
 
-    <form v-else :id="formId" class="space-y-8" @submit.prevent="saveContent">
-      <div class="space-y-3">
-        <dl class="grid gap-4 sm:grid-cols-3">
-          <div>
-            <dt class="text-xs font-medium text-muted">WatchState identity</dt>
-            <dd class="mt-1 font-semibold text-highlighted">{{ api_user }}</dd>
-          </div>
-          <div>
-            <dt class="text-xs font-medium text-muted">Backend</dt>
-            <dd class="mt-1 font-semibold text-highlighted">{{ backend.name }}</dd>
-          </div>
-          <div>
-            <dt class="text-xs font-medium text-muted">Server type</dt>
-            <dd class="mt-1 font-semibold text-highlighted">{{ ucFirst(backend.type) }}</dd>
-          </div>
-        </dl>
-      </div>
+    <form v-else :id="formId" class="space-y-4" @submit.prevent="saveContent">
+      <dl class="grid gap-4 sm:grid-cols-3">
+        <div>
+          <dt class="text-xs font-medium text-muted">WatchState identity</dt>
+          <dd class="mt-1 font-semibold text-highlighted">{{ api_user }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-muted">Backend</dt>
+          <dd class="mt-1 font-semibold text-highlighted">{{ backend.name }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-muted">Server type</dt>
+          <dd class="mt-1 font-semibold text-highlighted">{{ ucFirst(backend.type) }}</dd>
+        </div>
+      </dl>
 
       <nav
         aria-label="Backend settings sections"
-        class="sticky top-0 z-10 -mt-2 flex flex-wrap gap-1 border-b border-default bg-default/85 py-2 backdrop-blur-md"
+        class="sticky top-0 z-10 flex flex-wrap gap-1 border-b border-default bg-default/90 py-2 backdrop-blur-md"
       >
         <UButton
           as="a"
@@ -131,11 +129,11 @@
         </UButton>
       </nav>
 
-      <fieldset :disabled="isSaving || isRemovingOption" class="min-w-0 space-y-10">
+      <fieldset :disabled="isSaving || isRemovingOption" class="min-w-0 space-y-4">
         <section
           id="backend-connection"
           aria-labelledby="backend-connection-title"
-          class="scroll-mt-20 space-y-6"
+          class="ws-card-padded-lg scroll-mt-20 space-y-6"
         >
           <div>
             <h2 id="backend-connection-title" class="text-lg font-semibold text-highlighted">
@@ -375,7 +373,7 @@
         <section
           id="backend-remote-account"
           aria-labelledby="backend-remote-account-title"
-          class="scroll-mt-20 space-y-6 border-t border-default pt-8"
+          class="ws-card-padded-lg scroll-mt-20 space-y-6"
         >
           <div>
             <h2 id="backend-remote-account-title" class="text-lg font-semibold text-highlighted">
@@ -469,7 +467,7 @@
         <section
           id="backend-sync-direction"
           aria-labelledby="backend-sync-direction-title"
-          class="scroll-mt-20 space-y-6 border-t border-default pt-8"
+          class="ws-card-padded-lg scroll-mt-20 space-y-6"
         >
           <div>
             <h2 id="backend-sync-direction-title" class="text-lg font-semibold text-highlighted">
@@ -540,7 +538,7 @@
         <section
           id="backend-advanced"
           aria-labelledby="backend-advanced-title"
-          class="scroll-mt-20 space-y-6 border-t border-default pt-8"
+          class="ws-card-padded-lg scroll-mt-20 space-y-6"
         >
           <h2 id="backend-advanced-title">
             <button

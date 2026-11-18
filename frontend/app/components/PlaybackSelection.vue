@@ -137,7 +137,24 @@
           description="A different audio track requires compatibility playback."
         />
 
-        <template v-if="showAdvanced">
+        <div v-if="selectedPath" class="flex flex-row justify-end gap-2">
+          <UButton
+            color="neutral"
+            :variant="showAdvanced ? 'soft' : 'outline'"
+            size="sm"
+            icon="i-lucide-settings"
+            :aria-expanded="showAdvanced"
+            @click="showAdvanced = !showAdvanced"
+          >
+            Advanced settings
+          </UButton>
+        </div>
+
+        <section
+          v-if="showAdvanced"
+          aria-label="Advanced playback settings"
+          class="ws-card-padded-lg space-y-5"
+        >
           <UFormField
             label="Video transcoding codec"
             name="video_codec"
@@ -172,37 +189,19 @@
             />
           </UFormField>
 
-          <div class="rounded-md border border-default bg-elevated/30 px-3 py-3">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-medium text-highlighted">
-                  Include debug information in response headers
-                </div>
-                <p class="mt-1 text-sm text-toned">
-                  Shows ffmpeg options &amp; the active transcode path.
-                </p>
+          <div class="flex items-center justify-between gap-3 border-t border-default pt-4">
+            <div class="min-w-0">
+              <div class="text-sm font-medium text-highlighted">
+                Include debug information in response headers
               </div>
-
-              <USwitch id="debug" v-model="session_debug" color="neutral" />
+              <p class="mt-1 text-sm text-toned">
+                Shows ffmpeg options &amp; the active transcode path.
+              </p>
             </div>
+
+            <USwitch id="debug" v-model="session_debug" color="neutral" />
           </div>
-        </template>
-        <div v-if="selectedPath" class="flex flex-row justify-end gap-2">
-          <UButton
-            color="neutral"
-            :variant="showAdvanced ? 'soft' : 'outline'"
-            size="sm"
-            icon="i-lucide-settings"
-            :aria-pressed="showAdvanced"
-            @click="
-              () => {
-                showAdvanced = !showAdvanced;
-              }
-            "
-          >
-            Advanced settings
-          </UButton>
-        </div>
+        </section>
       </div>
     </template>
 

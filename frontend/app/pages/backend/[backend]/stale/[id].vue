@@ -48,7 +48,7 @@
       </template>
     </UAlert>
 
-    <div v-if="0 < items.length" class="ws-card divide-y divide-default">
+    <div v-if="0 < items.length" class="ws-list-card">
       <Lazy v-for="item in items" :key="item.id" :unrender="true" :min-height="216">
         <article class="flex items-start gap-3 p-4 sm:p-5">
           <StatisticsPoster

@@ -80,7 +80,7 @@
         description="Review the items below and use the external lookups to confirm the correct match."
       />
 
-      <section aria-label="Unmatched content" class="ws-card divide-y divide-default">
+      <section aria-label="Unmatched content" class="ws-list-card">
         <Lazy
           v-for="item in items"
           :key="

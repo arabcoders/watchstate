@@ -306,11 +306,7 @@
       </template>
     </UEmpty>
 
-    <ul
-      v-if="0 < filteredRows.length"
-      aria-label="Events"
-      class="ws-card divide-y divide-default overflow-hidden"
-    >
+    <ul v-if="0 < filteredRows.length" aria-label="Events" class="ws-list-card overflow-hidden">
       <li
         v-for="item in filteredRows"
         :key="item.id"
@@ -660,12 +656,10 @@ const perPageItems = computed(() =>
 const eventActionsId = useId();
 const quickViewModalUi = {
   content: 'max-w-5xl',
-  body: 'p-4 sm:p-5',
 };
 
 const deleteModalUi = {
   content: 'max-w-2xl',
-  body: 'p-4 sm:p-5',
   footer: 'border-t border-default/70 px-4 py-4 sm:px-5',
 };
 

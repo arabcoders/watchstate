@@ -262,7 +262,7 @@
           v-for="(log, logIndex) in dashboardLogs"
           :key="log.filename"
           :aria-labelledby="`log-heading-${logIndex}`"
-          class="overflow-hidden rounded-xl border border-default"
+          class="ws-card overflow-hidden"
         >
           <div class="flex flex-wrap items-center justify-between gap-3 bg-elevated/30 px-4 py-3">
             <div class="min-w-0 space-y-1">
@@ -342,7 +342,7 @@
             <article
               v-for="(entry, idx) in log.entries"
               :key="`${log.filename}-${idx}`"
-              class="flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30"
+              class="ws-log-row"
             >
               <div class="ws-log-line">
                 <StructuredLogLine
@@ -493,7 +493,6 @@ const logContainers = new Map<string, HTMLElement>();
 const eventActionsId = useId();
 const eventViewModalUi = {
   content: 'max-w-5xl',
-  body: 'p-4 sm:p-5',
 };
 
 const eventViewOpen = computed({

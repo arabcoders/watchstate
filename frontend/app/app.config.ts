@@ -1,3 +1,7 @@
+const floatingSurface =
+  'ws-floating-surface rounded-lg bg-(--ws-floating-bg) shadow-(--ws-floating-shadow) ring-0';
+const overlayBody = 'p-4 sm:p-5';
+
 export default defineAppConfig({
   ui: {
     primary: 'indigo',
@@ -67,11 +71,13 @@ export default defineAppConfig({
     modal: {
       slots: {
         content: 'ws-shell-surface bg-transparent',
+        body: overlayBody,
       },
     },
     slideover: {
       slots: {
         content: 'ws-shell-surface bg-transparent',
+        body: overlayBody,
       },
     },
     card: {
@@ -94,17 +100,17 @@ export default defineAppConfig({
     },
     dropdownMenu: {
       slots: {
-        content: 'ws-floating-surface',
+        content: floatingSurface,
       },
     },
     popover: {
       slots: {
-        content: 'ws-floating-surface',
+        content: floatingSurface,
       },
     },
     select: {
       slots: {
-        content: 'ws-floating-surface',
+        content: floatingSurface,
       },
       variants: {
         variant: {
@@ -114,7 +120,7 @@ export default defineAppConfig({
     },
     selectMenu: {
       slots: {
-        content: 'ws-floating-surface',
+        content: floatingSurface,
       },
       variants: {
         variant: {

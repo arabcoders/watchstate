@@ -32,7 +32,10 @@
           title="No parameters"
         />
 
-        <section v-if="pathParams.length > 0" class="space-y-3">
+        <section
+          v-if="pathParams.length > 0"
+          class="space-y-3 border-b border-default pb-4 last:border-b-0 last:pb-0"
+        >
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
@@ -80,7 +83,10 @@
           </div>
         </section>
 
-        <section v-if="queryParams.length > 0" class="space-y-3">
+        <section
+          v-if="queryParams.length > 0"
+          class="space-y-3 border-b border-default pb-4 last:border-b-0 last:pb-0"
+        >
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
@@ -128,7 +134,10 @@
           </div>
         </section>
 
-        <section v-if="headerParams.length > 0 || headerRows.length > 0" class="space-y-3">
+        <section
+          v-if="headerParams.length > 0 || headerRows.length > 0"
+          class="space-y-3 border-b border-default pb-4 last:border-b-0 last:pb-0"
+        >
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
@@ -171,7 +180,7 @@
             <div
               v-for="(row, index) in headerRows"
               :key="index"
-              class="flex flex-col gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2 sm:flex-row"
+              class="ws-inset flex flex-col gap-2 px-3 py-2 sm:flex-row"
             >
               <UInput
                 v-model="row.key"
@@ -209,7 +218,10 @@
           </div>
         </section>
 
-        <section v-if="route?.requestBody" class="space-y-3">
+        <section
+          v-if="route?.requestBody"
+          class="space-y-3 border-b border-default pb-4 last:border-b-0 last:pb-0"
+        >
           <button
             type="button"
             class="flex w-full items-center justify-between gap-3 text-left"
@@ -269,9 +281,7 @@
         </section>
 
         <div v-if="response" class="space-y-3">
-          <div
-            class="flex items-center gap-2 rounded-md border border-default bg-elevated/40 px-3 py-2"
-          >
+          <div class="ws-inset flex items-center gap-2 px-3 py-2">
             <UBadge
               :color="responseStatusColor"
               variant="soft"

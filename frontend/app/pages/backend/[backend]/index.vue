@@ -383,7 +383,6 @@ useHead(() => ({ title: `Backends: ${backend.value}` }));
 
 const backendEditModalUi = {
   content: 'max-w-6xl',
-  body: 'p-4 sm:p-5',
 };
 
 const historyLink = computed(() => ({

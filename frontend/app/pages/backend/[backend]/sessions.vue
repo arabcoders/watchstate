@@ -52,7 +52,7 @@
         title="No active play sessions"
       />
 
-      <div v-else-if="0 < items.length" class="ws-card divide-y divide-default">
+      <div v-else-if="0 < items.length" class="ws-list-card">
         <Lazy v-for="item in items" :key="item.id" :unrender="true" :min-height="112">
           <article
             :aria-labelledby="`session-${item.id}`"

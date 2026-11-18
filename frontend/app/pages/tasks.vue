@@ -105,7 +105,7 @@
         description="Check your task configuration, then refresh."
       />
 
-      <div v-if="0 < tasks.length" class="ws-card divide-y divide-default">
+      <div v-if="0 < tasks.length" class="ws-list-card">
         <article
           v-for="task in tasks"
           :id="task.name"
@@ -381,7 +381,6 @@ let disposed = false;
 const eventActionsId = useId();
 const eventViewModalUi = {
   content: 'max-w-5xl',
-  body: 'p-4 sm:p-5',
 };
 
 const eventViewOpen = computed({

@@ -11,7 +11,7 @@
       <h2 :id="`guides-${group.id}`" class="text-sm font-semibold text-highlighted">
         {{ group.title }}
       </h2>
-      <ul class="ws-card divide-y divide-default overflow-hidden">
+      <ul class="ws-list-card overflow-hidden">
         <li v-for="guide in group.guides" :key="guide.url">
           <NuxtLink
             :to="{ path: guide.url, query: { title: guide.title } }"

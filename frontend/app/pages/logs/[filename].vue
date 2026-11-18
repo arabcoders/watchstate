@@ -83,7 +83,7 @@
       v-else
       aria-labelledby="log-entries-heading"
       :aria-busy="isLoading"
-      class="min-w-0 overflow-hidden rounded-xl border border-default"
+      class="ws-card overflow-hidden"
     >
       <div class="space-y-3 bg-elevated/30 px-3 py-3 sm:px-4">
         <div class="flex flex-wrap items-baseline gap-2">
@@ -272,7 +272,8 @@
             v-for="entry in rows"
             :key="entry.key"
             :data-log-id="entry.key"
-            :class="rowClass(entry)"
+            class="ws-log-row"
+            :class="{ 'bg-warning/10': entry.isMatch, 'bg-muted/30': entry.isContext }"
           >
             <div class="ws-log-line">
               <StructuredLogLine
@@ -366,8 +367,6 @@ import type { LogLevel } from '~/utils/logs';
 
 const FILTER_CONTEXT_REGEX = /context:(\d+)/;
 const LOG_LEVELS: Array<LogLevel> = ['debug', 'info', 'notice', 'warning', 'error'];
-const LOG_ROW_CLASS =
-  'flex min-w-0 border-b border-default/50 last:border-b-0 hover:bg-elevated/30';
 
 type LevelFilterItem = { label: string; value: LogLevel };
 type LogRow = {
@@ -423,7 +422,7 @@ let disposed = false;
 const isTodayLog = computed<boolean>(() => filename.includes(moment().format('YYYYMMDD')));
 
 const eventActionsId = useId();
-const eventViewModalUi = { content: 'max-w-5xl', body: 'p-4 sm:p-5' };
+const eventViewModalUi = { content: 'max-w-5xl' };
 const eventViewOpen = computed({
   get: () => null !== selectedEventId.value,
   set: (value: boolean) => {
@@ -546,19 +545,6 @@ const rows = computed<Array<LogRow>>(() => {
 
   return result;
 });
-
-const rowClass = (entry: LogRow): Array<string> => {
-  const classes = [LOG_ROW_CLASS];
-  if (entry.isMatch) {
-    classes.push('bg-warning/10');
-    return classes;
-  }
-  if (entry.isContext) {
-    classes.push('bg-muted/30');
-    return classes;
-  }
-  return classes;
-};
 
 const openLogDetails = (entry: ServerJsonLogEntry): void => {
   selectedLog.value = entry;

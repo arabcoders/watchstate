@@ -115,7 +115,7 @@
       title="No items found"
     />
 
-    <div v-else-if="0 < items.length" class="ws-card divide-y divide-default">
+    <div v-else-if="0 < items.length" class="ws-list-card">
       <Lazy
         v-for="item in items"
         :key="`${item.via}:${item.type}:${ag(item, `metadata.${item.via}.id`, item.id)}:${item.content_path ?? item.title}`"

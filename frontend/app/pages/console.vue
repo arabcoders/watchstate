@@ -82,10 +82,7 @@
             Help
           </UButton>
 
-          <UPopover
-            :content="{ side: 'bottom', align: 'end', sideOffset: 8 }"
-            :ui="{ content: 'bg-elevated/80 dark:bg-elevated/30 backdrop-blur-md ring-0' }"
-          >
+          <UPopover :content="{ side: 'bottom', align: 'end', sideOffset: 8 }">
             <UButton color="neutral" variant="outline" size="lg" icon="i-lucide-history">
               History
             </UButton>

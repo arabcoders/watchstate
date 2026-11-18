@@ -9,8 +9,8 @@
     @update:open="(open) => !open && emit('close')"
   >
     <template #body>
-      <div class="divide-y divide-default">
-        <section class="space-y-5 pb-6">
+      <div class="space-y-5">
+        <section class="space-y-5">
           <h2 class="flex items-center gap-2 font-semibold text-highlighted">
             <UIcon name="i-lucide-image" class="size-5 text-toned" />
             Appearance
@@ -57,7 +57,7 @@
           </div>
         </section>
 
-        <section class="space-y-4 py-6">
+        <section class="space-y-4 border-t border-default pt-5">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="flex items-center gap-2 font-semibold text-highlighted">
               <UIcon name="i-lucide-calendar-clock" class="size-5 text-toned" />
@@ -96,7 +96,7 @@
           </div>
         </section>
 
-        <section class="space-y-5 pt-6">
+        <section class="ws-card-padded-lg space-y-5">
           <h2 class="flex items-center gap-2 font-semibold text-highlighted">
             <UIcon name="i-lucide-user-round" class="size-5 text-toned" />
             Account
@@ -236,8 +236,7 @@ const tooltip_date_format = TOOLTIP_DATE_FORMAT;
 const tooltipDatePreview = computed(() => moment().format(tooltip_date_format.value));
 
 const slideoverUi = {
-  content: 'ws-settings-panel ws-shell-surface w-full bg-transparent sm:max-w-xl',
-  body: 'p-4 sm:p-5',
+  content: 'ws-settings-panel w-full sm:max-w-xl',
 };
 
 const defaultValues = () => ({

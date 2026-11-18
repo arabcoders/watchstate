@@ -33,7 +33,7 @@
       variant="soft"
       icon="i-lucide-triangle-alert"
       title="Local records are permanently deleted"
-      description="Let queued work finish first. Events held in the Redis queue are also removed."
+      description="Let queued work finish first. Events held in the queue are also removed."
     />
 
     <dl class="grid gap-6 md:grid-cols-2">

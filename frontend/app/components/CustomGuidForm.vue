@@ -26,129 +26,133 @@
         />
       </UFormField>
 
-      <UFormField label="Validation pattern" name="validator.pattern" required>
-        <UInput
-          v-model="form.validator.pattern"
-          type="text"
-          icon="i-lucide-circle-check"
-          class="w-full font-mono"
-          placeholder="/^[0-9\\/]+$/i"
-        />
-        <template #help>
-          The regex must accept relative GUIDs such as <code>123/1/1</code>.
-          <ULink
-            href="https://regex101.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-primary"
-            external
-          >
-            regex101.com </ULink
-          >.
-        </template>
-      </UFormField>
-
-      <UFormField
-        label="Value example"
-        name="validator.example"
-        description="Shown when a GUID value fails validation."
-        required
-      >
-        <UInput
-          v-model="form.validator.example"
-          type="text"
-          icon="i-lucide-pencil-ruler"
-          class="w-full"
-          placeholder="(number)"
-        />
-      </UFormField>
-
-      <section
-        aria-labelledby="valid-values-heading"
-        class="space-y-3 border-t border-default pt-5"
-      >
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <h3 id="valid-values-heading" class="text-sm font-semibold text-highlighted">
-            Valid values
-          </h3>
-          <UButton
-            type="button"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-plus"
-            @click="form.validator.tests.valid.push('')"
-            label="Add value"
-          />
-        </div>
-        <p class="text-sm text-toned">At least one value that the pattern accepts.</p>
-        <div
-          v-for="(_, index) in form.validator.tests.valid"
-          :key="`valid-${index}`"
-          class="flex items-center gap-2"
-        >
+      <section aria-labelledby="guid-validation-heading" class="ws-card-padded-lg space-y-5">
+        <h3 id="guid-validation-heading" class="text-sm font-semibold text-highlighted">
+          Validation
+        </h3>
+        <UFormField label="Validation pattern" name="validator.pattern" required>
           <UInput
-            v-model="form.validator.tests.valid[index]"
+            v-model="form.validator.pattern"
             type="text"
             icon="i-lucide-circle-check"
-            :aria-label="`Valid value ${index + 1}`"
-            class="min-w-0 flex-1"
+            class="w-full font-mono"
+            placeholder="/^[0-9\\/]+$/i"
           />
-          <UButton
-            type="button"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-trash-2"
-            :disabled="1 > index || 1 > form.validator.tests.valid.length"
-            @click="form.validator.tests.valid.splice(index, 1)"
-            label="Remove"
-          />
-        </div>
-      </section>
+          <template #help>
+            The regex must accept relative GUIDs such as <code>123/1/1</code>.
+            <ULink
+              href="https://regex101.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary"
+              external
+            >
+              regex101.com </ULink
+            >.
+          </template>
+        </UFormField>
 
-      <section
-        aria-labelledby="invalid-values-heading"
-        class="space-y-3 border-t border-default pt-5"
-      >
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <h3 id="invalid-values-heading" class="text-sm font-semibold text-highlighted">
-            Invalid values
-          </h3>
-          <UButton
-            type="button"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-plus"
-            @click="form.validator.tests.invalid.push('')"
-            label="Add value"
-          />
-        </div>
-        <p class="text-sm text-toned">At least one value that the pattern rejects.</p>
-        <div
-          v-for="(_, index) in form.validator.tests.invalid"
-          :key="`invalid-${index}`"
-          class="flex items-center gap-2"
+        <UFormField
+          label="Value example"
+          name="validator.example"
+          description="Shown when a GUID value fails validation."
+          required
         >
           <UInput
-            v-model="form.validator.tests.invalid[index]"
+            v-model="form.validator.example"
             type="text"
-            icon="i-lucide-circle-x"
-            :aria-label="`Invalid value ${index + 1}`"
-            class="min-w-0 flex-1"
+            icon="i-lucide-pencil-ruler"
+            class="w-full"
+            placeholder="(number)"
           />
-          <UButton
-            type="button"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-trash-2"
-            :disabled="1 > index || 1 > form.validator.tests.invalid.length"
-            @click="form.validator.tests.invalid.splice(index, 1)"
-            label="Remove"
-          />
-        </div>
+        </UFormField>
+        <section
+          aria-labelledby="valid-values-heading"
+          class="space-y-3 border-t border-default pt-4"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h4 id="valid-values-heading" class="text-sm font-semibold text-highlighted">
+              Valid values
+            </h4>
+            <UButton
+              type="button"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-plus"
+              @click="form.validator.tests.valid.push('')"
+              label="Add value"
+            />
+          </div>
+          <p class="text-sm text-toned">At least one value that the pattern accepts.</p>
+          <div
+            v-for="(_, index) in form.validator.tests.valid"
+            :key="`valid-${index}`"
+            class="flex items-center gap-2"
+          >
+            <UInput
+              v-model="form.validator.tests.valid[index]"
+              type="text"
+              icon="i-lucide-circle-check"
+              :aria-label="`Valid value ${index + 1}`"
+              class="min-w-0 flex-1"
+            />
+            <UButton
+              type="button"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :disabled="1 > index || 1 > form.validator.tests.valid.length"
+              @click="form.validator.tests.valid.splice(index, 1)"
+              label="Remove"
+            />
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="invalid-values-heading"
+          class="space-y-3 border-t border-default pt-4"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h4 id="invalid-values-heading" class="text-sm font-semibold text-highlighted">
+              Invalid values
+            </h4>
+            <UButton
+              type="button"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-plus"
+              @click="form.validator.tests.invalid.push('')"
+              label="Add value"
+            />
+          </div>
+          <p class="text-sm text-toned">At least one value that the pattern rejects.</p>
+          <div
+            v-for="(_, index) in form.validator.tests.invalid"
+            :key="`invalid-${index}`"
+            class="flex items-center gap-2"
+          >
+            <UInput
+              v-model="form.validator.tests.invalid[index]"
+              type="text"
+              icon="i-lucide-circle-x"
+              :aria-label="`Invalid value ${index + 1}`"
+              class="min-w-0 flex-1"
+            />
+            <UButton
+              type="button"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :disabled="1 > index || 1 > form.validator.tests.invalid.length"
+              @click="form.validator.tests.invalid.splice(index, 1)"
+              label="Remove"
+            />
+          </div>
+        </section>
       </section>
     </fieldset>
 

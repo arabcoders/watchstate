@@ -9,9 +9,7 @@
       :open-delay="400"
       :close-delay="100"
       :content="{ side: 'right', sideOffset: 12, collisionPadding: 12 }"
-      :ui="{
-        content: 'w-auto overflow-hidden rounded-md border border-default bg-default p-1 shadow-xl',
-      }"
+      :ui="{ content: 'w-auto overflow-hidden p-1' }"
     >
       <img
         :src="url"

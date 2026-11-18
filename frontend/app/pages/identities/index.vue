@@ -96,7 +96,7 @@
         description="Add an identity, or use Match & Provision to link backend users."
       />
 
-      <div v-if="0 < identities.length" class="ws-card divide-y divide-default">
+      <div v-if="0 < identities.length" class="ws-list-card">
         <article
           v-for="identity in identities"
           :key="identity.identity"
@@ -331,11 +331,9 @@ let pendingIdentity: { identity: string; path: string } | null = null;
 
 const addIdentityModalUi = {
   content: 'max-w-xl',
-  body: 'p-4 sm:p-5',
 };
 const editIdentityModalUi = {
   content: 'max-w-6xl',
-  body: 'p-4 sm:p-5',
 };
 
 const resetAddIdentityForm = (): void => {
