@@ -3,6 +3,10 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+.mask-it {
+  --mask-it: 0;
+}
+
 :root {
   --ui-radius: 0.5rem;
   --ui-container: 96rem;

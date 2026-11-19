@@ -33,14 +33,6 @@ Please refer to [NEWS](/NEWS.md) for the latest important updates and changes.
 
 # Install
 
-If you prefer video format [AlienTech42 YouTube Channel](https://www.youtube.com/@AlienTech42) had a video about
-installing WatchState using unraid [at this link](https://www.youtube.com/watch?v=XoztOwGHGxk). Much appreciated.
-
-PS: I don't know the channel owner, but I appreciate the effort. There is small mistake in the video regarding the
-webhook URL, please copy the URL directly from the backends page. And this tool does support multi-users.
-
-----
-
 First, start by creating a directory to store the data, to follow along with this setup, create directory called `data`
 at your working directory. Then proceed to use your preferred method to install the tool.
 
@@ -146,5 +138,5 @@ I don’t accept donations. If you want to support the project, consider donatin
 
 # Disclaimer
 
-AI-based tools may have been used to assist with parts of this project. Regardless of how a change is produced, every 
+AI-based tools have been used to assist with parts of this project. Regardless of how a change is produced, every 
 change is reviewed and approved by the human maintainer before it is included.
