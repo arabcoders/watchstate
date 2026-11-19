@@ -70,6 +70,7 @@ export interface RecentHistoryCardsProps {
   timestampLabel?: string;
   showState?: boolean;
   attribution?: Record<number, string>;
+  maskable?: boolean;
 }
 
 export interface UserStatisticsReport {

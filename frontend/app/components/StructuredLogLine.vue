@@ -84,6 +84,7 @@ const props = withDefaults(
     wrapped?: boolean;
     expanded?: boolean;
     toggleable?: boolean;
+    maskable?: boolean;
   }>(),
   {
     showDetails: false,
@@ -91,6 +92,7 @@ const props = withDefaults(
     wrapped: false,
     expanded: false,
     toggleable: false,
+    maskable: false,
   },
 );
 
@@ -146,6 +148,7 @@ const identityUser = computed<string | null>(() => fieldString('identity.user'))
 const identityBackend = computed<string | null>(() => fieldString('identity.backend'));
 const messageClass = computed<Array<string>>(() => [
   'text-sm text-default',
+  props.maskable ? 'mask-it' : '',
   props.expanded || props.wrapped
     ? 'block whitespace-pre-wrap wrap-break-word'
     : 'ws-log-message-collapsed md:block md:truncate',

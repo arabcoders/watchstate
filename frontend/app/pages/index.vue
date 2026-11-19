@@ -9,7 +9,7 @@
             Recent updates
           </h2>
           <p class="text-sm text-toned">
-            Identity: <span class="font-medium text-default">{{ apiUser }}</span>
+            Identity: <span class="mask-it font-medium text-default">{{ apiUser }}</span>
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -48,7 +48,7 @@
         "
       >
         <template #description>
-          <p class="wrap-break-word">{{ historyError }}</p>
+          <p class="mask-it wrap-break-word">{{ historyError }}</p>
           <p v-if="0 < lastHistory.length" class="mt-1 text-xs">
             These results may be out of date.
           </p>
@@ -86,8 +86,12 @@
         variant="naked"
         icon="i-lucide-history"
         title="No recent updates"
-        :description="`Import watch history from a backend to get started with ${apiUser}.`"
-      />
+      >
+        <template #description>
+          Import watch history from a backend to get started with
+          <span class="mask-it">{{ apiUser }}.</span>
+        </template>
+      </UEmpty>
 
       <RecentHistoryCards
         v-if="0 < lastHistory.length"
@@ -97,6 +101,7 @@
         :poster-enable="posterEnable"
         timestamp-label="Updated"
         show-state
+        maskable
         :attribution="recentAttribution"
         aria-label="Recently updated records"
       />
@@ -226,7 +231,7 @@
         :title="0 < logs.length ? 'Logs could not be refreshed' : 'Recent logs could not be loaded'"
       >
         <template #description>
-          <p class="wrap-break-word">{{ logsError }}</p>
+          <p class="mask-it wrap-break-word">{{ logsError }}</p>
           <p v-if="0 < logs.length" class="mt-1 text-xs">Newer entries may be available.</p>
         </template>
         <template #actions>
@@ -287,7 +292,7 @@
               </h3>
               <NuxtLink
                 :to="`/logs/${log.filename}`"
-                class="block truncate text-xs text-toned hover:text-primary"
+                class="mask-it block truncate text-xs text-toned hover:text-primary"
               >
                 {{ log.filename }}
               </NuxtLink>
@@ -351,6 +356,7 @@
                   :wrapped="isLogWrapped(log.filename)"
                   :expanded="isExpandedLogRow(dashboardLogRowKey(log.filename, entry, idx))"
                   toggleable
+                  maskable
                   @details="openLogDetails"
                   @open-event="(id) => (selectedEventId = id)"
                   @toggle-expand="

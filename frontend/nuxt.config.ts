@@ -70,7 +70,11 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: `/favicon.ico?v=${faviconHash}` },
-        { rel: 'apple-touch-icon', sizes: '1024x1024', href: `/apple-touch-icon.${appleIconHash}.png` },
+        {
+          rel: 'apple-touch-icon',
+          sizes: '1024x1024',
+          href: `/apple-touch-icon.${appleIconHash}.png`,
+        },
       ],
     },
     buildAssetsDir: 'assets',
@@ -135,13 +139,10 @@ export default defineNuxtConfig({
       allowedHosts: true,
     },
     build: {
-      chunkSizeWarningLimit: 550,
+      chunkSizeWarningLimit: 750,
       rollupOptions: {
         onwarn(warning, warn) {
-          if (
-            'SOURCEMAP_BROKEN' === warning.code ||
-            'PLUGIN_TIMINGS' === warning.code
-          ) {
+          if ('SOURCEMAP_BROKEN' === warning.code || 'PLUGIN_TIMINGS' === warning.code) {
             return;
           }
 

@@ -15,7 +15,12 @@
         "
       >
         <div v-if="posterEnable" class="relative overflow-hidden rounded-lg">
-          <StatisticsPoster :history-id="item.history_id" :title="item.title" :user="user" />
+          <StatisticsPoster
+            :history-id="item.history_id"
+            :title="item.title"
+            :user="user"
+            :class="{ 'mask-it': maskable }"
+          />
           <UBadge
             v-if="0 < (item.progress ?? 0)"
             color="neutral"
@@ -32,6 +37,7 @@
         </div>
         <p
           class="mt-3 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-highlighted transition-colors group-hover:text-primary"
+          :class="{ 'mask-it': maskable }"
           :title="item.title"
         >
           {{ item.title }}
@@ -76,6 +82,7 @@
         <p
           v-if="attribution[item.history_id]"
           class="line-clamp-2 text-[11px] leading-4 text-dimmed"
+          :class="{ 'mask-it': maskable }"
           :title="`Via ${attribution[item.history_id]}`"
         >
           Via {{ attribution[item.history_id] }}
@@ -96,5 +103,6 @@ withDefaults(defineProps<RecentHistoryCardsProps>(), {
   timestampLabel: '',
   showState: false,
   attribution: () => ({}),
+  maskable: false,
 });
 </script>
