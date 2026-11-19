@@ -76,6 +76,11 @@ class Initializer
 
         Config::init(require __DIR__ . '/../../config/config.php');
 
+        if (null !== env('WS_PHP_MEMORY_LIMIT')) {
+            // PHP rejects a limit below the memory already allocated.
+            @ini_set('memory_limit', Config::get('php.ini.memory_limit'));
+        }
+
         foreach ((array) require __DIR__ . '/../../config/services.php' as $name => $definition) {
             Container::add($name, $definition);
         }

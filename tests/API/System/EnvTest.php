@@ -59,4 +59,21 @@ final class EnvTest extends TestCase
             (string) $response->getBody(),
         );
     }
+
+    public function test_memory_limit_invalid(): void
+    {
+        $handler = new Env();
+
+        $response = $handler->envUpdate(
+            $this->getRequest(
+                method: 'POST',
+                post: ['value' => '512MB'],
+                server: ['REQUEST_URI' => '/v1/api/system/env/WS_PHP_MEMORY_LIMIT'],
+            ),
+            'WS_PHP_MEMORY_LIMIT',
+        );
+
+        self::assertSame(Status::BAD_REQUEST->value, $response->getStatusCode());
+        self::assertStringContainsString('Use a positive byte count', (string) $response->getBody());
+    }
 }

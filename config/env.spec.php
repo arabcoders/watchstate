@@ -169,6 +169,38 @@ return (function () {
             'type' => 'string',
         ],
         [
+            'key' => 'WS_PHP_MEMORY_LIMIT',
+            'config' => 'php.ini.memory_limit',
+            'description' => 'PHP memory limit for WatchState. Default: 265M. Use -1 for no limit.',
+            'type' => 'string',
+            'validate' => static function (mixed $value): string {
+                $value = true === is_string($value) ? strtoupper(trim($value)) : '';
+
+                if ('-1' === $value) {
+                    return $value;
+                }
+
+                if (1 !== preg_match('/\A([1-9][0-9]*)([KMG]?)\z/', $value, $parts)) {
+                    throw new ValidationException('Use a positive byte count, a size such as 512M or 1G, or -1 for no limit.');
+                }
+
+                $shift = match ($parts[2]) {
+                    'K' => 10,
+                    'M' => 20,
+                    'G' => 30,
+                    default => 0,
+                };
+
+                if (false === filter_var($parts[1], FILTER_VALIDATE_INT, [
+                    'options' => ['max_range' => PHP_INT_MAX >> $shift],
+                ])) {
+                    throw new ValidationException('The PHP memory limit is too large.');
+                }
+
+                return $value;
+            },
+        ],
+        [
             'key' => 'WS_API_KEY',
             'config' => 'api.key',
             'description' => 'The API key to allow access to the API.',

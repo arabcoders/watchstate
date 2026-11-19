@@ -244,6 +244,37 @@ class ConfigTest extends TestCase
         $this->assertSame(90, Config::get('backup.prune.after'));
     }
 
+    public function test_memory_limit(): void
+    {
+        $previous = $_ENV['WS_PHP_MEMORY_LIMIT'] ?? null;
+        $cases = [
+            [false, '265M'],
+            [' 512m ', '512M'],
+            ['1G', '1G'],
+            ['536870912', '536870912'],
+            ['-1', '-1'],
+            ['512MB', '265M'],
+            ['0', '265M'],
+            ['true', '265M'],
+            [PHP_INT_MAX . 'G', '265M'],
+        ];
+
+        try {
+            foreach ($cases as [$value, $expected]) {
+                $_ENV['WS_PHP_MEMORY_LIMIT'] = $value;
+                Config::init(require ROOT_PATH . '/config/config.php');
+
+                self::assertSame($expected, Config::get('php.ini.memory_limit'), var_export($value, true));
+            }
+        } finally {
+            if (null === $previous) {
+                unset($_ENV['WS_PHP_MEMORY_LIMIT']);
+            } else {
+                $_ENV['WS_PHP_MEMORY_LIMIT'] = $previous;
+            }
+        }
+    }
+
     /**
      * Verify the progress minimum floor without capping larger values.
      */
