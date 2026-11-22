@@ -20,6 +20,7 @@ use App\Libs\Exceptions\Backends\RuntimeException;
 use App\Libs\Extends\Date;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use Closure;
 use DateTimeInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -104,6 +105,7 @@ class Progress
         $sessions = [];
         $ignoreDate = (bool) ag($context->options, Options::IGNORE_DATE, false);
         $replayProgress = (bool) ag($context->options, Options::REPLAY_PROGRESS, false);
+        $isExport = ag($context->options, Options::PROGRESS_EXPORT) instanceof Closure;
 
         try {
             $remoteSessions = Container::get(GetSessions::class)($context);
@@ -121,7 +123,7 @@ class Progress
                 }
             }
         } catch (Throwable) {
-            // simply ignore this error as it's not important enough to interrupt the whole process.
+            // Keep the normal progress behavior if sessions are unavailable.
         }
 
         foreach ($entities as $key => $entity) {
@@ -152,7 +154,8 @@ class Progress
                 ],
             ];
 
-            if ($context->backendName === $entity->via && false === $replayProgress) {
+            $sameBackend = $context->backendName === $entity->via;
+            if (true === $sameBackend && false === $isExport && false === $replayProgress) {
                 $this->logger->info(
                     message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event originated from this backend.",
                     context: [
@@ -191,7 +194,10 @@ class Progress
             $senderDate = make_date($senderDate)->getTimestamp();
             $senderDate -= (int) ag($context->options, 'progress.time_drift', self::DEFAULT_TIME_DRIFT);
 
-            $datetime = ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE, null);
+            $datetime =
+                true === $isExport && true === $sameBackend
+                    ? null
+                    : ag($entity->getExtra($context->backendName), iState::COLUMN_EXTRA_DATE);
             if (false === $ignoreDate && null !== $datetime && make_date($datetime)->getTimestamp() > $senderDate) {
                 $this->logger->warning(
                     message: "Not processing '#{history.id}: {history.title}' for '{identity.user}@{identity.backend}'. Event date '{comparison.event_date}' is older than local database date '{comparison.local_date}'.",
@@ -228,6 +234,11 @@ class Progress
             try {
                 $remoteData = $this->getItemDetails($context, $logContext['remote']['id'], [Options::NO_CACHE => true]);
                 $remoteItem = $this->createEntity($context, $guid, $remoteData, ['latest_date' => true]);
+
+                $remoteProgress = (int) ag($remoteItem->getMetadata($context->backendName), iState::COLUMN_META_DATA_PROGRESS, 0);
+                if (true === $isExport && $entity->getPlayProgress() === $remoteProgress) {
+                    continue;
+                }
 
                 if (false === $ignoreDate && make_date($remoteItem->updated)->getTimestamp() > $senderDate) {
                     $this->logger->info(

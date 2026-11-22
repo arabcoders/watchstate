@@ -172,7 +172,9 @@ class RestoreCommand extends Command
 
         $opStart = microtime(true);
 
-        $mapper = new RestoreMapper($this->logger, $file);
+        $restoreProgress = true === $input->getOption('restore-watch-progress');
+        $dryRun = false === $input->getOption('execute');
+        $mapper = new RestoreMapper($this->logger, $file, restoreProgress: $restoreProgress);
 
         try {
             $userContext = get_user_context(user: $userName, mapper: $mapper, logger: $this->logger);
@@ -262,7 +264,7 @@ class RestoreCommand extends Command
             ],
         );
 
-        if (false === $input->getOption('execute')) {
+        if (true === $dryRun) {
             $this->logger->notice(
                 "No changes will be committed to backend. To execute the changes pass '--execute' flag option.",
             );
@@ -270,9 +272,9 @@ class RestoreCommand extends Command
 
         $opts = [
             Options::IGNORE_DATE => true,
-            Options::REPLAY_PROGRESS => true === $input->getOption('restore-watch-progress'),
+            Options::REPLAY_PROGRESS => $restoreProgress,
             Options::DEBUG_TRACE => true === $input->getOption('trace'),
-            Options::DRY_RUN => false === $input->getOption('execute'),
+            Options::DRY_RUN => $dryRun,
         ];
 
         if ($input->getOption('timeout')) {
@@ -357,7 +359,7 @@ class RestoreCommand extends Command
                 ]);
             }
 
-            if ($total >= 1 && false !== $input->getOption('execute')) {
+            if ($total >= 1 && false === $dryRun) {
                 send_requests(
                     requests: $this->queue->getQueue(),
                     client: $this->http,
@@ -387,13 +389,28 @@ class RestoreCommand extends Command
 
             $progressStats = ['sent' => 0, 'failed' => 0];
 
-            if (true === $input->getOption('restore-watch-progress')) {
+            if (true === $restoreProgress) {
                 $this->queue->reset();
-                $backend->progress($mapper->getObjects(), $this->queue, null);
+                $progressItems = $mapper->getProgressItems();
+                if ([] !== $progressItems) {
+                    $backend->progress($progressItems, $this->queue, null);
+                }
 
                 $progressStats['sent'] = count($this->queue->getQueue());
 
-                if ($progressStats['sent'] >= 1) {
+                if (true === $dryRun) {
+                    $this->logger->notice(
+                        "Matched '{stats.matched}' items with saved watch progress for '{identity.user}@{identity.backend}'. No progress was written.",
+                        [
+                            'operation' => 'restore.progress',
+                            'stats' => ['matched' => count($progressItems)],
+                            'identity' => [
+                                'user' => $userContext->name,
+                                'backend' => $name,
+                            ],
+                        ],
+                    );
+                } elseif ($progressStats['sent'] >= 1) {
                     $this->logger->notice("Sending '{total}' watch progress requests for '{identity.user}@{identity.backend}'.", [
                         'identity' => [
                             'backend' => $name,
@@ -410,7 +427,7 @@ class RestoreCommand extends Command
                     ]);
                 }
 
-                if ($progressStats['sent'] >= 1 && false !== $input->getOption('execute')) {
+                if ($progressStats['sent'] >= 1 && false === $dryRun) {
                     send_requests(
                         requests: $this->queue->getQueue(),
                         client: $this->http,

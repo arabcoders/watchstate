@@ -46,7 +46,7 @@ class BackupFlowTest extends MediaBrowserTestCase
         }
     }
 
-    public function test_backup_episode_includes_parent(): void
+    public function test_backup_episode(): void
     {
         foreach ($this->provideBackends() as [$clientName, $actionClass, $guidClass, $metaClass]) {
             $context = $this->makeContext($clientName);
@@ -94,6 +94,7 @@ class BackupFlowTest extends MediaBrowserTestCase
             $content = (string) $writer;
 
             $this->assertStringContainsString('parent', $content);
+            $this->assertStringContainsString('"progress":700000', $content);
         }
     }
 

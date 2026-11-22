@@ -35,6 +35,11 @@ final class RestoreMapper implements iImport
     protected array $objects = [];
 
     /**
+     * @var array<string|int,iState> Backup items matched to destination IDs for progress restore.
+     */
+    private array $progressItems = [];
+
+    /**
      * @var array<string,int> Map entity pointers to object pointers.
      */
     protected array $pointers = [];
@@ -54,12 +59,14 @@ final class RestoreMapper implements iImport
      *
      * @param iLogger $logger An instance of the iLogger interface.
      * @param string|Stream $file The file or stream to be used by the constructor.
+     * @param bool $restoreProgress Collect destination matches for saved resume positions.
      *
      * @return void
      */
     public function __construct(
         private iLogger $logger,
         private Stream|string $file,
+        private readonly bool $restoreProgress = false,
     ) {}
 
     /**
@@ -223,10 +230,35 @@ final class RestoreMapper implements iImport
 
     /**
      * @inheritdoc
+     *
+     * Retain destination IDs during export without copying destination progress into the backup.
      */
     public function get(iState $entity): ?iState
     {
-        return false === ($pointer = $this->getPointer($entity)) ? null : $this->objects[$pointer];
+        if (false === ($pointer = $this->getPointer($entity))) {
+            return null;
+        }
+
+        $item = $this->objects[$pointer];
+
+        if (true === $this->restoreProgress && 0 < $item->getPlayProgress()) {
+            $id = $entity->getMetadata($entity->via)[iState::COLUMN_ID] ?? null;
+            if (is_string($id) && '' !== $id) {
+                $this->progressItems[$id] = (clone $item)->setMeta(iState::COLUMN_ID, $id, $entity->via);
+            }
+        }
+
+        return $item;
+    }
+
+    /**
+     * Return matched backup items with a restorable resume position.
+     *
+     * @return array<string|int,iState>
+     */
+    public function getProgressItems(): array
+    {
+        return $this->progressItems;
     }
 
     /**
@@ -260,7 +292,7 @@ final class RestoreMapper implements iImport
      */
     public function reset(): self
     {
-        $this->objects = $this->pointers = [];
+        $this->objects = $this->pointers = $this->progressItems = [];
 
         return $this;
     }
