@@ -103,7 +103,16 @@ class Backup extends Import
                 context: $context,
                 guid: $guid,
                 item: $item,
-                opts: $opts + ['library' => ag($logContext, 'library.id')],
+                opts: array_replace_recursive($opts + ['library' => ag($logContext, 'library.id')], [
+                    'override' => [
+                        iState::COLUMN_EXTRA => [
+                            $context->backendName => [
+                                iState::COLUMN_EXTRA_EVENT => 'task.backup',
+                                iState::COLUMN_EXTRA_DATE => make_date('now'),
+                            ],
+                        ],
+                    ],
+                ]),
             );
 
             assert($entity instanceof StateEntity, 'Expected state entity during Jellyfin backup.');

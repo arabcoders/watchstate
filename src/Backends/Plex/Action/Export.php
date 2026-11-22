@@ -16,6 +16,7 @@ use App\Libs\Mappers\ImportInterface as iImport;
 use App\Libs\Message;
 use App\Libs\Options;
 use App\Libs\QueueRequests;
+use Closure;
 use DateTimeInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface as iHttp;
 use Symfony\Contracts\HttpClient\ResponseInterface as iResponse;
@@ -172,6 +173,16 @@ final class Export extends Import
                 $this->logger->info(message: $message, context: $logContext);
                 Message::increment("{$context->backendName}.{$mappedType}.ignored_not_found_in_db");
                 return;
+            }
+
+            $collectProgress = ag($context->options, Options::PROGRESS_EXPORT);
+            if ($collectProgress instanceof Closure) {
+                $collectProgress(
+                    $entity,
+                    $context->backendName,
+                    $after instanceof DateTimeInterface ? $after->getTimestamp() : null,
+                    $rItem,
+                );
             }
 
             $clearProgress = true === $entity->isWatched() && true === $rItem->isWatched() && 0 < (int) ag($item, 'viewOffset', 0);

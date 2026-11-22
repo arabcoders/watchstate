@@ -67,6 +67,7 @@ final class Options
     public const string QUEUE_ONLY = 'QUEUE_ONLY';
     public const string DATE_COLUMN = 'DATE_COLUMN';
     public const string REPLAY_PROGRESS = 'REPLAY_PROGRESS';
+    public const string PROGRESS_EXPORT = 'PROGRESS_EXPORT';
 
     private function __construct() {}
 }

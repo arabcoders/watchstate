@@ -24,6 +24,7 @@ use App\Libs\Options;
 use App\Libs\QueueRequests;
 use App\Libs\Stream;
 use App\Libs\UserContext;
+use Closure;
 use Monolog\Level;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface as iLogger;
@@ -79,6 +80,12 @@ class ExportCommand extends Command
             ->setName(self::ROUTE)
             ->setDescription('Export play state to backends.')
             ->addOption('force-full', 'f', InputOption::VALUE_NONE, 'Force full export. Ignore last export date.')
+            ->addOption(
+                'with-progress',
+                null,
+                InputOption::VALUE_NONE,
+                'Export resume positions.',
+            )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Do not commit changes to backends.')
             ->addOption(
                 'sync-requests',
@@ -192,6 +199,8 @@ class ExportCommand extends Command
         $selected = $input->getOption('select-backend');
         $isCustom = !empty($selected) && count($selected) > 0;
         $supported = Config::get('supported', []);
+        $withProgress = true === $input->getOption('with-progress');
+        $forceFull = true === $input->getOption('force-full');
 
         if (true === $input->getOption('dry-run')) {
             $this->logger->notice('Dry run mode. No changes will be committed.');
@@ -205,6 +214,34 @@ class ExportCommand extends Command
             try {
                 $cursorUpdatedAt = $this->getCursor($userContext);
                 $backends = $export = $push = $entities = [];
+                $progressItems = [];
+                $collectProgress = null;
+
+                if (true === $withProgress) {
+                    $collectProgress = static function (
+                        iState $local,
+                        string $target,
+                        ?int $after,
+                        ?iState $remote = null,
+                    ) use (&$progressItems): void {
+                        if (null !== $after && $local->updated_at <= $after) {
+                            return;
+                        }
+
+                        $id = ag(($remote ?? $local)->getMetadata($target), iState::COLUMN_ID);
+                        if (false === is_string($id) && false === is_int($id) || '' === $id || 0 >= $local->getPlayProgress()) {
+                            return;
+                        }
+
+                        $metadata = $local->getMetadata();
+                        if ($id !== ($metadata[$target][iState::COLUMN_ID] ?? null)) {
+                            $metadata[$target][iState::COLUMN_ID] = $id;
+                            $local = $local::fromArray(array_replace($local->getAll(), [iState::COLUMN_META_DATA => $metadata]));
+                        }
+
+                        $progressItems[$target][$id] = $local;
+                    };
+                }
 
                 foreach ($userContext->config->getAll() as $backendName => $backend) {
                     $type = strtolower(ag($backend, 'type', 'unknown'));
@@ -309,6 +346,10 @@ class ExportCommand extends Command
                         $opts['client']['timeout'] = $input->getOption('timeout');
                     }
 
+                    if (null !== $collectProgress) {
+                        $opts[Options::PROGRESS_EXPORT] = $collectProgress;
+                    }
+
                     $backend['options'] = $opts;
                     $backend['class'] = make_backend(backend: $backend, name: $name, options: [
                         UserContext::class => $userContext,
@@ -317,7 +358,7 @@ class ExportCommand extends Command
 
                 unset($backend);
 
-                if (false === $input->getOption('force-full')) {
+                if (false === $forceFull) {
                     $minDate = time();
 
                     foreach ($backends as $backend) {
@@ -497,9 +538,7 @@ class ExportCommand extends Command
                     }
                 } else {
                     $export = $backends;
-                    $this->logger->notice(
-                        "Not possible to use push mode when '-f, --force-full' flag is used.",
-                    );
+                    $this->logger->notice("Not possible to use push mode when '-f, --force-full' flag is used.");
                 }
 
                 $this->logger->notice(
@@ -520,7 +559,7 @@ class ExportCommand extends Command
                 );
 
                 if (count($push) >= 1) {
-                    $this->push($userContext, $push, $entities);
+                    $this->push($userContext, $push, $entities, $collectProgress);
                 }
 
                 if (count($export) >= 1) {
@@ -528,7 +567,7 @@ class ExportCommand extends Command
                         $userContext,
                         $export,
                         $input->getOption('dry-run'),
-                        $input->getOption('force-full'),
+                        $forceFull,
                         $syncRequests,
                     );
                 }
@@ -614,6 +653,10 @@ class ExportCommand extends Command
                     ]);
                 }
 
+                if ([] !== $progressItems) {
+                    $this->exportProgress($userContext, $backends, $progressItems, $syncRequests);
+                }
+
                 if (true === $input->getOption('dry-run')) {
                     continue;
                 }
@@ -673,11 +716,16 @@ class ExportCommand extends Command
      * @param UserContext $userContext The user context object.
      * @param array $backends An array of backends.
      * @param array $entities An array of entities to be pushed.
+     * @param Closure|null $collectProgress Collect resume positions for this export when requested.
      *
      * @return int The success status code.
      */
-    protected function push(UserContext $userContext, array $backends, array $entities): int
-    {
+    protected function push(
+        UserContext $userContext,
+        array $backends,
+        array $entities,
+        ?Closure $collectProgress = null,
+    ): int {
         $this->logger->notice("Push mode started for '{identity.user}: {backends}'.", [
             'identity' => [
                 'user' => $userContext->name,
@@ -697,6 +745,13 @@ class ExportCommand extends Command
                 queue: $this->queue,
                 after: null,
             );
+
+            if (null !== $collectProgress) {
+                $after = (int) ag($backend, 'export.lastSync', 0);
+                foreach ($entities as $entity) {
+                    $collectProgress($entity, $name, $after);
+                }
+            }
         }
 
         $this->logger->notice("Push mode ended for '{identity.user}: {backends}'.", [
@@ -812,6 +867,51 @@ class ExportCommand extends Command
             'backends' => implode(', ', array_keys($backends)),
             'duration' => round(microtime(true) - $start, 4),
         ]);
+    }
+
+    /**
+     * Export matched resume positions after all played and unplayed writes finish.
+     *
+     * @param array<string,array{name:string,class:ClientInterface}> $backends
+     * @param array<string,array<string|int,iState>> $itemsByBackend
+     */
+    private function exportProgress(
+        UserContext $userContext,
+        array $backends,
+        array $itemsByBackend,
+        bool $syncRequests,
+    ): void {
+        $queue = new QueueRequests();
+
+        foreach ($backends as $name => $backend) {
+            $items = $itemsByBackend[$name] ?? [];
+            if ([] === $items) {
+                continue;
+            }
+
+            $context = [
+                'operation' => 'export.progress',
+                'identity' => ['user' => $userContext->name, 'backend' => $name],
+                'stats' => ['matched' => count($items)],
+            ];
+
+            $this->logger->notice(
+                "Checking '{stats.matched}' matched items for watch progress export to '{identity.user}@{identity.backend}'.",
+                $context,
+            );
+
+            try {
+                $backend['class']->progress($items, $queue);
+            } catch (Throwable $e) {
+                Message::add("{$name}.has_errors", true);
+                $this->logger->error(
+                    "Failed to prepare watch progress export to '{identity.user}@{identity.backend}'. {exception.message}",
+                    [...$context, ...exception_log($e), 'error' => 'progress_export_failed'],
+                );
+            }
+        }
+
+        send_requests(requests: $queue->getQueue(), client: $this->http, sync: $syncRequests, logger: $this->logger);
     }
 
     private function in_array(array $list, string $search): bool

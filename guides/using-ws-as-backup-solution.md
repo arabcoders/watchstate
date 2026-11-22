@@ -111,7 +111,7 @@ for that identity.
 2. Select the desired identity under **Browse as**.
 3. Click on the **Reload** button to switch to that identity context.
 4. Go to the <!--i:i-lucide-server--> **Backends** page.
-5. Under your backend in the **Quick operations** list, select **3. Force export local play state to this backend.**
+5. Under your backend in the **Quick operations** list, select **3. Force export play and progress state**.
 6. **Activity > Console** opens with a prefilled export command. Review the identity and backend, then click **Run command**
    to push the local playstate to your server.
 7. Repeat for each identity you want to restore.

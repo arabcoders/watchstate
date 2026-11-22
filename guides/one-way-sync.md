@@ -70,7 +70,7 @@ You have two options:
 ##### Option 1 (One Extra Backend)
 
 Go to the <!--i:i-lucide-server--> **Backends** page, and under the backend, there is a `Quick operations` list. Select
-*`3. Force export local play state to this backend.`* Once selected, you'll be redirected to
+*`3. Force export play and progress state`*. Once selected, you'll be redirected to
 the **Activity** > <!--i:i-lucide-terminal--> **Console** page, where the command will be pre-filled
 for you. Press *Enter* or click the <!--i:i-lucide-send--> **Run command** button.
 

@@ -593,8 +593,8 @@ const usefulCommands: UsefulCommands = {
   },
   force_export: {
     id: 3,
-    title: 'Force export local play state to this backend.',
-    command: 'state:export -fi -v -u {user} -s {name}',
+    title: 'Force export play and progress state',
+    command: 'state:export -fi --with-progress -v -u {user} -s {name}',
   },
   backup_now: {
     id: 4,
@@ -869,7 +869,15 @@ const handleEvents = async (event: string, backend: Backend): Promise<void> => {
           'run_console',
           {
             command: 'state:export',
-            args: ['-fi', '-v', '--user', api_user.value, '--select-backend', backend.name],
+            args: [
+              '-fi',
+              '--with-progress',
+              '-v',
+              '--user',
+              api_user.value,
+              '--select-backend',
+              backend.name,
+            ],
           },
           300,
         );

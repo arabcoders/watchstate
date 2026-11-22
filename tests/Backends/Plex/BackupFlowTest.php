@@ -41,7 +41,7 @@ class BackupFlowTest extends PlexTestCase
         $this->assertStringContainsString('Ferengi', $content);
     }
 
-    public function test_backup_episode_includes_parent(): void
+    public function test_backup_episode(): void
     {
         $context = $this->makeContext();
         $mapper = $context->userContext->mapper;
@@ -107,6 +107,7 @@ class BackupFlowTest extends PlexTestCase
         $content = (string) $writer;
 
         $this->assertStringContainsString('parent', $content);
+        $this->assertStringContainsString('"progress":70000', $content);
     }
 
     private function invokeProcess(

@@ -106,7 +106,7 @@ of applying the backend state directly. To resolve this conflict and sync the ba
 
 - Go to the `Backends`.
 - Under the relevant backend, find the **Quick operations** list.
-- Select **3. Force export local play state to this backend.**
+- Select **3. Force export play and progress state**.
 
 This operation will overwrite the backend's watch state with your current local state to bring them back in sync.
 
@@ -149,7 +149,7 @@ To synchronize both backends correctly:
   Review the prefilled command in **Activity > Console**, then click **Run command**.
 - Once the import is complete, **add the second backend** (the one with incorrect or outdated play state).
 - Under the newly added backend, locate the **Quick operations** section.
-- Select **3. Force export local play state to this backend.**
+- Select **3. Force export play and progress state**.
 
 This will push your local watch state to the backend and ensure both are in sync.
 
@@ -188,7 +188,7 @@ To override the date check and force an update do the following:
 
 * Go to the `Backends`.
 * Under the relevant backend, find the **Quick operations** list.
-* Select **3. Force export local play state to this backend.**
+* Select **3. Force export play and progress state**.
 
 This will sync your local database state to the backend, ignoring date comparisons.
 
@@ -560,6 +560,10 @@ Use **Settings > Suppression** to stop recording log messages that match a rule.
 For best experience, first Enable the [webhook](/guides/webhooks.md) feature for the media backends you want to sync the
 watch progress. However, if you are unable to do so, the **Import** task under **Activity > Tasks** also generates progress watch events.
 However, it's not as reliable as the `Webhooks` or as fast it will only sync the progress when the import task is run.
+
+To export resume positions, run `state:export --with-progress -u main -s DESTINATION` in **Activity > Console**.
+Replace `DESTINATION` with your configured backend name. Use `--force-full` to include items outside the normal
+export window, `--ignore-date` to skip date checks, or `--dry-run` to preview without writing.
 
 Open **Activity > Events**, select **Any status**, open **Search events**, enter `on_progress` under
 **Event name**, then click **Apply search**. Click an event name for its status, attached data, and saved logs.
