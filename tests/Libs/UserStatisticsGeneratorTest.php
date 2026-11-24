@@ -116,6 +116,70 @@ final class UserStatisticsGeneratorTest extends TestCase
         self::assertSame([4, 1], array_column($report['shows'], 'total'));
     }
 
+    public function test_insights(): void
+    {
+        $logger = $this->initFakeBackendApp([]);
+        $context = $this->makeUserContext('main', $logger);
+        $midnight = gmmktime(0, 0, 0, 1, 2, 2024);
+        $this->record(
+            $context,
+            iState::TYPE_MOVIE,
+            1,
+            metadata: [
+                'alpha' => ['played_at' => $midnight - 1],
+                'beta' => ['played_at' => $midnight],
+            ],
+            year: 1999,
+        );
+        $this->record($context, iState::TYPE_MOVIE, 1, year: null);
+        $this->record($context, iState::TYPE_MOVIE, 1, year: 0);
+        $this->record(
+            $context,
+            iState::TYPE_MOVIE,
+            1,
+            metadata: ['alpha' => ['played_at' => time() + 86_400]],
+            year: 1990,
+        );
+        $this->record($context, iState::TYPE_MOVIE, 1, year: 1989);
+        $this->record($context, iState::TYPE_MOVIE, 0, metadata: ['alpha' => ['played_at' => $midnight]], year: 2000);
+
+        $this->record($context, iState::TYPE_EPISODE, 1, metadata: ['alpha' => ['played_at' => $midnight - 1]]);
+        $this->record(
+            $context,
+            iState::TYPE_EPISODE,
+            1,
+            metadata: ['alpha' => ['show' => '1', 'played_at' => $midnight]],
+            title: 'Zulu',
+        );
+        $this->record($context, iState::TYPE_EPISODE, 1, metadata: ['alpha' => ['show' => '1']], title: 'Zulu', episode: 2);
+        $this->record($context, iState::TYPE_EPISODE, 0, metadata: ['alpha' => ['show' => '1']], title: 'Zulu', episode: 3);
+        $this->record($context, iState::TYPE_EPISODE, 1, metadata: ['alpha' => ['show' => '2']], title: 'Beta');
+        $this->record($context, iState::TYPE_EPISODE, 1, metadata: ['alpha' => ['show' => '3']], title: 'Alpha');
+        $this->record($context, iState::TYPE_EPISODE, 0, metadata: ['alpha' => ['show' => '4']], title: 'Unwatched');
+
+        $report = Container::get(UserStatisticsGenerator::class)->generate($context);
+        $insights = $report['insights'];
+
+        self::assertSame(
+            [
+                ['date' => '2024-01-01', 'movies' => 0, 'episodes' => 1],
+                ['date' => '2024-01-02', 'movies' => 1, 'episodes' => 1],
+            ],
+            $insights['activity'],
+        );
+        self::assertSame(
+            [
+                ['decade' => 1980, 'movies' => 1],
+                ['decade' => 1990, 'movies' => 2],
+                ['decade' => null, 'movies' => 2],
+            ],
+            $insights['movie_decades'],
+        );
+        self::assertSame(['Zulu', 'Alpha', 'Beta'], array_column($insights['top_shows'], 'title'));
+        self::assertSame([2, 1, 1], array_column($insights['top_shows'], 'watched'));
+        self::assertSame([3, 1, 1], array_column($insights['top_shows'], 'total'));
+    }
+
     public function test_scope(): void
     {
         $logger = $this->initFakeBackendApp($this->fakeBackendConfig('alpha'), ['alice' => $this->fakeBackendConfig('alpha')]);
@@ -202,6 +266,15 @@ final class UserStatisticsGeneratorTest extends TestCase
         self::assertSame('user_statistics_v1', UserStatisticsGenerator::CACHE_KEY);
         self::assertSame(1, $report['version']);
         self::assertSame($report, $snapshot['report']);
+
+        $legacy = $snapshot;
+        unset($legacy['report']['insights']);
+        $context->cache->set('user_statistics_v1', $legacy);
+        self::assertSame($legacy['report'], $generator->latest($context));
+        self::assertFalse($generator->isStale($context));
+        $legacyExport = $generator->export($legacy['report']);
+        self::assertArrayNotHasKey('insights', $legacyExport);
+        self::assertStringNotContainsString('## Last recorded watch', $generator->markdown($legacyExport));
 
         foreach ([null, [], ['movies' => []], ['episodes' => []], ['movies' => [], 'episodes' => 'invalid']] as $inProgress) {
             $incomplete = $snapshot;
@@ -541,9 +614,12 @@ final class UserStatisticsGeneratorTest extends TestCase
         self::assertSame(['title', 'type', 'year', 'season', 'episode', 'played_at', 'history_id'], array_keys($report['recent'][0]));
         self::assertSame(['title', 'type', 'year', 'season', 'episode', 'played_at'], array_keys($public['recent'][0]));
         self::assertSame(
-            ['version', 'generated_at', 'completed_at', 'summary', 'genres', 'shows', 'recent', 'in_progress'],
+            ['version', 'generated_at', 'completed_at', 'summary', 'genres', 'shows', 'recent', 'in_progress', 'insights'],
             array_keys($public),
         );
+        self::assertSame($report['insights']['activity'], $public['insights']['activity']);
+        self::assertSame([['title' => $title, 'total' => 1, 'watched' => 1]], $public['insights']['top_shows']);
+        self::assertSame($report['insights']['movie_decades'], $public['insights']['movie_decades']);
         self::assertSame(['movies', 'episodes'], array_keys($public['in_progress']));
         foreach (['movies', 'episodes'] as $type) {
             self::assertSame(['title', 'type', 'year', 'season', 'episode', 'progress'], array_keys($public['in_progress'][$type][0]));
@@ -572,6 +648,10 @@ final class UserStatisticsGeneratorTest extends TestCase
         self::assertStringContainsString('&lt;b&gt;Drama&lt;/b&gt;\\|\\[\\*\\]', $markdown);
         self::assertStringContainsString('## Recently watched', $markdown);
         self::assertStringContainsString('## In progress', $markdown);
+        self::assertStringContainsString('## Last recorded watch', $markdown);
+        self::assertStringContainsString('| 1970-01-01 | 0 | 1 |', $markdown);
+        self::assertStringContainsString('## Top shows by episodes watched', $markdown);
+        self::assertStringContainsString('## Watched movies by release decade', $markdown);
         self::assertStringContainsString('| Type | Title | Episode | Year | Playback position |', $markdown);
         self::assertStringContainsString(
             '| Movie | \\[link\\]\\(javascript:alert\\(1\\)\\)&lt;img src=x&gt;\\| \\# title |  | 2020 | 01:02:03 |',
@@ -603,6 +683,7 @@ final class UserStatisticsGeneratorTest extends TestCase
 
         self::assertCount(UserStatisticsGenerator::RECENT_ITEMS_COUNT, $report['recent']);
         self::assertSame(range(24, 25 - UserStatisticsGenerator::RECENT_ITEMS_COUNT), array_column($report['recent'], 'played_at'));
+        self::assertSame([['date' => '1970-01-01', 'movies' => 24, 'episodes' => 0]], $report['insights']['activity']);
     }
 
     public function test_episode_numbers(): void

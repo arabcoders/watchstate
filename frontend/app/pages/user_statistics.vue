@@ -185,6 +185,84 @@
         />
       </section>
 
+      <template v-if="report.insights">
+        <WatchActivityChart :key="apiUser" :activity="report.insights.activity" />
+
+        <div class="grid gap-6 lg:grid-cols-2">
+          <section aria-labelledby="top-shows-heading" class="min-w-0 space-y-3">
+            <h2
+              id="top-shows-heading"
+              class="flex items-center gap-2 text-lg font-semibold text-highlighted"
+            >
+              <UIcon name="i-lucide-trophy" class="size-5 shrink-0 text-toned" />
+              Top shows by episodes watched
+            </h2>
+            <ol
+              v-if="report.insights.top_shows.length"
+              class="ws-card divide-y divide-default px-4"
+            >
+              <li
+                v-for="(show, index) in report.insights.top_shows"
+                :key="show.history_id"
+                class="flex items-baseline justify-between gap-x-3 py-2.5 text-sm"
+              >
+                <div class="flex min-w-0 items-baseline gap-2">
+                  <span class="w-5 shrink-0 tabular-nums text-toned" aria-hidden="true"
+                    >{{ index + 1 }}.</span
+                  >
+                  <NuxtLink
+                    :to="{ path: '/history', query: { title: show.title, type: 'episode' } }"
+                    class="min-w-0 wrap-break-word font-medium text-highlighted hover:text-primary hover:underline"
+                    >{{ show.title }}</NuxtLink
+                  >
+                </div>
+                <span class="shrink-0 tabular-nums text-toned">
+                  {{ formatNumber(show.watched) }} of {{ formatNumber(show.total) }} synced
+                </span>
+              </li>
+            </ol>
+            <UEmpty v-else size="sm" variant="naked" icon="i-lucide-tv" title="No watched shows" />
+          </section>
+
+          <section aria-labelledby="movie-decades-heading" class="min-w-0 space-y-3">
+            <h2
+              id="movie-decades-heading"
+              class="flex items-center gap-2 text-lg font-semibold text-highlighted"
+            >
+              <UIcon name="i-lucide-film" class="size-5 shrink-0 text-toned" />
+              Watched movies by release decade
+            </h2>
+            <ul v-if="report.insights.movie_decades.length" class="ws-card space-y-3 p-4">
+              <li
+                v-for="item in report.insights.movie_decades"
+                :key="item.decade ?? 'unknown'"
+                class="space-y-1"
+              >
+                <div class="flex justify-between gap-2 text-sm">
+                  <span class="font-medium text-highlighted">
+                    {{ null === item.decade ? 'Unknown release year' : `${item.decade}s` }}
+                  </span>
+                  <span class="tabular-nums text-toned">{{ formatNumber(item.movies) }}</span>
+                </div>
+                <UProgress
+                  :model-value="item.movies"
+                  :max="movieDecadeMax"
+                  size="sm"
+                  aria-hidden="true"
+                />
+              </li>
+            </ul>
+            <UEmpty
+              v-else
+              size="sm"
+              variant="naked"
+              icon="i-lucide-film"
+              title="No watched movies"
+            />
+          </section>
+        </div>
+      </template>
+
       <section aria-labelledby="progress-heading" class="space-y-4">
         <div class="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
           <div class="space-y-1">
@@ -454,6 +532,7 @@ import Pager from '~/components/Pager.vue';
 import RecentHistoryCards from '~/components/RecentHistoryCards.vue';
 import StatCard from '~/components/StatCard.vue';
 import StatisticsPoster from '~/components/StatisticsPoster.vue';
+import WatchActivityChart from '~/components/WatchActivityChart.vue';
 import { useUserStatistics } from '~/composables/useUserStatistics';
 import type {
   RecentHistoryCard,
@@ -556,6 +635,9 @@ const genres = computed(() =>
 );
 const genreMax = computed(() =>
   Math.max(1, ...(report.value?.genres ?? []).map((genre) => genre.total)),
+);
+const movieDecadeMax = computed(() =>
+  Math.max(1, ...(report.value?.insights?.movie_decades ?? []).map((decade) => decade.movies)),
 );
 const exportItems = computed(() => [
   {

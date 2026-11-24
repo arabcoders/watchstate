@@ -58,6 +58,9 @@ final class UserStatisticsGenerator
         $genres = [];
         $recent = [];
         $inProgressItems = ['movies' => [], 'episodes' => []];
+        $activity = [];
+        $decades = [];
+        $unknownMovieYears = 0;
 
         $sql = "SELECT
                     id, type, watched, title, year, season, episode, parent, metadata, updated, extra
@@ -93,6 +96,12 @@ final class UserStatisticsGenerator
             }
 
             if (true === $watched && null !== $playedAt) {
+                if ($generatedAt >= $playedAt) {
+                    $day = gmdate('Y-m-d', $playedAt);
+                    $activity[$day] ??= ['date' => $day, 'movies' => 0, 'episodes' => 0];
+                    $activity[$day][$type]++;
+                }
+
                 $recent[] = [
                     'title' => $entity->title,
                     'type' => $entity->type,
@@ -112,6 +121,12 @@ final class UserStatisticsGenerator
             if ($entity->isMovie()) {
                 if (true === $watched) {
                     $this->addGenres($genres, $itemGenres, 'movies');
+                    if (null === $entity->year || 0 >= $entity->year) {
+                        $unknownMovieYears++;
+                    } else {
+                        $decade = intdiv($entity->year, 10) * 10;
+                        $decades[$decade] = ($decades[$decade] ?? 0) + 1;
+                    }
                 }
                 continue;
             }
@@ -203,6 +218,23 @@ final class UserStatisticsGenerator
         }
         unset($items);
 
+        ksort($activity, SORT_STRING);
+        ksort($decades, SORT_NUMERIC);
+        $movieDecades = [];
+        foreach ($decades as $decade => $count) {
+            $movieDecades[] = ['decade' => $decade, 'movies' => $count];
+        }
+        if (0 < $unknownMovieYears) {
+            $movieDecades[] = ['decade' => null, 'movies' => $unknownMovieYears];
+        }
+
+        $topShows = array_values(array_filter($shows, static fn(array $show): bool => 0 < $show['watched']));
+        usort($topShows, static fn(array $a, array $b): int => $b['watched'] <=> $a['watched']);
+        $topShows = array_map(
+            static fn(array $show): array => array_intersect_key($show, array_flip(['title', 'total', 'watched', 'history_id'])),
+            array_slice($topShows, 0, 10),
+        );
+
         $report = [
             'version' => self::VERSION,
             'generated_at' => $generatedAt,
@@ -212,6 +244,11 @@ final class UserStatisticsGenerator
             'shows' => $shows,
             'recent' => $recent,
             'in_progress' => $inProgressItems,
+            'insights' => [
+                'activity' => array_values($activity),
+                'top_shows' => $topShows,
+                'movie_decades' => $movieDecades,
+            ],
         ];
 
         if (false === $context->cache->set(self::CACHE_KEY, ['fingerprint' => $fingerprint, 'report' => $report], null)) {
@@ -256,6 +293,16 @@ final class UserStatisticsGenerator
                 array_flip(['title', 'type', 'year', 'season', 'episode', 'progress']),
             ), $report['in_progress'][$type]);
         }
+        if (isset($report['insights'])) {
+            $result['insights'] = [
+                'activity' => $report['insights']['activity'],
+                'top_shows' => array_map(
+                    static fn(array $show): array => array_intersect_key($show, array_flip(['title', 'total', 'watched'])),
+                    $report['insights']['top_shows'],
+                ),
+                'movie_decades' => $report['insights']['movie_decades'],
+            ];
+        }
 
         return $result;
     }
@@ -291,6 +338,44 @@ final class UserStatisticsGenerator
                 $counts['fully_watched'],
             ),
         ];
+        if (isset($report['insights'])) {
+            $lines = [
+                ...$lines,
+                '',
+                '## Last recorded watch',
+                '',
+                'Each watched item counts once, on its latest recorded watch date. Items without a date are excluded.',
+                '',
+                '| Date (UTC) | Movies | Episodes |',
+                '| --- | ---: | ---: |',
+            ];
+            foreach ($report['insights']['activity'] as $day) {
+                $lines[] = sprintf('| %s | %d | %d |', $day['date'], $day['movies'], $day['episodes']);
+            }
+            $lines = [
+                ...$lines,
+                '',
+                '## Top shows by episodes watched',
+                '',
+                '| Show | Watched episodes | Synced episodes |',
+                '| --- | ---: | ---: |',
+            ];
+            foreach ($report['insights']['top_shows'] as $show) {
+                $lines[] = sprintf('| %s | %d | %d |', $this->escapeMarkdown($show['title']), $show['watched'], $show['total']);
+            }
+            $lines = [
+                ...$lines,
+                '',
+                '## Watched movies by release decade',
+                '',
+                '| Decade | Movies |',
+                '| --- | ---: |',
+            ];
+            foreach ($report['insights']['movie_decades'] as $decade) {
+                $label = null === $decade['decade'] ? 'Unknown' : $decade['decade'] . 's';
+                $lines[] = sprintf('| %s | %d |', $label, $decade['movies']);
+            }
+        }
         $lines = [
             ...$lines,
             '',
