@@ -82,7 +82,7 @@
                       {{ log.tag }}
                     </span>
                     <UBadge
-                      v-if="isInstalled(log)"
+                      v-if="isInstalledRelease(log)"
                       color="success"
                       variant="soft"
                       size="sm"
@@ -286,22 +286,14 @@ const isInstalledCommit = (commit: ChangeCommit): boolean => {
   return matchesInstalledSha(commit.full_sha) || matchesInstalledSha(commit.sha);
 };
 
-const isInstalled = (log: ChangeSet): boolean => {
-  if (matchesInstalledSha(log.full_sha)) {
-    return true;
-  }
-
-  for (const commit of log?.commits ?? []) {
-    if (isInstalledCommit(commit)) {
-      return true;
-    }
-  }
-
-  return false;
+const isInstalledRelease = (log: ChangeSet): boolean => {
+  return 'Unreleased' !== log.tag && matchesInstalledSha(log.full_sha);
 };
 
 const openCurrentReleases = (): void => {
-  const installedIndex = logs.value.findIndex((log) => isInstalled(log));
+  const installedIndex = logs.value.findIndex(
+    (log) => matchesInstalledSha(log.full_sha) || log.commits?.some(isInstalledCommit),
+  );
   const lastOpenIndex = 0 > installedIndex ? 0 : installedIndex;
 
   openReleases.value = logs.value.slice(0, lastOpenIndex + 1).map((log) => log.tag);
