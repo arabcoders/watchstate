@@ -21,6 +21,8 @@ final class ServeStatic implements LoggerAwareInterface
 
     private ?finfo $mimeType = null;
 
+    private const string FINGERPRINTED_ASSET = '#^/assets/(?:(?:[^/]+\.)?[A-Za-z0-9_-]{8}\.(?:css|js)|fonts/[A-Za-z0-9_-]{32,}\.woff2)$#D';
+
     private const array CONTENT_TYPE = [
         'css' => 'text/css; charset=utf-8',
         'js' => 'text/javascript; charset=utf-8',
@@ -32,7 +34,7 @@ final class ServeStatic implements LoggerAwareInterface
     ];
 
     /**
-     * @var list<array{match:string,path:string,regex?:bool,static?: bool}>
+     * @var list<array{match:string,path:string,regex?:bool,static?:bool,immutable?:bool}>
      */
     private const array FILES = [
         [
@@ -84,6 +86,7 @@ final class ServeStatic implements LoggerAwareInterface
             'path' => '/images/logo.png',
             'regex' => true,
             'static' => true,
+            'immutable' => true,
         ],
     ];
 
@@ -131,7 +134,7 @@ final class ServeStatic implements LoggerAwareInterface
 
             $filePath = $file['static'] ?? false ? fix_path($staticPath . $file['path']) : $file['path'];
 
-            return $this->serveFile($request, new SplFileInfo($filePath));
+            return $this->serveFile($request, new SplFileInfo($filePath), immutable: $file['immutable'] ?? false);
         }
 
         // -- check if the request path is in the MD_IMAGES array
@@ -162,6 +165,14 @@ final class ServeStatic implements LoggerAwareInterface
 
         if (!file_exists($filePath)) {
             $this->logger?->debug("File '{file}' is not found.", ['file' => $filePath]);
+            if (true === str_starts_with($request->getUri()->getPath(), '/assets/')) {
+                return api_error(
+                    r("404: Path '{file}' is not found.", ['file' => $requestPath]),
+                    Status::NOT_FOUND,
+                    headers: ['Cache-Control' => 'no-store'],
+                );
+            }
+
             $checkIndex = fix_path($staticPath . $this->deepIndexLookup($staticPath, $requestPath));
             if (false === file_exists($checkIndex) || false === is_file($checkIndex)) {
                 throw new NotFoundException(r("Path '{file}' is not found.", [
@@ -182,8 +193,14 @@ final class ServeStatic implements LoggerAwareInterface
         return $this->serveFile($request, new SplFileInfo($filePath));
     }
 
-    private function serveFile(iRequest $request, SplFileInfo $file): iResponse
+    private function serveFile(iRequest $request, SplFileInfo $file, bool $immutable = false): iResponse
     {
+        $cacheControl = match (true) {
+            'html' === strtolower($file->getExtension()) => 'no-store',
+            $immutable, 1 === preg_match(self::FINGERPRINTED_ASSET, $request->getUri()->getPath()) => 'public, max-age=31536000, immutable',
+            default => 'public, max-age=0, must-revalidate',
+        };
+
         $ifModifiedSince = $request->getHeaderLine('if-modified-since');
 
         if (!empty($ifModifiedSince) && false !== $file->getMTime()) {
@@ -191,6 +208,7 @@ final class ServeStatic implements LoggerAwareInterface
                 $ifModifiedSince = make_date($ifModifiedSince)->getTimestamp();
                 if ($ifModifiedSince >= $file->getMTime()) {
                     return api_response(Status::NOT_MODIFIED, headers: [
+                        'Cache-Control' => $cacheControl,
                         'Last-Modified' => gmdate('D, d M Y H:i:s T', $file->getMTime()),
                     ]);
                 }
@@ -203,19 +221,10 @@ final class ServeStatic implements LoggerAwareInterface
             'Content-Length' => $file->getSize(),
             'Last-Modified' => gmdate('D, d M Y H:i:s T', $file->getMTime()),
             'Content-Type' => $this->getMimeType($file),
+            'Cache-Control' => $cacheControl,
         ];
 
-        $stream = null;
-
-        if ('GET' === $request->getMethod()) {
-            if ('html' === strtolower($file->getExtension())) {
-                $headers['Cache-Control'] = 'no-cache, must-revalidate';
-                $headers['Expires'] = '0';
-            } else {
-                $headers['Cache-Control'] = 'public, max-age=31536000';
-            }
-            $stream = Stream::make($file->getRealPath());
-        }
+        $stream = 'GET' === $request->getMethod() ? Stream::make($file->getRealPath()) : null;
 
         return api_response(Status::OK, body: $stream, headers: $headers);
     }

@@ -1271,8 +1271,10 @@ final class Index
     #[Get(self::URL . '/{id:\d+}/images/{type:poster|background}[/]', name: 'history.item.images')]
     public function images(iRequest $request, string $id, string $type): iResponse
     {
+        $headers = 'poster' === $type ? ['X-No-AccessLog' => '1'] : [];
+
         if ($request->hasHeader('if-modified-since')) {
-            return api_response(Status::NOT_MODIFIED, headers: ['Cache-Control' => 'public, max-age=25920000']);
+            return api_response(Status::NOT_MODIFIED, headers: [...$headers, 'Cache-Control' => 'public, max-age=25920000']);
         }
 
         try {
@@ -1331,6 +1333,7 @@ final class Index
         }
 
         return api_response($response->status, body: $response->stream, headers: [
+            ...$headers,
             'Pragma' => 'public',
             'Cache-Control' => sprintf('public, max-age=%s', time() + 31_536_000),
             'Last-Modified' => sprintf('%s GMT', gmdate('D, d M Y H:i:s', time())),
