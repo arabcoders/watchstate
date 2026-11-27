@@ -47,7 +47,7 @@ export default defineNuxtConfig({
     head: {
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1.0, viewport-fit=cover' },
         { name: 'theme-color', content: '#000000' },
       ],
       link: [
@@ -70,6 +70,10 @@ export default defineNuxtConfig({
   modules: ['./modules/guide-icons', '@nuxt/ui', '@vueuse/nuxt', '@nuxt/eslint'],
   nitro: {
     sourceMap: isProd ? false : true,
+    prerender: {
+      // Prerendering '/' already writes index.html.
+      ignore: ['/index.html'],
+    },
     devProxy: apiUrl
       ? {
           '/v1/api/': {
