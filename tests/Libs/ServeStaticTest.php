@@ -170,10 +170,12 @@ class ServeStaticTest extends TestCase
         ]));
 
         $this->assertEquals(Status::NOT_MODIFIED->value, $response->getStatusCode());
+        $this->assertSame('no-store', $response->getHeaderLine('Cache-Control'));
 
         // -- check for deep index lookup.
         $response = $this->server->serve($this->createRequest('GET', '/test/view/action/1'));
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
+        $this->assertSame('no-store', $response->getHeaderLine('Cache-Control'));
         $this->assertEquals('text/html; charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals(
             file_get_contents(__DIR__ . '/../Fixtures/static_data/test/index.html'),
@@ -209,14 +211,43 @@ class ServeStaticTest extends TestCase
 
         $this->assertEquals(Status::OK->value, $response->getStatusCode());
         $this->assertEquals("logo content\n", (string) $response->getBody());
-        $this->assertEquals('public, max-age=31536000', $response->getHeaderLine('Cache-Control'));
+        $this->assertSame('public, max-age=31536000, immutable', $response->getHeaderLine('Cache-Control'));
     }
 
-    public function test_html_revalidates()
+    public function test_html_cache(): void
     {
-        $response = $this->server->serve($this->createRequest('GET', '/test.html'));
+        foreach (['GET', 'HEAD'] as $method) {
+            $response = $this->server->serve($this->createRequest($method, '/test.html'));
 
-        $this->assertEquals('no-cache, must-revalidate', $response->getHeaderLine('Cache-Control'));
-        $this->assertEquals('0', $response->getHeaderLine('Expires'));
+            $this->assertSame(Status::OK->value, $response->getStatusCode());
+            $this->assertSame('no-store', $response->getHeaderLine('Cache-Control'));
+        }
+    }
+
+    public function test_asset_cache(): void
+    {
+        $this->initTempDir();
+        $server = new ServeStatic(self::$tmpPath);
+        mkdir(self::$tmpPath . '/assets/builds', 0o755, true);
+        mkdir(self::$tmpPath . '/assets/fonts');
+
+        foreach ([
+            '/assets/CCY7lA2m.js' => 'public, max-age=31536000, immutable',
+            '/assets/entry.CCY7lA2m.css' => 'public, max-age=31536000, immutable',
+            '/assets/fonts/' . str_repeat('a', 32) . '.woff2' => 'public, max-age=31536000, immutable',
+            '/assets/builds/latest.json' => 'public, max-age=0, must-revalidate',
+        ] as $path => $cacheControl) {
+            file_put_contents(self::$tmpPath . $path, 'fixture');
+            $response = $server->serve($this->createRequest('GET', $path));
+
+            $this->assertSame(Status::OK->value, $response->getStatusCode(), $path);
+            $this->assertSame($cacheControl, $response->getHeaderLine('Cache-Control'), $path);
+        }
+
+        file_put_contents(self::$tmpPath . '/assets/index.html', '<html>fallback</html>');
+        $response = $server->serve($this->createRequest('GET', '/assets/Missing1.js'));
+
+        $this->assertSame(Status::NOT_FOUND->value, $response->getStatusCode());
+        $this->assertSame('no-store', $response->getHeaderLine('Cache-Control'));
     }
 }

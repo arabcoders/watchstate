@@ -36,17 +36,17 @@ final class Images
     #[Get(self::URL . '/{type:poster|background}[/]', name: 'system.images')]
     public function __invoke(iRequest $request, DBLayer $db, string $type): iResponse
     {
+        $headers = 'poster' === $type ? ['X-No-AccessLog' => '1'] : [];
+
         try {
             $uc = $this->getUserContext($request, $this->mapper, $this->logger);
             if (count($uc->config) < 1) {
-                return api_response(Status::NO_CONTENT);
+                return api_response(Status::NO_CONTENT, headers: $headers);
             }
             $resp = $this->getImage($db, $type, force: (bool) ag($request->getQueryParams(), 'force', false));
         } catch (DBLayerException|InvalidArgumentException|RuntimeException) {
-            return api_response(Status::NO_CONTENT);
+            return api_response(Status::NO_CONTENT, headers: $headers);
         }
-
-        $headers = [];
 
         $removeHeaders = ['pragma', 'cache-control', 'expires'];
 

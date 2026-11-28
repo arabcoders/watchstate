@@ -12,25 +12,7 @@ const appleIconHash = createHash('sha256')
   .digest('hex')
   .slice(0, 12);
 
-let extraNitro = {};
-try {
-  const API_URL = import.meta.env.NUXT_API_URL;
-  if (API_URL) {
-    extraNitro = {
-      devProxy: {
-        '/v1/api/': {
-          target: API_URL + '/v1/api/',
-          changeOrigin: true,
-        },
-        '/guides/': {
-          target: API_URL + '/guides/',
-          changeOrigin: true,
-        },
-      },
-    };
-  }
-} catch {}
-
+const apiUrl = process.env.NUXT_API_URL?.replace(/\/+$/, '');
 const isProd = 'production' === process.env.NODE_ENV;
 export default defineNuxtConfig({
   ssr: false,
@@ -65,7 +47,7 @@ export default defineNuxtConfig({
     head: {
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1.0, viewport-fit=cover' },
         { name: 'theme-color', content: '#000000' },
       ],
       link: [
@@ -88,6 +70,22 @@ export default defineNuxtConfig({
   modules: ['./modules/guide-icons', '@nuxt/ui', '@vueuse/nuxt', '@nuxt/eslint'],
   nitro: {
     sourceMap: isProd ? false : true,
+    prerender: {
+      // Prerendering '/' already writes index.html.
+      ignore: ['/index.html'],
+    },
+    devProxy: apiUrl
+      ? {
+          '/v1/api/': {
+            target: `${apiUrl}/v1/api/`,
+            changeOrigin: true,
+          },
+          '/guides/': {
+            target: `${apiUrl}/guides/`,
+            changeOrigin: true,
+          },
+        }
+      : undefined,
     output: {
       publicDir: isProd ? __dirname + '/exported' : __dirname + '/dist',
     },
@@ -105,7 +103,6 @@ export default defineNuxtConfig({
         handler(level, log);
       },
     },
-    ...extraNitro,
   },
   css: ['~/assets/css/tailwind.css'],
   telemetry: false,

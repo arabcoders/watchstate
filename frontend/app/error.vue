@@ -77,7 +77,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { clearError, useRoute, type NuxtError } from '#app';
+import type { NuxtError } from '#app';
 import { NuxtLayout, UAlert, UButton, UIcon } from '#components';
 
 const props = defineProps<{
@@ -86,8 +86,8 @@ const props = defineProps<{
 
 const showStacks = ref(false);
 
-const handleRetry = async (): Promise<void> => {
-  await clearError({ redirect: useRoute().fullPath });
+const handleRetry = (): void => {
+  window.location.reload();
 };
 
 onMounted(() => console.error(props.error));

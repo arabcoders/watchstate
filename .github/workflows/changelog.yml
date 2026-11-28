@@ -48,6 +48,9 @@ jobs:
         with:
           path: ${{ runner.temp }}/changelog
 
+      - name: Wait before deploying to Pages
+        run: sleep 5
+
       - name: Publish commit history
         id: deployment
         uses: actions/deploy-pages@v5

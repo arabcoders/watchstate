@@ -73,6 +73,14 @@ export interface RecentHistoryCardsProps {
   maskable?: boolean;
 }
 
+export interface UserStatisticsActivityDay {
+  date: string;
+  movies: number;
+  episodes: number;
+}
+
+export type WatchActivityPeriod = 'week' | 'month' | 'quarter' | 'year';
+
 export interface UserStatisticsReport {
   version: number;
   generated_at: number;
@@ -94,6 +102,11 @@ export interface UserStatisticsReport {
     episodes: Array<UserStatisticsProgressItem>;
   };
   recent: Array<UserStatisticsItem & { played_at: number }>;
+  insights?: {
+    activity: Array<UserStatisticsActivityDay>;
+    top_shows: Array<Pick<UserStatisticsShow, 'title' | 'total' | 'watched' | 'history_id'>>;
+    movie_decades: Array<{ decade: number | null; movies: number }>;
+  };
 }
 
 export interface UserStatisticsResponse {

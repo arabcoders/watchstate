@@ -90,13 +90,19 @@
               <li>The webhook plugin for Jellyfin.</li>
               <li>Plex Pass for Plex, or Emby Premiere for Emby.</li>
             </ul>
-            <UInput
-              :model-value="webhookFullUrl"
-              readonly
-              icon="i-lucide-link"
-              size="sm"
-              class="w-full"
-            />
+            <UFormField
+              label="Webhook URL"
+              description="Use an address your media server can reach. Keep the generated path and query parameters."
+            >
+              <UInput
+                v-model.trim="webhookUrl"
+                type="url"
+                icon="i-lucide-link"
+                size="sm"
+                class="w-full"
+                :disabled="webhookLoading"
+              />
+            </UFormField>
           </div>
         </template>
         <template #footer>
@@ -106,7 +112,8 @@
               variant="outline"
               size="sm"
               icon="i-lucide-copy"
-              @click="copyUrl(webhookBackend)"
+              :disabled="'' === webhookUrl || webhookLoading"
+              @click="copyUrl"
             >
               Copy URL
             </UButton>
@@ -116,6 +123,7 @@
               size="sm"
               icon="i-lucide-webhook"
               :loading="webhookLoading"
+              :disabled="'' === webhookUrl"
               @click="addWebhook(webhookBackend)"
             >
               Add/Update
@@ -244,7 +252,7 @@
               color="neutral"
               variant="outline"
               icon="i-lucide-webhook"
-              @click="webhookBackend = backend"
+              @click="openWebhookModal(backend)"
               >Add Webhook</UButton
             >
             <UButton
@@ -414,6 +422,7 @@ import {
   UBadge,
   UButton,
   UEmpty,
+  UFormField,
   UIcon,
   UInput,
   UModal,
@@ -547,15 +556,8 @@ const backendReportCards = (
 };
 
 const webhookBackend = ref<Backend | null>(null);
+const webhookUrl = ref('');
 const webhookLoading = ref<boolean>(false);
-
-const webhookFullUrl = computed((): string => {
-  const urls = webhookBackend.value?.urls;
-  if (undefined === urls?.webhook) {
-    return '';
-  }
-  return window.origin + urls.webhook;
-});
 
 const backendAddModalUi = {
   content: 'max-w-5xl',
@@ -742,11 +744,18 @@ onBeforeUnmount(() => {
   ++loadVersion;
 });
 
-const copyUrl = (b: Backend): void => {
-  if (b.urls?.webhook) {
-    copyText(window.origin + b.urls.webhook);
+const openWebhookModal = (backend: Backend): void => {
+  const path = backend.urls?.webhook;
+  if (!path) {
+    return;
   }
 
+  webhookUrl.value = window.origin + path;
+  webhookBackend.value = backend;
+};
+
+const copyUrl = (): void => {
+  void copyText(webhookUrl.value);
   webhookBackend.value = null;
 };
 
@@ -755,18 +764,11 @@ const handleWebhookModalClose = (): void => {
 };
 
 const addWebhook = async (b: Backend): Promise<void> => {
-  if (undefined === b.urls?.webhook) {
-    return;
-  }
-
-  const webhook = b.urls.webhook;
-
   webhookLoading.value = true;
   try {
-    const webhookUrl = window.origin + webhook;
     const response = await request(`/backend/${b.name}/webhook`, {
       method: 'POST',
-      body: JSON.stringify({ webhook_url: webhookUrl }),
+      body: JSON.stringify({ webhook_url: webhookUrl.value }),
     });
 
     const json = await parse_api_response<{ message: string }>(response);

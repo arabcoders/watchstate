@@ -2275,7 +2275,16 @@ Returns the latest cached user statistics for the selected identity and its queu
         "played_at": 1784510000,
         "history_id": 1
       }
-    ]
+    ],
+    "insights": {
+      "activity": [
+        { "date": "2026-07-20", "movies": 0, "episodes": 1 }
+      ],
+      "top_shows": [
+        { "title": "Example Series", "total": 2, "watched": 1, "history_id": 1 }
+      ],
+      "movie_decades": []
+    }
   },
   "queued": false,
   "queued_event": null,
@@ -2285,7 +2294,10 @@ Returns the latest cached user statistics for the selected identity and its queu
 
 **Notes**:
 - `report` is `null` until the first successful report completes.
-- `recent` contains up to 20 watched records with recorded play dates.
+- `recent` contains up to 8 watched records with recorded play dates.
+- `activity` contains daily UTC counts of currently watched movies and episodes. Each item counts once on its latest recorded watch date. Items with missing or future dates are excluded, and days without counts are omitted.
+- `top_shows` contains up to 10 shows ranked by watched episode count. `total` counts synced episodes.
+- `movie_decades` counts watched movies by release decade. `decade: null` counts movies without a known release year.
 
 ---
 
